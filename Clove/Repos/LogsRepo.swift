@@ -31,4 +31,15 @@ class LogsRepo {
             return false
         }
     }
+
+    func getLogs() -> [DailyLog] {
+        do {
+            return try dbManager.read { db in
+                try DailyLog.fetchAll(db)
+            }
+        } catch {
+            print("Error getting logs: \(error)")
+            return []
+        }
+    }
 }

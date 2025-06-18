@@ -14,7 +14,7 @@ struct MainTabView: View {
             .tag(0)
 
             NavigationStack {
-               Text("Insights View")
+               InsightsView()
             }
             .tabItem {
                 Label("Insights", systemImage: "chart.line.uptrend.xyaxis")

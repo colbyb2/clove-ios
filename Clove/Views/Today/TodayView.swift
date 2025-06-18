@@ -44,6 +44,25 @@ struct TodayView: View {
                     viewModel.saveLog()
                 }
                 .buttonStyle(.borderedProminent)
+
+                Button("DEV - Add Log") {
+                    let fakeLog = DailyLog(
+                        date: Calendar.current.date(byAdding: .day, value: 1, to: Date())!,
+                        mood: 3,
+                        painLevel: 6,
+                        energyLevel: 4,
+                        meals: [],
+                        activities: [],
+                        medicationsTaken: [],
+                        notes: nil,
+                        isFlareDay: false,
+                        symptomRatings: [
+                            SymptomRating(symptomName: "Fatigue", rating: 6),
+                            SymptomRating(symptomName: "Headache", rating: 4)
+                        ]
+                    )
+                    LogsRepo.shared.saveLog(fakeLog)
+                }
             }
             .padding()
         }
