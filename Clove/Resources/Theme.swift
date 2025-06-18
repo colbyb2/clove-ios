@@ -8,7 +8,10 @@ enum CloveColors {
     static let background = Color("Background")
     static let primaryText = Color("PrimaryText")
     static let secondaryText = Color("SecondaryText")
-    static let Card = Color("Card")
+    static let card = Color("Card")
+    static let success = Color("Success")
+    static let error = Color("Error")
+    static let info = Color("Info")
 }
 
 /// Fonts

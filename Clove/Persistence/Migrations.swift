@@ -5,7 +5,8 @@ import GRDB
 enum Migrations {
     /// All migrations in order they should be applied
     static let all: [Migration] = [
-        InitialMigration()
+        InitialMigration(),
+        UserSettingsMigration()
     ]
 }
 
@@ -37,6 +38,32 @@ struct InitialMigration: Migration {
             t.column("name", .text).notNull()
             t.column("order", .integer).notNull()
         }
+    }
+}
+
+/// The migration for the user settings table
+struct UserSettingsMigration: Migration {
+    var identifier: String {
+        return "userSettings_061825"
+    }
+    
+    func migrate(_ db: Database) throws {
+        try db.create(table: "userSettings") { t in
+            t.column("id", .integer).primaryKey().defaults(to: 1)
+            t.column("trackMood", .boolean).notNull().defaults(to: true)
+            t.column("trackPain", .boolean).notNull().defaults(to: true)
+            t.column("trackEnergy", .boolean).notNull().defaults(to: false)
+            t.column("trackSymptoms", .boolean).notNull().defaults(to: true)
+            t.column("trackMeals", .boolean).notNull().defaults(to: false)
+            t.column("trackActivities", .boolean).notNull().defaults(to: false)
+            t.column("trackMeds", .boolean).notNull().defaults(to: false)
+            t.column("showFlareToggle", .boolean).notNull().defaults(to: true)
+        }
+
+        try db.execute(sql: """
+            INSERT INTO userSettings (id, trackMood, trackPain, trackEnergy, trackSymptoms, trackMeals, trackActivities, trackMeds, showFlareToggle)
+            VALUES (1, 1, 1, 0, 1, 0, 0, 0, 1)
+        """)
     }
 }
 

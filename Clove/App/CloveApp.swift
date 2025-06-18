@@ -9,9 +9,24 @@ import SwiftUI
 
 @main
 struct CloveApp: App {
+    @State private var appState = AppState()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ZStack {
+                switch appState.phase {
+                case .loading:
+                    Text("Loading...")
+                case .onboarding:
+                    Text("Onboarding...")
+                case .main:
+                    MainTabView()
+                    .environment(appState)
+                }
+            }
+            .foregroundStyle(CloveColors.primaryText)
+            .background(CloveColors.background)
+            .toastable()
         }
     }
 
