@@ -14,4 +14,12 @@ struct CloveApp: App {
             ContentView()
         }
     }
+
+    init() {
+        do {
+            try DatabaseManager.shared.setupDatabase()
+        } catch {
+            print("Database setup failed: \(error)")
+        }
+    }
 }

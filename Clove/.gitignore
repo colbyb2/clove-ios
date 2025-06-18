@@ -1,0 +1,23 @@
+# Xcode
+*.xcworkspace
+*.xcuserdata
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+DerivedData/
+build/
+.idea/
+
+# SwiftPM
+.build/
+Packages/
+Package.resolved
+
+# Logs & user config
+*.log
+*.env
+*.DS_Store
+
+# Personal DBs / App Data
+clove.sqlite
+clove.sqlite-shm
+clove.sqlite-wal
