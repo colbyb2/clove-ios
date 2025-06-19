@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		6FC7BE042E01E110009F0219 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 6FC7BE032E01E110009F0219 /* GRDB */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		6FC7BDE42E01D9A5009F0219 /* Clove.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Clove.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6FC7BE042E01E110009F0219 /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = Clove;
 			packageProductDependencies = (
+				6FC7BE032E01E110009F0219 /* GRDB */,
 			);
 			productName = Clove;
 			productReference = 6FC7BDE42E01D9A5009F0219 /* Clove.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = 6FC7BDDB2E01D9A5009F0219;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6FC7BE022E01E110009F0219 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6FC7BDE52E01D9A5009F0219 /* Products */;
 			projectDirPath = "";
@@ -324,6 +333,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6FC7BE022E01E110009F0219 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6FC7BE032E01E110009F0219 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6FC7BE022E01E110009F0219 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 6FC7BDDC2E01D9A5009F0219 /* Project object */;
 }

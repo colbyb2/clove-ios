@@ -24,3 +24,16 @@ extension Color {
         )
     }
 }
+
+/// Date Extensions
+extension Date: @retroactive Identifiable {
+    func stripTime() -> Date {
+        Calendar.current.startOfDay(for: self)
+    }
+
+    var iso8601String: String {
+        ISO8601DateFormatter().string(from: self)
+    }
+
+    public var id: String { self.iso8601String }
+}

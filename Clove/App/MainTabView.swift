@@ -22,7 +22,7 @@ struct MainTabView: View {
             .tag(1)
 
             NavigationStack {
-               Text("History View")
+               HistoryCalendarView()
             }
             .tabItem {
                 Label("History", systemImage: "clock.arrow.circlepath")
@@ -30,7 +30,7 @@ struct MainTabView: View {
             .tag(2)
 
             NavigationStack {
-               Text("Settings View")
+               CustomizeTrackerView()
             }
             .tabItem {
                 Label("Settings", systemImage: "gear")
