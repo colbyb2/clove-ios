@@ -1,24 +1,40 @@
 import SwiftUI
 import Charts
+import Foundation
 
 struct SymptomSummaryView: View {
    let logs: [DailyLog]
    
    // State for the currently selected symptom
-   @State private var selectedSymptom: String?
+   @State private var selectedSymptomId: Int64?
+   
+   // Get all tracked symptoms for reference
+   private var trackedSymptoms: [TrackedSymptom] {
+      SymptomsRepo.shared.getTrackedSymptoms()
+   }
    
    // Computed property to get all unique, available symptoms from logs
-   private var availableSymptoms: [String] {
+   private var availableSymptoms: [TrackedSymptom] {
       let allRatings = logs.flatMap { $0.symptomRatings }
-      return Array(Set(allRatings.map { $0.symptomName })).sorted()
+      let symptomIds = Set(allRatings.map { $0.symptomId })
+      
+      return trackedSymptoms.filter { symptom in
+         guard let id = symptom.id else { return false }
+         return symptomIds.contains(id)
+      }.sorted { $0.name < $1.name }
+   }
+   
+   // Helper to get symptom name by ID
+   private func getSymptomName(for id: Int64) -> String {
+      return trackedSymptoms.first { $0.id == id }?.name ?? "Unknown Symptom"
    }
    
    // Computed property to get the chart data for the selected symptom
    private var chartData: [SymptomDataPoint] {
-      guard let selectedSymptom = selectedSymptom else { return [] }
+      guard let selectedSymptomId = selectedSymptomId else { return [] }
       
       return logs.compactMap { log -> SymptomDataPoint? in
-         if let rating = log.symptomRatings.first(where: { $0.symptomName == selectedSymptom }) {
+         if let rating = log.symptomRatings.first(where: { $0.symptomId == selectedSymptomId }) {
             return SymptomDataPoint(date: log.date, rating: rating.rating)
          }
          return nil
@@ -31,7 +47,7 @@ struct SymptomSummaryView: View {
          symptomSelector
          
          // Show chart if a symptom is selected, otherwise show an empty state
-         if selectedSymptom != nil {
+         if selectedSymptomId != nil {
             symptomChart
          } else {
             emptyStateView
@@ -39,8 +55,8 @@ struct SymptomSummaryView: View {
       }
       .padding(.top, 8)
       .onAppear {
-         if selectedSymptom == nil {
-            selectedSymptom = availableSymptoms.first
+         if selectedSymptomId == nil {
+            selectedSymptomId = availableSymptoms.first?.id
          }
       }
    }
@@ -48,16 +64,16 @@ struct SymptomSummaryView: View {
    // Dropdown menu for selecting a symptom
    private var symptomSelector: some View {
       Menu {
-         ForEach(availableSymptoms, id: \.self) { symptom in
+         ForEach(availableSymptoms, id: \.id) { symptom in
             Button(action: {
-               selectedSymptom = symptom
+               selectedSymptomId = symptom.id
             }) {
-               Text(symptom)
+               Text(symptom.name)
             }
          }
       } label: {
          HStack {
-            Text(selectedSymptom ?? "Select a Symptom")
+            Text(selectedSymptomId != nil ? getSymptomName(for: selectedSymptomId!) : "Select a Symptom")
                .font(.headline)
                .foregroundStyle(CloveColors.primary)
             Image(systemName: "chevron.down")

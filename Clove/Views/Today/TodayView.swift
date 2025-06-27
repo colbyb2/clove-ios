@@ -3,9 +3,7 @@ import SwiftUI
 struct TodayView: View {
    @State var viewModel = TodayViewModel()
    
-   @State private var showEditSymptoms: Bool = true
-   @State private var newSymptom: String = ""
-   @State private var newSymptoms: [TrackedSymptom] = []
+   @State private var showEditSymptoms: Bool = false
    
    var body: some View {
       ScrollView {
@@ -77,7 +75,7 @@ struct TodayView: View {
                   VStack(alignment: .leading) {
                      ZStack {
                         HStack {
-                           Text(symptom.symptomName).font(.system(size: 18, weight: .semibold, design: .rounded))
+                           Text("\(symptom.symptomName)").font(.system(size: 18, weight: .semibold, design: .rounded))
                               .foregroundStyle(CloveColors.secondaryText)
                            Spacer()
                         }
@@ -128,48 +126,10 @@ struct TodayView: View {
          viewModel.load()
       }
       .sheet(isPresented: $showEditSymptoms) {
-         VStack(spacing: 30) {
-            Text("Tracked Symptoms").font(.system(size: 22, weight: .semibold, design: .rounded))
-            HStack {
-               TextField("New Symptom", text: $newSymptom)
-                  .padding(10)
-                  .font(.system(size: 24))
-                  .frame(height: 45)
-                  .background(CloveColors.background)
-                  .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
-               Button {} label: {
-                  Image(systemName: "plus.circle.fill")
-                     .resizable()
-                     .scaledToFit()
-                     .frame(width: 40)
-                     .foregroundStyle(CloveColors.primary)
-               }
-            }
-            List {
-               ForEach(viewModel.symptomRatings.indices, id: \.self) { i in
-                  let symptom = viewModel.symptomRatings[i]
-                  HStack {
-                     Image(systemName: "circle.fill")
-                        .resizable()
-                        .frame(width: 10, height: 10)
-                        .foregroundStyle(Color(hex: "b17ad6"))
-                     
-                     Text("\(symptom.symptomName)")
-                        .font(.system(size: 22))
-                  }
-                  .padding(5)
-               }
-            }
-            .background(Color.clear)
-            .scrollContentBackground(.hidden)
-         }
-         .padding()
-         .background(CloveColors.card)
-         .clipShape(RoundedRectangle(cornerRadius: 20))
-         .padding(5)
-         .presentationDetents([.medium])
-         .presentationDragIndicator(.hidden)
-         .presentationBackground(.clear)
+         EditSymptomsSheet(
+            viewModel: viewModel,
+            trackedSymptoms: SymptomsRepo.shared.getTrackedSymptoms()
+         )
       }
    }
 }

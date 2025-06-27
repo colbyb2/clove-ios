@@ -6,7 +6,8 @@ enum Migrations {
     /// All migrations in order they should be applied
     static let all: [Migration] = [
         InitialMigration(),
-        UserSettingsMigration()
+        UserSettingsMigration(),
+        SymptomIdMigration()
     ]
 }
 
@@ -63,6 +64,61 @@ struct UserSettingsMigration: Migration {
             INSERT INTO userSettings (id, trackMood, trackPain, trackEnergy, trackSymptoms, trackMeals, trackActivities, trackMeds, showFlareToggle)
             VALUES (1, 1, 1, 0, 1, 0, 0, 0, 1)
         """)
+    }
+}
+
+/// Migration to add symptom IDs to existing symptom ratings
+struct SymptomIdMigration: Migration {
+    var identifier: String {
+        return "symptomId_062725"
+    }
+    
+    func migrate(_ db: Database) throws {
+        // Get all tracked symptoms to create a name-to-ID mapping
+        let trackedSymptoms = try TrackedSymptom.fetchAll(db)
+        let symptomNameToId = Dictionary(uniqueKeysWithValues: trackedSymptoms.map { ($0.name, $0.id ?? 0) })
+        
+        // Get all daily logs  
+        let logs = try Row.fetchAll(db, sql: "SELECT id, symptomRatingsJSON FROM dailyLog").map { row in
+            (id: row["id"] as Int64, symptomRatingsJSON: row["symptomRatingsJSON"] as String)
+        }
+        
+        // Helper struct for legacy symptom rating (without ID)
+        struct LegacySymptomRating: Codable {
+            var symptomName: String
+            var rating: Int
+        }
+        
+        // Helper struct for new symptom rating (with ID)
+        struct NewSymptomRating: Codable {
+            var symptomId: Int64
+            var symptomName: String
+            var rating: Int
+        }
+        
+        // Update each log's symptom ratings JSON
+        for log in logs {
+            guard let jsonData = log.symptomRatingsJSON.data(using: String.Encoding.utf8),
+                  let legacyRatings = try? JSONDecoder().decode([LegacySymptomRating].self, from: jsonData) else {
+                continue
+            }
+            
+            // Convert legacy ratings to new format with IDs
+            let newRatings = legacyRatings.map { legacyRating in
+                NewSymptomRating(
+                    symptomId: symptomNameToId[legacyRating.symptomName] ?? 0,
+                    symptomName: legacyRating.symptomName,
+                    rating: legacyRating.rating
+                )
+            }
+            
+            // Encode the new ratings back to JSON
+            if let newJsonData = try? JSONEncoder().encode(newRatings),
+               let newJsonString = String(data: newJsonData, encoding: .utf8) {
+                try db.execute(sql: "UPDATE dailyLog SET symptomRatingsJSON = ? WHERE id = ?", 
+                             arguments: [newJsonString, log.id])
+            }
+        }
     }
 }
 

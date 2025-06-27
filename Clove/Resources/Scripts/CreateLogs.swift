@@ -19,7 +19,7 @@ class DEVCreateLogs {
          var symptomRatings: [SymptomRating] = []
          for symptom in trackedSymptoms {
             let rating = Int.random(in: 0...10)
-            symptomRatings.append(SymptomRating(symptomName: symptom.name, rating: rating))
+            symptomRatings.append(SymptomRating(symptomId: Int64.random(in: 1...100), symptomName: symptom.name, rating: rating))
          }
          
          // Generate some sample data for other fields

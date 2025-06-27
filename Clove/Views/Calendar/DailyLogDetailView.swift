@@ -23,7 +23,7 @@ struct DailyLogDetailView: View {
             if !log.symptomRatings.isEmpty {
                 Text("Symptoms:")
                     .bold()
-                ForEach(log.symptomRatings, id: \.symptomName) { symptom in
+                ForEach(log.symptomRatings, id: \.symptomId) { symptom in
                     Text("- \(symptom.symptomName): \(symptom.rating)")
                 }
             }
