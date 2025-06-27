@@ -1,6 +1,6 @@
 import Foundation
 
 struct SymptomRating: Codable {
-    var symptomName: String
-    var rating: Int
+   var symptomName: String
+   var rating: Int
 }

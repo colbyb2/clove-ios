@@ -1,74 +1,181 @@
 import SwiftUI
 
 struct TodayView: View {
-    @State private var viewModel = TodayViewModel()
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-
-                if viewModel.settings.trackMood {
-                    Text("Mood (1-5)").font(.headline)
-                    Stepper(value: $viewModel.mood, in: 1...5) {
-                        Text("Mood: \(viewModel.mood)")
-                    }
-                }
-
-                if viewModel.settings.trackPain {
-                    Text("Pain Level (0-10)").font(.headline)
-                    Slider(value: $viewModel.painLevel, in: 0...10, step: 1)
-                    Text("Pain: \(Int(viewModel.painLevel))")
-                }
-
-                if viewModel.settings.trackEnergy {
-                    Text("Energy (0-10)").font(.headline)
-                    Slider(value: $viewModel.energyLevel, in: 0...10, step: 1)
-                    Text("Energy: \(Int(viewModel.energyLevel))")
-                }
-
-                if viewModel.settings.trackSymptoms {
-                    Text("Symptom Ratings").font(.headline)
-                    ForEach(viewModel.symptomRatings.indices, id: \.self) { i in
-                        let symptom = viewModel.symptomRatings[i]
-                        VStack(alignment: .leading) {
-                            Text(symptom.symptomName)
-                            Slider(value: $viewModel.symptomRatings[i].ratingDouble, in: 0...10, step: 1)
-                            Text("Rating: \(Int(viewModel.symptomRatings[i].ratingDouble))")
-                        }
-                    }
-                }
-
-                Toggle("Flare Today?", isOn: $viewModel.isFlareDay)
-
-                Button("Save Log") {
-                    viewModel.saveLog()
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button("DEV - Add Log") {
-                    let fakeLog = DailyLog(
-                        date: Calendar.current.date(byAdding: .day, value: 1, to: Date())!,
-                        mood: 3,
-                        painLevel: 6,
-                        energyLevel: 4,
-                        meals: [],
-                        activities: [],
-                        medicationsTaken: [],
-                        notes: nil,
-                        isFlareDay: false,
-                        symptomRatings: [
-                            SymptomRating(symptomName: "Fatigue", rating: 6),
-                            SymptomRating(symptomName: "Headache", rating: 4)
-                        ]
-                    )
-                    LogsRepo.shared.saveLog(fakeLog)
-                }
+   @State var viewModel = TodayViewModel()
+   
+   @State private var showEditSymptoms: Bool = true
+   @State private var newSymptom: String = ""
+   @State private var newSymptoms: [TrackedSymptom] = []
+   
+   var body: some View {
+      ScrollView {
+         VStack(alignment: .leading, spacing: 24) {
+            
+            if viewModel.settings.trackMood {
+               ZStack {
+                  HStack {
+                     Text("Mood").font(.system(size: 22, weight: .semibold, design: .rounded))
+                     Spacer()
+                  }
+                  HStack {
+                     Spacer()
+                     Text("\(Int(viewModel.mood))\(viewModel.currentMoodEmoji)")
+                        .font(.system(size: 28, weight: .bold))
+                     Spacer()
+                  }
+               }
+               CloveSlider(value: 0.5, height: 40) { value in
+                  viewModel.mood = value
+               }
             }
-            .padding()
-        }
-        .navigationTitle("Today")
-        .onAppear {
-            viewModel.load()
-        }
-    }
+            
+            if viewModel.settings.trackPain {
+               ZStack {
+                  HStack {
+                     Text("Pain").font(.system(size: 22, weight: .semibold, design: .rounded))
+                     Spacer()
+                  }
+                  HStack {
+                     Spacer()
+                     Text("\(Int(viewModel.painLevel))")
+                        .font(.system(size: 28, weight: .bold))
+                     Spacer()
+                  }
+               }
+               CloveSlider(value: 0.5, height: 40) { value in
+                  viewModel.painLevel = value
+               }
+            }
+            
+            if viewModel.settings.trackEnergy {
+               ZStack {
+                  HStack {
+                     Text("Energy").font(.system(size: 22, weight: .semibold, design: .rounded))
+                     Spacer()
+                  }
+                  HStack {
+                     Spacer()
+                     Text("\(Int(viewModel.energyLevel))")
+                        .font(.system(size: 28, weight: .bold))
+                     Spacer()
+                  }
+               }
+               CloveSlider(value: 0.5, height: 40) { value in
+                  viewModel.energyLevel = value
+               }
+            }
+            
+            if viewModel.settings.trackSymptoms {
+               HStack {
+                  Text("Symptoms").font(.system(size: 22, weight: .semibold, design: .rounded))
+                  Spacer()
+                  Button("Edit") { showEditSymptoms = true }
+                     .foregroundStyle(CloveColors.primaryText)
+               }
+               ForEach(viewModel.symptomRatings.indices, id: \.self) { i in
+                  let symptom = viewModel.symptomRatings[i]
+                  VStack(alignment: .leading) {
+                     ZStack {
+                        HStack {
+                           Text(symptom.symptomName).font(.system(size: 18, weight: .semibold, design: .rounded))
+                              .foregroundStyle(CloveColors.secondaryText)
+                           Spacer()
+                        }
+                        HStack {
+                           Spacer()
+                           Text("\(Int(viewModel.symptomRatings[i].ratingDouble))").font(.system(size: 26, weight: .semibold, design: .rounded))
+                              .foregroundStyle(CloveColors.secondaryText)
+                           Spacer()
+                        }
+                     }
+                     CloveSlider(value: 0.5, height: 40) { value in
+                        viewModel.symptomRatings[i].ratingDouble = value
+                     }
+                  }
+               }
+               if (viewModel.symptomRatings.isEmpty) {
+                  HStack {
+                     Spacer()
+                     Text("No Symptoms Being Tracked")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(CloveColors.secondaryText)
+                     Spacer()
+                  }
+               }
+            }
+            
+            if viewModel.settings.showFlareToggle {
+               HStack {
+                  Spacer()
+                  Text("Flare Up?").font(.system(size: 18, weight: .semibold, design: .rounded))
+                  CloveToggle(toggled: $viewModel.isFlareDay, onColor: .error, handleColor: .card.opacity(0.6))
+                  Spacer()
+               }
+            }
+            
+            CloveButton(text: "Save", background: .blue) {
+               viewModel.saveLog()
+            }
+            
+//            Button("DEV - Add Logs") {
+//               DEVCreateLogs.execute()
+//            }
+         }
+         .padding()
+      }
+      .navigationTitle("Today")
+      .onAppear {
+         viewModel.load()
+      }
+      .sheet(isPresented: $showEditSymptoms) {
+         VStack(spacing: 30) {
+            Text("Tracked Symptoms").font(.system(size: 22, weight: .semibold, design: .rounded))
+            HStack {
+               TextField("New Symptom", text: $newSymptom)
+                  .padding(10)
+                  .font(.system(size: 24))
+                  .frame(height: 45)
+                  .background(CloveColors.background)
+                  .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
+               Button {} label: {
+                  Image(systemName: "plus.circle.fill")
+                     .resizable()
+                     .scaledToFit()
+                     .frame(width: 40)
+                     .foregroundStyle(CloveColors.primary)
+               }
+            }
+            List {
+               ForEach(viewModel.symptomRatings.indices, id: \.self) { i in
+                  let symptom = viewModel.symptomRatings[i]
+                  HStack {
+                     Image(systemName: "circle.fill")
+                        .resizable()
+                        .frame(width: 10, height: 10)
+                        .foregroundStyle(Color(hex: "b17ad6"))
+                     
+                     Text("\(symptom.symptomName)")
+                        .font(.system(size: 22))
+                  }
+                  .padding(5)
+               }
+            }
+            .background(Color.clear)
+            .scrollContentBackground(.hidden)
+         }
+         .padding()
+         .background(CloveColors.card)
+         .clipShape(RoundedRectangle(cornerRadius: 20))
+         .padding(5)
+         .presentationDetents([.medium])
+         .presentationDragIndicator(.hidden)
+         .presentationBackground(.clear)
+      }
+   }
+}
+
+#Preview {
+   NavigationStack {
+      TodayView(viewModel: TodayViewModel(settings: UserSettings(trackMood: true, trackPain: true, trackEnergy: true, trackSymptoms: true, trackMeals: false, trackActivities: false, trackMeds: false, showFlareToggle: true)))
+   }
 }

@@ -2,34 +2,42 @@ import SwiftUI
 
 struct Toast: View {  
     var body: some View {
-        VStack {
-            HStack(spacing: 12) {
-                if let icon = ToastManager.shared.icon {
-                    icon
+        VStack(spacing: 0) {
+            if ToastManager.shared.isVisible {
+                HStack(spacing: 12) {
+                    if let icon = ToastManager.shared.icon {
+                        icon
+                            .foregroundColor(.white)
+                            .font(.system(size: 18, weight: .medium))
+                    }
+                    
+                    Text(ToastManager.shared.message)
                         .foregroundColor(.white)
-                        .font(.system(size: 20))
+                        .font(.system(size: 15, weight: .medium))
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(3)
                 }
-                
-                Text(ToastManager.shared.message)
-                    .foregroundColor(.white)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .multilineTextAlignment(.center)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(ToastManager.shared.color)
+                        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+                        .shadow(color: .black.opacity(0.04), radius: 2, x: 0, y: 1)
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .offset(y: ToastManager.shared.offset)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .top).combined(with: .opacity),
+                    removal: .move(edge: .top).combined(with: .opacity)
+                ))
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(
-                Capsule()
-                    .fill(ToastManager.shared.color)
-                    .shadow(color: .black.opacity(0.15), radius: 5, x: 0, y: 2)
-            )
-            .padding(.horizontal, 20)
-            .offset(y: ToastManager.shared.offset)
-            .animation(.linear, value: ToastManager.shared.offset)
-            .padding(.top, 20)
             
             Spacer()
         }
+        .animation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0), value: ToastManager.shared.isVisible)
+        .animation(.spring(response: 0.4, dampingFraction: 0.9, blendDuration: 0), value: ToastManager.shared.offset)
     }
 }
 
@@ -53,21 +61,50 @@ extension View {
 @Observable
 class ToastManager {
     static let shared = ToastManager()
+    
+    private init() {}
 
-    var offset: CGFloat = -150
-    var message: String = "Test Toast"
+    var offset: CGFloat = 0
+    var message: String = ""
     var color: Color = .blue
     var icon: Image? = nil
     var duration: Double = 3.0
+    var isVisible: Bool = false
+    
+    private var hideTask: Task<Void, Never>?
 
     func showToast(message: String, color: Color = .blue, icon: Image? = nil, duration: Double = 3.0) {
+        // Cancel any existing hide task
+        hideTask?.cancel()
+        
+        // Set toast properties (these won't animate as they're set before visibility)
         self.message = message
         self.color = color
         self.icon = icon
         self.duration = duration
         self.offset = 0
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-            self.offset = -150
+        
+        // Show the toast with animation
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            self.isVisible = true
+        }
+        
+        // Hide after duration
+        hideTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(duration))
+            
+            guard !Task.isCancelled else { return }
+            
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+                self.isVisible = false
+            }
+        }
+    }
+    
+    func hide() {
+        hideTask?.cancel()
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+            self.isVisible = false
         }
     }
 }

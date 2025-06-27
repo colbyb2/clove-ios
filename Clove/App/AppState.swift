@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 @Observable
 class AppState {
@@ -8,7 +9,7 @@ class AppState {
         case main
     }
 
-    var phase: LaunchPhase = .main
+    var phase: LaunchPhase = .loading
 
     func completeOnboarding() {
         phase = .main

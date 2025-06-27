@@ -21,6 +21,7 @@ struct HistoryCalendarView: View {
          .background(.ultraThinMaterial)
          .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
          .padding()
+         .padding(.vertical)
          .sheet(item: $viewModel.selectedDate) { date in
              if let log = viewModel.log(for: date) {
                  DailyLogDetailView(log: log)
@@ -29,6 +30,8 @@ struct HistoryCalendarView: View {
                      .padding()
              }
          }
+         
+         Spacer()
       }
       .navigationTitle("History")
    }
@@ -56,5 +59,11 @@ struct HistoryCalendarView: View {
       }
       
       return .clear
+   }
+}
+
+#Preview {
+   NavigationView {
+      HistoryCalendarView()
    }
 }

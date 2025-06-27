@@ -36,7 +36,6 @@ struct InitialMigration: Migration {
         try db.create(table: "trackedSymptom") { t in
             t.autoIncrementedPrimaryKey("id")
             t.column("name", .text).notNull()
-            t.column("order", .integer).notNull()
         }
     }
 }

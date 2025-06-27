@@ -9,32 +9,42 @@ import SwiftUI
 
 @main
 struct CloveApp: App {
-    @State private var appState = AppState()
-
-    var body: some Scene {
-        WindowGroup {
-            ZStack {
-                switch appState.phase {
-                case .loading:
-                    Text("Loading...")
-                case .onboarding:
-                    Text("Onboarding...")
-                case .main:
-                    MainTabView()
-                    .environment(appState)
-                }
+   @AppStorage(Constants.ONBOARDING_FLAG) var onboardingCompleted: Bool = false
+   @State private var appState = AppState()
+   
+   var body: some Scene {
+      WindowGroup {
+         ZStack {
+            CloveColors.background
+               .ignoresSafeArea()
+            
+            switch appState.phase {
+            case .loading:
+               Text("Loading...")
+            case .onboarding:
+               OnboardingView()
+                  .environment(appState)
+            case .main:
+               MainTabView()
+                  .environment(appState)
             }
-            .foregroundStyle(CloveColors.primaryText)
-            .background(CloveColors.background)
-            .toastable()
-        }
-    }
-
-    init() {
-        do {
-            try DatabaseManager.shared.setupDatabase()
-        } catch {
-            print("Database setup failed: \(error)")
-        }
-    }
+         }
+         .foregroundStyle(CloveColors.primaryText)
+         .toastable()
+      }
+   }
+   
+   init() {
+      do {
+         try DatabaseManager.shared.setupDatabase()
+      } catch {
+         print("Database setup failed: \(error)")
+      }
+      
+      if !onboardingCompleted {
+         appState.phase = .onboarding
+      } else {
+         appState.phase = .main
+      }
+   }
 }
