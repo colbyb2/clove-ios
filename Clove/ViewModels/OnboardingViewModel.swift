@@ -15,11 +15,9 @@ class OnboardingViewModel {
          if baseSettings.trackSymptoms {
             step = .symptomSelection
          } else {
-            step = .locationPermission
+            step = .complete
          }
       case .symptomSelection:
-         step = .locationPermission
-      case .locationPermission:
          step = .complete
       case .complete:
          return
@@ -58,6 +56,5 @@ enum OnboardingStep {
    case welcome
    case moduleSelection
    case symptomSelection
-   case locationPermission
    case complete
 }

@@ -100,57 +100,29 @@ class TodayViewModel {
    }
    
    func saveLog() {
-      Task {
-         await MainActor.run { isSaving = true }
-         
-         // Get weather data if saving for today
-         let weatherData = await getWeatherDataIfToday()
-         
-         let log = DailyLog(
-            date: selectedDate,
-            mood: settings.trackMood ? Int(logData.mood) : nil,
-            painLevel: settings.trackPain ? Int(logData.painLevel) : nil,
-            energyLevel: settings.trackEnergy ? Int(logData.energyLevel) : nil,
-            meals: [],
-            activities: [],
-            medicationsTaken: [],
-            notes: nil,
-            isFlareDay: logData.isFlareDay,
-            weather: weatherData,
-            symptomRatings: logData.symptomRatings.map { $0.toModel() }
-         )
-         
-         await MainActor.run {
-            let result = LogsRepo.shared.saveLog(log)
-            isSaving = false
-            
-            if result {
-               var message = "Log saved successfully"
-               if weatherData != nil {
-                  message += " with weather data"
-               }
-               ToastManager.shared.showToast(message: message, color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
-            } else {
-               ToastManager.shared.showToast(message: "Hmm, something went wrong.", color: CloveColors.error)
-            }
-         }
-      }
-   }
-   
-   private func getWeatherDataIfToday() async -> String? {
-      // Only fetch weather for today's date, not for past dates
-      let calendar = Calendar.current
-      guard calendar.isDateInToday(selectedDate) else {
-         return nil
+      let log = DailyLog(
+         date: selectedDate,
+         mood: settings.trackMood ? Int(logData.mood) : nil,
+         painLevel: settings.trackPain ? Int(logData.painLevel) : nil,
+         energyLevel: settings.trackEnergy ? Int(logData.energyLevel) : nil,
+         meals: [],
+         activities: [],
+         medicationsTaken: [],
+         notes: nil,
+         isFlareDay: logData.isFlareDay,
+         symptomRatings: logData.symptomRatings.map { $0.toModel() }
+      )
+      
+      let result = LogsRepo.shared.saveLog(log)
+      isSaving = false
+      
+      if result {
+         var message = "Log saved successfully"
+         ToastManager.shared.showToast(message: message, color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
+      } else {
+         ToastManager.shared.showToast(message: "Hmm, something went wrong.", color: CloveColors.error)
       }
       
-      // Check if weather tracking is enabled
-      guard settings.trackWeather else {
-         return nil
-      }
-      
-      // Fetch current weather
-      return await WeatherManager.shared.getCurrentWeatherString()
    }
    
    // MARK: - Symptom Management
