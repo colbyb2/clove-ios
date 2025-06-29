@@ -30,7 +30,7 @@ struct MainTabView: View {
             .tag(2)
 
             NavigationStack {
-               CustomizeTrackerView()
+               SettingsView()
             }
             .tabItem {
                 Label("Settings", systemImage: "gear")

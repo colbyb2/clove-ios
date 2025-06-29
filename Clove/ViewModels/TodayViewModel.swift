@@ -5,11 +5,11 @@ import GRDB
 @Observable
 class TodayViewModel {
    var settings: UserSettings = .default
-   var mood: Double = 5
-   var painLevel: Double = 5
-   var energyLevel: Double = 5
-   var isFlareDay: Bool = false
-   var symptomRatings: [SymptomRatingVM] = []
+   
+   var selectedDate: Date = Date()
+   var logData: LogData = LogData()
+   
+   var yesterdayLog: DailyLog? = nil
    
    private var mocked: Bool = false
    
@@ -30,7 +30,7 @@ class TodayViewModel {
    
    var currentMoodEmoji: Character {
       for (range, emoji) in moodEmojiMap {
-         if range.contains(mood) {
+         if range.contains(logData.mood) {
             return emoji
          }
       }
@@ -41,6 +41,21 @@ class TodayViewModel {
       guard !mocked else { return }
       loadSettings()
       loadTrackedSymptoms()
+      loadLogData(for: Date())
+      loadYesterdayLog()
+   }
+   
+   func loadLogData(for date: Date) {
+      self.selectedDate = date
+      if let data = LogsRepo.shared.getLogForDate(date) {
+         self.logData = LogData(from: data)
+      } else {
+         // No existing data for this date, create new LogData with default values
+         self.logData = LogData()
+      }
+      
+      // Ensure symptom ratings match current tracked symptoms
+      syncSymptomRatingsWithTrackedSymptoms()
    }
    
    func loadSettings() {
@@ -49,23 +64,52 @@ class TodayViewModel {
    
    func loadTrackedSymptoms() {
       let trackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
-      self.symptomRatings = trackedSymptoms.map {
+      self.logData.symptomRatings = trackedSymptoms.map {
          return SymptomRatingVM(symptomId: $0.id ?? 0, symptomName: $0.name, ratingDouble: 5)
       }
+   }
+   
+   private func syncSymptomRatingsWithTrackedSymptoms() {
+      let currentTrackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
+      var updatedRatings: [SymptomRatingVM] = []
+      
+      // For each currently tracked symptom, find existing rating or create default
+      for symptom in currentTrackedSymptoms {
+         if let existingRating = logData.symptomRatings.first(where: { $0.symptomId == symptom.id }) {
+            // Keep existing rating but update name in case it changed
+            var updatedRating = existingRating
+            updatedRating.symptomName = symptom.name
+            updatedRatings.append(updatedRating)
+         } else {
+            // Create new rating with default value
+            updatedRatings.append(SymptomRatingVM(
+               symptomId: symptom.id ?? 0,
+               symptomName: symptom.name,
+               ratingDouble: 5
+            ))
+         }
+      }
+      
+      self.logData.symptomRatings = updatedRatings
+   }
+   
+   func loadYesterdayLog() {
+      let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+      self.yesterdayLog = LogsRepo.shared.getLogForDate(yesterday)
    }
    
    func saveLog() {
       let log = DailyLog(
          date: Date(),
-         mood: settings.trackMood ? Int(mood) : nil,
-         painLevel: settings.trackPain ? Int(painLevel) : nil,
-         energyLevel: settings.trackEnergy ? Int(energyLevel) : nil,
+         mood: settings.trackMood ? Int(logData.mood) : nil,
+         painLevel: settings.trackPain ? Int(logData.painLevel) : nil,
+         energyLevel: settings.trackEnergy ? Int(logData.energyLevel) : nil,
          meals: [],
          activities: [],
          medicationsTaken: [],
          notes: nil,
-         isFlareDay: isFlareDay,
-         symptomRatings: symptomRatings.map { $0.toModel() }
+         isFlareDay: logData.isFlareDay,
+         symptomRatings: logData.symptomRatings.map { $0.toModel() }
       )
       
       let result = LogsRepo.shared.saveLog(log)

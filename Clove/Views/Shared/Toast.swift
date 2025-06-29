@@ -84,6 +84,18 @@ class ToastManager {
         self.duration = duration
         self.offset = 0
         
+        // Haptic feedback based on toast type
+        if color == CloveColors.success {
+            let notificationFeedback = UINotificationFeedbackGenerator()
+            notificationFeedback.notificationOccurred(.success)
+        } else if color == CloveColors.error {
+            let notificationFeedback = UINotificationFeedbackGenerator()
+            notificationFeedback.notificationOccurred(.error)
+        } else {
+            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+            impactFeedback.impactOccurred()
+        }
+        
         // Show the toast with animation
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
             self.isVisible = true

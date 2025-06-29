@@ -21,3 +21,6 @@ Package.resolved
 clove.sqlite
 clove.sqlite-shm
 clove.sqlite-wal
+
+Notes.md
+CLAUDE.md

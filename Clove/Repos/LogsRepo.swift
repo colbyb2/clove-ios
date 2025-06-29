@@ -42,4 +42,19 @@ class LogsRepo {
          return []
       }
    }
+   
+   func getLogForDate(_ date: Date) -> DailyLog? {
+      do {
+         return try dbManager.read { db in
+            let calendar = Calendar.current
+            let startOfDay = calendar.startOfDay(for: date)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+            
+            return try DailyLog.filter(Column("date") >= startOfDay && Column("date") < endOfDay).fetchOne(db)
+         }
+      } catch {
+         print("Error getting log for date: \(error)")
+         return nil
+      }
+   }
 }

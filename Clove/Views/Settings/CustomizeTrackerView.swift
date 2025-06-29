@@ -1,19 +1,20 @@
 import SwiftUI
 
 struct CustomizeTrackerView: View {
-    @State private var viewModel = UserSettingsViewModel()
+   @Environment(UserSettingsViewModel.self) var viewModel
 
     var body: some View {
         Form {
+            @Bindable var vm = viewModel
             Section(header: Text("What do you want to track?")) {
-                Toggle("Mood", isOn: $viewModel.settings.trackMood)
-                Toggle("Pain", isOn: $viewModel.settings.trackPain)
-                Toggle("Energy", isOn: $viewModel.settings.trackEnergy)
-                Toggle("Symptoms", isOn: $viewModel.settings.trackSymptoms)
-                Toggle("Meals", isOn: $viewModel.settings.trackMeals)
-                Toggle("Activities", isOn: $viewModel.settings.trackActivities)
-                Toggle("Medications", isOn: $viewModel.settings.trackMeds)
-                Toggle("Flare Toggle", isOn: $viewModel.settings.showFlareToggle)
+                Toggle("Mood", isOn: $vm.settings.trackMood)
+                Toggle("Pain", isOn: $vm.settings.trackPain)
+                Toggle("Energy", isOn: $vm.settings.trackEnergy)
+                Toggle("Symptoms", isOn: $vm.settings.trackSymptoms)
+                Toggle("Meals", isOn: $vm.settings.trackMeals)
+                Toggle("Activities", isOn: $vm.settings.trackActivities)
+                Toggle("Medications", isOn: $vm.settings.trackMeds)
+                Toggle("Flare Toggle", isOn: $vm.settings.showFlareToggle)
             }
 
             Section {
@@ -23,8 +24,5 @@ struct CustomizeTrackerView: View {
             }
         }
         .navigationTitle("Customize Tracker")
-        .onAppear {
-            viewModel.load()
-        }
     }
 }
