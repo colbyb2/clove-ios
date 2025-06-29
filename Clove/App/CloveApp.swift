@@ -6,11 +6,14 @@
 //
 
 import SwiftUI
+import CoreLocation
 
 @main
 struct CloveApp: App {
    @AppStorage(Constants.ONBOARDING_FLAG) var onboardingCompleted: Bool = false
+   @AppStorage("locationPermissionRequested") var locationPermissionRequested: Bool = false
    @State private var appState = AppState()
+   @State private var showLocationPrompt = false
    
    var body: some Scene {
       WindowGroup {
@@ -31,6 +34,12 @@ struct CloveApp: App {
          }
          .foregroundStyle(CloveColors.primaryText)
          .toastable()
+         .sheet(isPresented: $showLocationPrompt) {
+            PostOnboardingLocationView()
+         }
+         .onAppear {
+            checkLocationPermissionNeeded()
+         }
       }
    }
    
@@ -45,6 +54,29 @@ struct CloveApp: App {
          appState.phase = .onboarding
       } else {
          appState.phase = .main
+      }
+   }
+   
+   private func checkLocationPermissionNeeded() {
+      // Only show location prompt if:
+      // 1. Onboarding is completed
+      // 2. We haven't asked for location permission before
+      // 3. User has weather tracking enabled
+      // 4. Location permission is still not determined or denied
+      guard onboardingCompleted,
+            !locationPermissionRequested,
+            appState.phase == .main else { return }
+      
+      // Check if user has weather tracking enabled
+      if let settings = UserSettingsRepo.shared.getSettings(),
+         settings.trackWeather,
+         LocationManager.shouldRequestLocationPermission() {
+         
+         // Delay showing the prompt to avoid overwhelming user at launch
+         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            showLocationPrompt = true
+            locationPermissionRequested = true
+         }
       }
    }
 }

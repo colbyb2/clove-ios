@@ -12,6 +12,7 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
     var medicationsTaken: [String]
     var notes: String?
     var isFlareDay: Bool
+    var weather: String? // Weather description like "Sunny 72°F" or "Cloudy 45°F"
 
     // Store foreign key separately for linking
     var symptomRatingsJSON: String // JSON-encoded [SymptomRating]
@@ -27,6 +28,7 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
         medicationsTaken: [String] = [],
         notes: String? = nil,
         isFlareDay: Bool = false,
+        weather: String? = nil,
         symptomRatings: [SymptomRating] = []
     ) {
         self.id = id
@@ -39,6 +41,7 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
         self.medicationsTaken = medicationsTaken
         self.notes = notes
         self.isFlareDay = isFlareDay
+        self.weather = weather
         self.symptomRatingsJSON = try! JSONEncoder().encode(symptomRatings).toJSONString()
     }
 

@@ -13,6 +13,8 @@ struct OnboardingView: View {
                FeatureSelectionView()
            case .symptomSelection:
                SymptomSelectionView()
+           case .locationPermission:
+               LocationPermissionView()
            case .complete:
                CompleteView()
            }

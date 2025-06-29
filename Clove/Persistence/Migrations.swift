@@ -7,7 +7,9 @@ enum Migrations {
     static let all: [Migration] = [
         InitialMigration(),
         UserSettingsMigration(),
-        SymptomIdMigration()
+        SymptomIdMigration(),
+        WeatherFieldMigration(),
+        WeatherSettingMigration()
     ]
 }
 
@@ -118,6 +120,32 @@ struct SymptomIdMigration: Migration {
                 try db.execute(sql: "UPDATE dailyLog SET symptomRatingsJSON = ? WHERE id = ?", 
                              arguments: [newJsonString, log.id])
             }
+        }
+    }
+}
+
+/// Migration to add weather field to DailyLog table
+struct WeatherFieldMigration: Migration {
+    var identifier: String {
+        return "weatherField_122924"
+    }
+    
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "dailyLog") { t in
+            t.add(column: "weather", .text)
+        }
+    }
+}
+
+/// Migration to add weather tracking setting to UserSettings table
+struct WeatherSettingMigration: Migration {
+    var identifier: String {
+        return "weatherSetting_122924"
+    }
+    
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "userSettings") { t in
+            t.add(column: "trackWeather", .boolean).notNull().defaults(to: true)
         }
     }
 }

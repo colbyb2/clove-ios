@@ -7,6 +7,7 @@ class LogData {
    var painLevel: Double = 5
    var energyLevel: Double = 5
    var isFlareDay: Bool = false
+   var weather: String? = nil
    var symptomRatings: [SymptomRatingVM] = []
    
    init() {}
@@ -22,6 +23,7 @@ class LogData {
          self.energyLevel = Double(logEnergy)
       }
       self.isFlareDay = log.isFlareDay
+      self.weather = log.weather
       self.symptomRatings = log.symptomRatings.map({ s in
          return SymptomRatingVM(symptomId: s.symptomId, symptomName: s.symptomName, ratingDouble: Double(s.rating))
       })

@@ -15,7 +15,7 @@ struct TodayView: View {
             }
             
             // Yesterday's Summary (only show if data exists or it's helpful for context)
-            if (viewModel.yesterdayLog != nil) {
+            if (viewModel.yesterdayLog != nil && Calendar.current.isDateInToday(viewModel.selectedDate)) {
                YesterdaySummary(
                   yesterdayLog: viewModel.yesterdayLog,
                   settings: viewModel.settings
@@ -126,10 +126,16 @@ struct TodayView: View {
             // Success haptic feedback (will be triggered by toast in ViewModel)
          }) {
             HStack(spacing: CloveSpacing.small) {
-               Image(systemName: "checkmark.circle.fill")
-                  .font(.system(size: 18, weight: .semibold))
+               if viewModel.isSaving {
+                  ProgressView()
+                     .scaleEffect(0.9)
+                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
+               } else {
+                  Image(systemName: "checkmark.circle.fill")
+                     .font(.system(size: 18, weight: .semibold))
+               }
                
-               Text("Save Today's Log")
+               Text(viewModel.isSaving ? "Saving..." : "Save Today's Log")
                   .font(.system(size: 18, weight: .semibold))
             }
             .foregroundColor(.white)
@@ -137,12 +143,13 @@ struct TodayView: View {
             .frame(height: 56) // Large touch target
             .background(
                RoundedRectangle(cornerRadius: CloveCorners.medium)
-                  .fill(CloveColors.accent)
+                  .fill(viewModel.isSaving ? CloveColors.secondaryText : CloveColors.accent)
                   .shadow(color: CloveColors.accent.opacity(0.3), radius: 4, x: 0, y: 2)
             )
          }
-         .accessibilityLabel("Save today's health log")
-         .accessibilityHint("Saves all current ratings and settings")
+         .disabled(viewModel.isSaving)
+         .accessibilityLabel(viewModel.isSaving ? "Saving health log" : "Save today's health log")
+         .accessibilityHint(viewModel.isSaving ? "Currently saving with weather data" : "Saves all current ratings and settings")
          
 //            Button("DEV - Add Logs") {
 //               DEVCreateLogs.execute()
@@ -165,6 +172,6 @@ struct TodayView: View {
 
 #Preview {
    NavigationStack {
-      TodayView(viewModel: TodayViewModel(settings: UserSettings(trackMood: true, trackPain: true, trackEnergy: true, trackSymptoms: true, trackMeals: false, trackActivities: false, trackMeds: false, showFlareToggle: true)))
+      TodayView(viewModel: TodayViewModel(settings: UserSettings(trackMood: true, trackPain: true, trackEnergy: true, trackSymptoms: true, trackMeals: false, trackActivities: false, trackMeds: false, showFlareToggle: true, trackWeather: false)))
    }
 }

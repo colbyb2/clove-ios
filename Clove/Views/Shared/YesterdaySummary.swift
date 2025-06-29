@@ -301,7 +301,8 @@ struct MetricCard: View {
                 trackMeals: false,
                 trackActivities: false,
                 trackMeds: false,
-                showFlareToggle: true
+                showFlareToggle: true,
+                trackWeather: false
             )
         )
         
