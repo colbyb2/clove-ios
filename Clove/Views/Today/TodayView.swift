@@ -127,6 +127,28 @@ struct TodayView: View {
             .padding(.vertical, CloveSpacing.small)
          }
          
+         if viewModel.settings.trackMeals {
+            TagInputView(
+               title: "Meals",
+               placeholder: "Add a meal...",
+               type: .meals,
+               color: .green,
+               items: $viewModel.logData.meals
+            )
+            .padding(.vertical, CloveSpacing.small)
+         }
+         
+         if viewModel.settings.trackActivities {
+            TagInputView(
+               title: "Activities",
+               placeholder: "Add an activity...",
+               type: .activities,
+               color: .blue,
+               items: $viewModel.logData.activities
+            )
+            .padding(.vertical, CloveSpacing.small)
+         }
+         
          if viewModel.settings.showFlareToggle {
             VStack(spacing: CloveSpacing.small) {
                HStack {
