@@ -25,6 +25,7 @@ struct FeatureSelectionView: View {
                featureButton(name: "Meals", icon: "fork.knife", color: Color(hex: "72aae5"), selected: $vm.baseSettings.trackMeals)
                featureButton(name: "Activities", icon: "figure.run", color: Color(hex: "e5b772"), selected: $vm.baseSettings.trackActivities)
                featureButton(name: "Medications", icon: "pills.fill", color: Color(hex: "6eb59e"), selected: $vm.baseSettings.trackMeds)
+               featureButton(name: "Weather", icon: "cloud.sun.fill", color: Color(hex: "8ec5ff"), selected: $vm.baseSettings.trackWeather)
                featureButton(name: "Flare Ups", icon: "flame.fill", color: Color(hex: "ed5c40"), selected: $vm.baseSettings.showFlareToggle)
             }
             .padding(.vertical)

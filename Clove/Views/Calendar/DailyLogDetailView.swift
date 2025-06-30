@@ -12,6 +12,11 @@ struct DailyLogDetailView: View {
                     // Header section
                     headerSection
                     
+                    // Weather section
+                    if let weather = log.weather {
+                        weatherSection(weather: weather)
+                    }
+                    
                     // Mental & Physical Health section
                     if hasPhysicalMentalData {
                         physicalMentalSection
@@ -231,6 +236,42 @@ struct DailyLogDetailView: View {
         )
     }
     
+    // MARK: - Weather Section
+    private func weatherSection(weather: String) -> some View {
+        VStack(spacing: CloveSpacing.medium) {
+            SectionHeaderView(title: "Weather", emoji: "🌤️")
+            
+            HStack(spacing: CloveSpacing.medium) {
+                // Weather emoji display
+                Text(weatherEmoji(for: weather))
+                    .font(.system(size: 48))
+                    .scaleEffect(1.0)
+                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(weather)
+                        .font(.system(.title2, design: .rounded).weight(.semibold))
+                        .foregroundStyle(CloveColors.primaryText)
+                    
+                    Text("Weather conditions")
+                        .font(CloveFonts.small())
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+                
+                Spacer()
+            }
+            .padding(CloveSpacing.medium)
+            .background(
+                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                    .fill(weatherBackgroundColor(for: weather))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CloveCorners.medium)
+                            .stroke(weatherBorderColor(for: weather), lineWidth: 1)
+                    )
+            )
+        }
+    }
+    
     // MARK: - Helper Properties
     private var hasPhysicalMentalData: Bool {
         log.mood != nil || log.painLevel != nil || log.energyLevel != nil
@@ -243,7 +284,7 @@ struct DailyLogDetailView: View {
     private var hasAnyData: Bool {
         hasPhysicalMentalData || !log.symptomRatings.isEmpty || hasLifestyleData || 
         (log.notes != nil && !log.notes!.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ||
-        log.isFlareDay
+        log.isFlareDay || log.weather != nil
     }
     
     // MARK: - Helper Functions
@@ -284,6 +325,42 @@ struct DailyLogDetailView: View {
     private func symptomColor(for rating: Int) -> Color {
         painColor(for: rating) // Use same color scale as pain
     }
+    
+    private func weatherEmoji(for weather: String) -> String {
+        switch weather {
+        case "Sunny": return "☀️"
+        case "Cloudy": return "☁️"
+        case "Rainy": return "🌧️"
+        case "Stormy": return "⛈️"
+        case "Snow": return "❄️"
+        case "Gloomy": return "🌫️"
+        default: return "🌤️"
+        }
+    }
+    
+    private func weatherBackgroundColor(for weather: String) -> Color {
+        switch weather {
+        case "Sunny": return Color.yellow.opacity(0.1)
+        case "Cloudy": return Color.gray.opacity(0.1)
+        case "Rainy": return Color.blue.opacity(0.1)
+        case "Stormy": return Color.purple.opacity(0.1)
+        case "Snow": return Color.cyan.opacity(0.1)
+        case "Gloomy": return Color.gray.opacity(0.15)
+        default: return Color.blue.opacity(0.05)
+        }
+    }
+    
+    private func weatherBorderColor(for weather: String) -> Color {
+        switch weather {
+        case "Sunny": return Color.yellow.opacity(0.3)
+        case "Cloudy": return Color.gray.opacity(0.3)
+        case "Rainy": return Color.blue.opacity(0.3)
+        case "Stormy": return Color.purple.opacity(0.3)
+        case "Snow": return Color.cyan.opacity(0.3)
+        case "Gloomy": return Color.gray.opacity(0.4)
+        default: return Color.blue.opacity(0.2)
+        }
+    }
 }
 
 #Preview {
@@ -298,6 +375,7 @@ struct DailyLogDetailView: View {
             medicationsTaken: ["Ibuprofen", "Vitamin D"],
             notes: "Had a good day overall. Felt energetic in the morning but pain increased in the afternoon. The weather was nice so I was able to go for a walk.",
             isFlareDay: false,
+            weather: "Sunny",
             symptomRatings: [
                 SymptomRating(symptomId: 1, symptomName: "Headache", rating: 3),
                 SymptomRating(symptomId: 2, symptomName: "Fatigue", rating: 6)

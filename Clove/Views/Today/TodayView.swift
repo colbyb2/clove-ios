@@ -4,6 +4,7 @@ struct TodayView: View {
    @State var viewModel = TodayViewModel()
    
    @State private var showEditSymptoms: Bool = false
+   @State private var showWeatherSelection: Bool = false
    
    var body: some View {
       ScrollView {
@@ -82,6 +83,48 @@ struct TodayView: View {
                   Spacer()
                }
             }
+         }
+         
+         if viewModel.settings.trackWeather {
+            VStack(spacing: CloveSpacing.small) {
+               HStack {
+                  HStack(spacing: CloveSpacing.small) {
+                     Text(weatherEmoji(for: viewModel.logData.weather))
+                        .font(.system(size: 20))
+                     Text("Weather")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                  }
+                  
+                  Spacer()
+                  
+                  Button(action: {
+                     showWeatherSelection = true
+                     // Haptic feedback
+                     let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                     impactFeedback.impactOccurred()
+                  }) {
+                     HStack {
+                        Text(viewModel.logData.weather ?? "Tap to select")
+                           .foregroundStyle(viewModel.logData.weather != nil ? CloveColors.primary : CloveColors.secondaryText)
+                           .font(.system(.body, design: .rounded).weight(.medium))
+                        
+                        if viewModel.logData.weather == nil {
+                           Image(systemName: "plus.circle.fill")
+                              .foregroundStyle(CloveColors.accent)
+                              .font(.system(size: 16))
+                        }
+                     }
+                     .padding(.horizontal, 12)
+                     .padding(.vertical, 8)
+                     .background(CloveColors.card)
+                     .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
+                     .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+                  }
+                  .accessibilityLabel("Weather selection")
+                  .accessibilityHint("Opens weather selection dialog")
+               }
+            }
+            .padding(.vertical, CloveSpacing.small)
          }
          
          if viewModel.settings.showFlareToggle {
@@ -166,6 +209,23 @@ struct TodayView: View {
             viewModel: viewModel,
             trackedSymptoms: SymptomsRepo.shared.getTrackedSymptoms()
          )
+      }
+      .sheet(isPresented: $showWeatherSelection) {
+         WeatherSelectionSheet(selectedWeather: $viewModel.logData.weather)
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+      }
+   }
+   
+   private func weatherEmoji(for weather: String?) -> String {
+      switch weather {
+      case "Sunny": return "☀️"
+      case "Cloudy": return "☁️"
+      case "Rainy": return "🌧️"
+      case "Stormy": return "⛈️"
+      case "Snow": return "❄️"
+      case "Gloomy": return "🌫️"
+      default: return "🌤️"
       }
    }
 }
