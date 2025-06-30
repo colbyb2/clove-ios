@@ -9,7 +9,8 @@ enum Migrations {
         UserSettingsMigration(),
         SymptomIdMigration(),
         WeatherFieldMigration(),
-        WeatherSettingMigration()
+        WeatherSettingMigration(),
+        MedicationTrackingMigration()
     ]
 }
 
@@ -146,6 +147,41 @@ struct WeatherSettingMigration: Migration {
     func migrate(_ db: Database) throws {
         try db.alter(table: "userSettings") { t in
             t.add(column: "trackWeather", .boolean).notNull().defaults(to: true)
+        }
+    }
+}
+
+/// Migration to add medication tracking tables
+struct MedicationTrackingMigration: Migration {
+    var identifier: String {
+        return "medicationTracking_123024"
+    }
+    
+    func migrate(_ db: Database) throws {
+        // Create TrackedMedication table
+        try db.create(table: "trackedMedication") { t in
+            t.autoIncrementedPrimaryKey("id")
+            t.column("name", .text).notNull()
+            t.column("dosage", .text).notNull()
+            t.column("instructions", .text).notNull()
+            t.column("isAsNeeded", .boolean).notNull().defaults(to: false)
+        }
+        
+        // Create MedicationHistoryEntry table
+        try db.create(table: "medicationHistoryEntry") { t in
+            t.autoIncrementedPrimaryKey("id")
+            t.column("medicationId", .integer).notNull()
+            t.column("medicationName", .text).notNull()
+            t.column("changeType", .text).notNull()
+            t.column("changeDate", .date).notNull()
+            t.column("oldValue", .text)
+            t.column("newValue", .text)
+            t.column("notes", .text)
+        }
+        
+        // Add medicationAdherenceJSON column to DailyLog table
+        try db.alter(table: "dailyLog") { t in
+            t.add(column: "medicationAdherenceJSON", .text).notNull().defaults(to: "[]")
         }
     }
 }

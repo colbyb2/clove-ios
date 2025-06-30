@@ -6,6 +6,7 @@ class SuggestionRepository {
     
     private let mealsKey = "meals_suggestions"
     private let activitiesKey = "activities_suggestions"
+    private let medicationsKey = "medications_suggestions"
     private let maxSuggestions = 50
     
     private init() {}
@@ -13,7 +14,12 @@ class SuggestionRepository {
     // MARK: - Public Methods
     
     func getSuggestions(for type: SuggestionType) -> [String] {
-        let key = type == .meals ? mealsKey : activitiesKey
+        let key: String
+        switch type {
+        case .meals: key = mealsKey
+        case .activities: key = activitiesKey
+        case .medications: key = medicationsKey
+        }
         let suggestions = UserDefaults.standard.stringArray(forKey: key) ?? getDefaultSuggestions(for: type)
         return Array(suggestions.prefix(maxSuggestions))
     }
@@ -33,7 +39,12 @@ class SuggestionRepository {
         // Keep only max suggestions
         suggestions = Array(suggestions.prefix(maxSuggestions))
         
-        let key = type == .meals ? mealsKey : activitiesKey
+        let key: String
+        switch type {
+        case .meals: key = mealsKey
+        case .activities: key = activitiesKey
+        case .medications: key = medicationsKey
+        }
         UserDefaults.standard.set(suggestions, forKey: key)
     }
     
@@ -80,6 +91,13 @@ class SuggestionRepository {
                 "Reading", "Work", "Cooking", "Shopping",
                 "Meditation", "Rest", "Cleaning", "Driving"
             ]
+        case .medications:
+            return [
+                "Ibuprofen", "Acetaminophen", "Aspirin", "Naproxen",
+                "Vitamin D", "Vitamin B12", "Omega-3", "Magnesium",
+                "Probiotic", "Multivitamin", "Iron", "Calcium",
+                "Melatonin", "Zinc", "Turmeric", "Fish Oil"
+            ]
         }
     }
 }
@@ -87,4 +105,5 @@ class SuggestionRepository {
 enum SuggestionType {
     case meals
     case activities
+    case medications
 }

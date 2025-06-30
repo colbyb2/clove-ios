@@ -35,6 +35,7 @@ enum CloveFonts {
 
 /// Spacing
 enum CloveSpacing {
+    static let xsmall: CGFloat = 6
     static let small: CGFloat = 8
     static let medium: CGFloat = 16
     static let large: CGFloat = 24

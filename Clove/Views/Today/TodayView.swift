@@ -5,6 +5,7 @@ struct TodayView: View {
    
    @State private var showEditSymptoms: Bool = false
    @State private var showWeatherSelection: Bool = false
+   @State private var showMedicationSelection: Bool = false
    
    var body: some View {
       ScrollView {
@@ -149,6 +150,48 @@ struct TodayView: View {
             .padding(.vertical, CloveSpacing.small)
          }
          
+         if viewModel.settings.trackMeds {
+            VStack(spacing: CloveSpacing.small) {
+               HStack {
+                  HStack(spacing: CloveSpacing.small) {
+                     Text("💊")
+                        .font(.system(size: 20))
+                     Text("Medications")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                  }
+                  
+                  Spacer()
+                  
+                  Button(action: {
+                     showMedicationSelection = true
+                     // Haptic feedback
+                     let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                     impactFeedback.impactOccurred()
+                  }) {
+                     HStack {
+                        Text(medicationSummaryText())
+                           .foregroundStyle(viewModel.logData.medicationAdherence.isEmpty ? CloveColors.secondaryText : CloveColors.primary)
+                           .font(.system(.body, design: .rounded).weight(.medium))
+                        
+                        if viewModel.logData.medicationAdherence.isEmpty {
+                           Image(systemName: "plus.circle.fill")
+                              .foregroundStyle(CloveColors.accent)
+                              .font(.system(size: 16))
+                        }
+                     }
+                     .padding(.horizontal, 12)
+                     .padding(.vertical, 8)
+                     .background(CloveColors.card)
+                     .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
+                     .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+                  }
+                  .accessibilityLabel("Medication tracking")
+                  .accessibilityHint("Opens medication checklist")
+               }
+            }
+            .padding(.vertical, CloveSpacing.small)
+         }
+         
          if viewModel.settings.showFlareToggle {
             VStack(spacing: CloveSpacing.small) {
                HStack {
@@ -237,6 +280,11 @@ struct TodayView: View {
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
       }
+      .sheet(isPresented: $showMedicationSelection) {
+         MedicationSelectionSheet(medicationAdherence: $viewModel.logData.medicationAdherence)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+      }
    }
    
    private func weatherEmoji(for weather: String?) -> String {
@@ -248,6 +296,24 @@ struct TodayView: View {
       case "Snow": return "❄️"
       case "Gloomy": return "🌫️"
       default: return "🌤️"
+      }
+   }
+   
+   private func medicationSummaryText() -> String {
+      let adherence = viewModel.logData.medicationAdherence
+      if adherence.isEmpty {
+         return "Tap to track"
+      }
+      
+      let takenCount = adherence.filter { $0.wasTaken }.count
+      let totalCount = adherence.count
+      
+      if takenCount == 0 {
+         return "None taken yet"
+      } else if takenCount == totalCount {
+         return "All taken (\(totalCount))"
+      } else {
+         return "\(takenCount) of \(totalCount) taken"
       }
    }
 }

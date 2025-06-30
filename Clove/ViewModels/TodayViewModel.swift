@@ -57,6 +57,9 @@ class TodayViewModel {
       
       // Ensure symptom ratings match current tracked symptoms
       syncSymptomRatingsWithTrackedSymptoms()
+      
+      // Ensure medication adherence matches current tracked medications
+      syncMedicationAdherenceWithTrackedMedications()
    }
    
    func loadSettings() {
@@ -94,6 +97,38 @@ class TodayViewModel {
       self.logData.symptomRatings = updatedRatings
    }
    
+   private func syncMedicationAdherenceWithTrackedMedications() {
+      let currentTrackedMedications = MedicationRepository.shared.getTrackedMedications()
+      var updatedAdherence: [MedicationAdherence] = []
+      
+      // For each currently tracked medication, find existing adherence or create default
+      for medication in currentTrackedMedications {
+         guard let medicationId = medication.id else { continue }
+         
+         if let existingAdherence = logData.medicationAdherence.first(where: { $0.medicationId == medicationId }) {
+            // Keep existing adherence but update name in case it changed
+            var updatedMedicationAdherence = existingAdherence
+            updatedMedicationAdherence.medicationName = medication.name
+            updatedMedicationAdherence.isAsNeeded = medication.isAsNeeded
+            updatedAdherence.append(updatedMedicationAdherence)
+         } else {
+            // Create new adherence with default value (not taken)
+            updatedAdherence.append(MedicationAdherence(
+               medicationId: medicationId,
+               medicationName: medication.name,
+               wasTaken: false,
+               isAsNeeded: medication.isAsNeeded
+            ))
+         }
+      }
+      
+      // Keep any one-time medications (medicationId == -1)
+      let oneTimeMedications = logData.medicationAdherence.filter { $0.medicationId == -1 }
+      updatedAdherence.append(contentsOf: oneTimeMedications)
+      
+      self.logData.medicationAdherence = updatedAdherence
+   }
+   
    func loadYesterdayLog() {
       let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
       self.yesterdayLog = LogsRepo.shared.getLogForDate(yesterday)
@@ -108,6 +143,7 @@ class TodayViewModel {
          meals: settings.trackMeals ? logData.meals : [],
          activities: settings.trackActivities ? logData.activities : [],
          medicationsTaken: [],
+         medicationAdherence: settings.trackMeds ? logData.medicationAdherence : [],
          notes: nil,
          isFlareDay: logData.isFlareDay,
          weather: settings.trackWeather ? logData.weather : nil,

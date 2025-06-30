@@ -10,6 +10,7 @@ class LogData {
    var weather: String? = nil
    var meals: [String] = []
    var activities: [String] = []
+   var medicationAdherence: [MedicationAdherence] = []
    var symptomRatings: [SymptomRatingVM] = []
    
    init() {}
@@ -28,6 +29,7 @@ class LogData {
       self.weather = log.weather
       self.meals = log.meals
       self.activities = log.activities
+      self.medicationAdherence = log.medicationAdherence
       self.symptomRatings = log.symptomRatings.map({ s in
          return SymptomRatingVM(symptomId: s.symptomId, symptomName: s.symptomName, ratingDouble: Double(s.rating))
       })

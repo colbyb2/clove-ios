@@ -18,6 +18,56 @@ Description: Instead of using WeatherKit or any API, the user will select the cu
 - Add a tracking option to the onboarding selection options. [X]
 - Add a weather selection to the TodayView that allows the user to select that days weather. [X]
 
+### Medication Tracking
+Description: Allow users to track their regular medications with a simple daily checklist approach. Track medication history (started/stopped/dosage changes) automatically for insights and correlation analysis.
+
+**Phase 1: Core Medication Tracking**
+- Create TrackedMedication data model with id, name, dosage, instructions, isAsNeeded fields [X]
+- Create MedicationHistoryEntry data model for tracking medication changes over time [X]
+- Add database migration for TrackedMedication and MedicationHistoryEntry tables [X]
+- Create MedicationRepository (@Observable singleton) for managing user's regular medications [X]
+- Update DailyLog to store medication adherence data (which meds were actually taken) [X]
+- Update LogData class to include medicationsTaken array matching DailyLog structure [X]
+
+**Phase 2: Medication Setup & Management**
+- Create MedicationSetupSheet for adding/editing regular medications [X]
+- Design medication entry form with name, dosage, instructions, and as-needed toggle [X]
+- Implement medication list management (add, edit, delete with confirmation) [X]
+- Add medication setup access from Settings view [X]
+- Create medication suggestion system for common medications [X]
+- Implement medication search/autocomplete functionality [X]
+
+**Phase 3: Daily Tracking Interface**
+- Create a selector similar to Weather for medication in TodayView [X]
+- When this is clicked, open a sheet like Weather where the user is displayed a list of their medications. [X]
+- Don't use toggles, use a "Checklist" of sort as the UI showing medication name and dosage [X]
+- Add medication section to TodayView (only show if trackMeds enabled) [X]
+- Implement taken/not-taken state with visual feedback and haptic response [X]
+- Add "Add one-time medication" option for occasional meds [X]
+- Update TodayViewModel to handle medication adherence saving [X]
+
+**Phase 4: Automatic History Tracking**
+- Implement automatic history entry creation when medications are added/removed [X]
+- Detect dosage changes and create history entries with before/after values [X]
+- Add change detection logic to compare medication lists over time [X]
+- Create medication timeline view for viewing history [X]
+- Implement medication change notifications/prompts for user context [X]
+
+**Phase 5: Integration & Polish**
+- Update onboarding to include medication tracking option [ ]
+- Add medication data to CSV export functionality [ ]
+- Update DailyLogDetailView to show medications taken that day [ ]
+- Ensure medication data persists correctly across app launches [ ]
+- Add medication adherence percentage calculations [ ]
+- Implement medication-related accessibility features [ ]
+
+**Phase 6: Insights & Analytics (Future)**
+- Add medication adherence tracking to InsightsView [ ]
+- Implement correlation analysis between medication changes and symptom patterns [ ]
+- Create medication timeline visualization [ ]
+- Add adherence scoring and missed dose pattern detection [ ]
+- Implement medication-symptom correlation insights [ ]
+
 ## Analysis
 
 ### Insights View

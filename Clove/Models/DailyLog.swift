@@ -10,6 +10,7 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
     var meals: [String]
     var activities: [String]
     var medicationsTaken: [String]
+    var medicationAdherenceJSON: String // JSON-encoded [MedicationAdherence]
     var notes: String?
     var isFlareDay: Bool
     var weather: String? // Weather description like "Sunny 72°F" or "Cloudy 45°F"
@@ -26,6 +27,7 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
         meals: [String] = [],
         activities: [String] = [],
         medicationsTaken: [String] = [],
+        medicationAdherence: [MedicationAdherence] = [],
         notes: String? = nil,
         isFlareDay: Bool = false,
         weather: String? = nil,
@@ -39,6 +41,7 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
         self.meals = meals
         self.activities = activities
         self.medicationsTaken = medicationsTaken
+        self.medicationAdherenceJSON = try! JSONEncoder().encode(medicationAdherence).toJSONString()
         self.notes = notes
         self.isFlareDay = isFlareDay
         self.weather = weather
@@ -47,5 +50,9 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
 
     var symptomRatings: [SymptomRating] {
         (try? JSONDecoder().decode([SymptomRating].self, from: symptomRatingsJSON.data(using: .utf8)!)) ?? []
+    }
+    
+    var medicationAdherence: [MedicationAdherence] {
+        (try? JSONDecoder().decode([MedicationAdherence].self, from: medicationAdherenceJSON.data(using: .utf8)!)) ?? []
     }
 }
