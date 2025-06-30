@@ -154,7 +154,7 @@ class TodayViewModel {
       isSaving = false
       
       if result {
-         var message = "Log saved successfully"
+         let message = "Log saved successfully"
          ToastManager.shared.showToast(message: message, color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
       } else {
          ToastManager.shared.showToast(message: "Hmm, something went wrong.", color: CloveColors.error)

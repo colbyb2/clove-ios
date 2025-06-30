@@ -205,4 +205,74 @@ class MedicationRepository {
             try historyEntry.save(db)
         }
     }
+    
+    // MARK: - Adherence Calculation Methods
+    
+    func calculateAdherencePercentage(for medicationId: Int64, days: Int = 30) -> Double {
+        let startDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+        let endDate = Date()
+        
+        do {
+            let logs = try dbManager.read { db in
+                try DailyLog.fetchAll(db, sql: "SELECT * FROM dailyLog WHERE date >= ? AND date <= ?", arguments: [startDate, endDate])
+            }
+            
+            var totalDays = 0
+            var takenDays = 0
+            
+            for log in logs {
+                let adherence = log.medicationAdherence
+                if let medicationAdherence = adherence.first(where: { $0.medicationId == medicationId }) {
+                    totalDays += 1
+                    if medicationAdherence.wasTaken {
+                        takenDays += 1
+                    }
+                }
+            }
+            
+            guard totalDays > 0 else { return 0.0 }
+            return Double(takenDays) / Double(totalDays) * 100.0
+            
+        } catch {
+            print("Error calculating adherence percentage: \(error)")
+            return 0.0
+        }
+    }
+    
+    func calculateOverallAdherencePercentage(days: Int = 30) -> Double {
+        let trackedMedications = getTrackedMedications()
+        guard !trackedMedications.isEmpty else { return 0.0 }
+        
+        let adherencePercentages = trackedMedications.compactMap { medication -> Double? in
+            guard let id = medication.id else { return nil }
+            return calculateAdherencePercentage(for: id, days: days)
+        }
+        
+        guard !adherencePercentages.isEmpty else { return 0.0 }
+        return adherencePercentages.reduce(0, +) / Double(adherencePercentages.count)
+    }
+    
+    func getAdherenceInsights(days: Int = 30) -> [String: Any] {
+        let trackedMedications = getTrackedMedications()
+        var insights: [String: Any] = [:]
+        
+        let overallPercentage = calculateOverallAdherencePercentage(days: days)
+        insights["overallPercentage"] = overallPercentage
+        
+        var medicationBreakdown: [[String: Any]] = []
+        for medication in trackedMedications {
+            guard let id = medication.id else { continue }
+            let percentage = calculateAdherencePercentage(for: id, days: days)
+            medicationBreakdown.append([
+                "name": medication.name,
+                "percentage": percentage,
+                "id": id
+            ])
+        }
+        
+        insights["medicationBreakdown"] = medicationBreakdown
+        insights["totalMedications"] = trackedMedications.count
+        
+        return insights
+    }
 }

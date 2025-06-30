@@ -250,7 +250,7 @@ struct DataCardView<Content: View>: View {
         
         RatingDisplayView(value: 7, label: "Pain Level", emoji: "🩹", color: .orange)
         
-        ProgressRatingView(value: 8, maxValue: 10, label: "Energy Level", color: .green)
+        ProgressRatingView(value: 8, maxValue: 10, label: "Energy Level", color: CloveColors.green)
         
         TagListView(items: ["Breakfast", "Lunch", "Snack"], color: CloveColors.accent)
         

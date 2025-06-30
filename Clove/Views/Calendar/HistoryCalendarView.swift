@@ -51,11 +51,11 @@ struct HistoryCalendarView: View {
       case .mood:
          if let mood = log.mood {
             switch mood {
-            case 9...10: return .green
-            case 7...8: return Color(hex: "90EE90") // Light green
-            case 5...6: return .yellow
-            case 3...4: return .orange
-            case 1...2: return .red
+            case 9...10: return CloveColors.green
+            case 7...8: return CloveColors.blue
+            case 5...6: return CloveColors.yellow
+            case 3...4: return CloveColors.orange
+            case 1...2: return CloveColors.red
             default: return .gray
             }
          }
@@ -63,11 +63,11 @@ struct HistoryCalendarView: View {
       case .pain:
          if let pain = log.painLevel {
             switch pain {
-            case 8...10: return .red
-            case 5...7: return .orange
-            case 3...4: return .yellow
-            case 1...2: return Color(hex: "90EE90") // Light green
-            case 0: return .green
+            case 8...10: return CloveColors.red
+            case 5...7: return CloveColors.orange
+            case 3...4: return CloveColors.yellow
+            case 1...2: return CloveColors.blue
+            case 0: return CloveColors.green
             default: return .gray
             }
          }
@@ -75,11 +75,11 @@ struct HistoryCalendarView: View {
       case .energy:
          if let energy = log.energyLevel {
             switch energy {
-            case 8...10: return .green
-            case 5...7: return Color(hex: "90EE90") // Light green
-            case 3...4: return .yellow
-            case 1...2: return .orange
-            case 0: return .red
+            case 8...10: return CloveColors.green
+            case 5...7: return CloveColors.blue
+            case 3...4: return CloveColors.yellow
+            case 1...2: return CloveColors.orange
+            case 0: return CloveColors.red
             default: return .gray
             }
          }
@@ -102,11 +102,11 @@ struct HistoryCalendarView: View {
       case .symptom(let id, _):
          if let rating = log.symptomRatings.first(where: { $0.symptomId == id }) {
             switch rating.rating {
-            case 8...10: return .red
-            case 5...7: return .orange
-            case 3...4: return .yellow
-            case 1...2: return Color(hex: "90EE90") // Light green
-            case 0: return .green
+            case 8...10: return CloveColors.red
+            case 5...7: return CloveColors.orange
+            case 3...4: return CloveColors.yellow
+            case 1...2: return CloveColors.blue
+            case 0: return CloveColors.green
             default: return .gray
             }
          }

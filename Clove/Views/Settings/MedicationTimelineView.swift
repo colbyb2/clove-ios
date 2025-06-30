@@ -57,7 +57,6 @@ struct MedicationTimelineView: View {
     }
     
     private func groupHistory() {
-        let calendar = Calendar.current
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         

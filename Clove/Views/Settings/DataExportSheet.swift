@@ -275,6 +275,9 @@ enum ExportCategory: String, CaseIterable {
     case energy = "Energy Level"
     case flareDay = "Flare Day"
     case weather = "Weather"
+    case medications = "Medications"
+    case meals = "Meals"
+    case activities = "Activities"
     case notes = "Notes"
     
     var icon: String {
@@ -285,6 +288,9 @@ enum ExportCategory: String, CaseIterable {
         case .energy: return "bolt"
         case .flareDay: return "flame"
         case .weather: return "cloud.sun"
+        case .medications: return "pills"
+        case .meals: return "fork.knife"
+        case .activities: return "figure.run"
         case .notes: return "note.text"
         }
     }
@@ -297,6 +303,9 @@ enum ExportCategory: String, CaseIterable {
         case .energy: return "Energy level scores"
         case .flareDay: return "Flare day indicators"
         case .weather: return "Weather conditions"
+        case .medications: return "Medication adherence"
+        case .meals: return "Daily meals logged"
+        case .activities: return "Daily activities logged"
         case .notes: return "Log notes"
         }
     }

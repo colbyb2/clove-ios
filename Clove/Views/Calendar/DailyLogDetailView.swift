@@ -159,7 +159,7 @@ struct DailyLogDetailView: View {
                         }
                         .padding(.horizontal, CloveSpacing.medium)
                         
-                        TagListView(items: log.meals, color: Color.green)
+                       TagListView(items: log.meals, color: CloveColors.green)
                     }
                 }
                 
@@ -175,11 +175,11 @@ struct DailyLogDetailView: View {
                         }
                         .padding(.horizontal, CloveSpacing.medium)
                         
-                        TagListView(items: log.activities, color: Color.blue)
+                       TagListView(items: log.activities, color: CloveColors.blue)
                     }
                 }
                 
-                if !log.medicationsTaken.isEmpty {
+                if !log.medicationAdherence.isEmpty {
                     VStack(alignment: .leading, spacing: CloveSpacing.small) {
                         HStack {
                             Text("💊")
@@ -191,7 +191,7 @@ struct DailyLogDetailView: View {
                         }
                         .padding(.horizontal, CloveSpacing.medium)
                         
-                        TagListView(items: log.medicationsTaken, color: Color.purple)
+                        MedicationAdherenceView(adherence: log.medicationAdherence)
                     }
                 }
             }
@@ -278,7 +278,7 @@ struct DailyLogDetailView: View {
     }
     
     private var hasLifestyleData: Bool {
-        !log.meals.isEmpty || !log.activities.isEmpty || !log.medicationsTaken.isEmpty
+        !log.meals.isEmpty || !log.activities.isEmpty || !log.medicationAdherence.isEmpty
     }
     
     private var hasAnyData: Bool {
@@ -294,31 +294,31 @@ struct DailyLogDetailView: View {
     
     private func moodColor(for mood: Int) -> Color {
         switch mood {
-        case 8...10: return .green
-        case 6...7: return Color(hex: "90EE90")
-        case 4...5: return .yellow
-        case 2...3: return .orange
-        default: return .red
+        case 8...10: return CloveColors.green
+        case 6...7: return CloveColors.blue
+        case 4...5: return CloveColors.yellow
+        case 2...3: return CloveColors.orange
+        default: return CloveColors.red
         }
     }
     
     private func painColor(for pain: Int) -> Color {
         switch pain {
-        case 8...10: return .red
-        case 5...7: return .orange
-        case 3...4: return .yellow
-        case 1...2: return Color(hex: "90EE90")
-        default: return .green
+        case 8...10: return CloveColors.red
+        case 5...7: return CloveColors.orange
+        case 3...4: return CloveColors.yellow
+        case 1...2: return CloveColors.blue
+        default: return CloveColors.green
         }
     }
     
     private func energyColor(for energy: Int) -> Color {
         switch energy {
-        case 8...10: return .green
-        case 5...7: return Color(hex: "90EE90")
-        case 3...4: return .yellow
-        case 1...2: return .orange
-        default: return .red
+        case 8...10: return CloveColors.green
+        case 5...7: return CloveColors.blue
+        case 3...4: return CloveColors.yellow
+        case 1...2: return CloveColors.orange
+        default: return CloveColors.red
         }
     }
     
@@ -359,6 +359,64 @@ struct DailyLogDetailView: View {
         case "Snow": return Color.cyan.opacity(0.3)
         case "Gloomy": return Color.gray.opacity(0.4)
         default: return Color.blue.opacity(0.2)
+        }
+    }
+}
+
+// MARK: - Medication Adherence View
+struct MedicationAdherenceView: View {
+    let adherence: [MedicationAdherence]
+    
+    var body: some View {
+        VStack(spacing: CloveSpacing.small) {
+            ForEach(adherence.indices, id: \.self) { index in
+                let medication = adherence[index]
+                
+                HStack(spacing: CloveSpacing.medium) {
+                    // Status indicator
+                    Image(systemName: medication.wasTaken ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 20))
+                        .foregroundStyle(medication.wasTaken ? CloveColors.success : CloveColors.secondaryText)
+                    
+                    // Medication info
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(medication.medicationName)
+                            .font(CloveFonts.body())
+                            .foregroundStyle(CloveColors.primaryText)
+                            .fontWeight(.medium)
+                        
+                        if medication.isAsNeeded || medication.medicationId == -1 {
+                            Text(medication.medicationId == -1 ? "One-time" : "As needed")
+                                .font(CloveFonts.small())
+                                .foregroundStyle(CloveColors.secondaryText)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(CloveColors.secondaryText.opacity(0.1))
+                                )
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Status text
+                    Text(medication.wasTaken ? "Taken" : "Not taken")
+                        .font(CloveFonts.small())
+                        .foregroundStyle(medication.wasTaken ? CloveColors.success : CloveColors.secondaryText)
+                        .fontWeight(.medium)
+                }
+                .padding(.horizontal, CloveSpacing.medium)
+                .padding(.vertical, CloveSpacing.small)
+                .background(
+                    RoundedRectangle(cornerRadius: CloveCorners.small)
+                        .fill(medication.wasTaken ? CloveColors.success.opacity(0.05) : CloveColors.card)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: CloveCorners.small)
+                                .stroke(medication.wasTaken ? CloveColors.success.opacity(0.2) : Color.clear, lineWidth: 1)
+                        )
+                )
+            }
         }
     }
 }

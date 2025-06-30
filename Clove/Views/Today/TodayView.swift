@@ -86,54 +86,12 @@ struct TodayView: View {
             }
          }
          
-         if viewModel.settings.trackWeather {
-            VStack(spacing: CloveSpacing.small) {
-               HStack {
-                  HStack(spacing: CloveSpacing.small) {
-                     Text(weatherEmoji(for: viewModel.logData.weather))
-                        .font(.system(size: 20))
-                     Text("Weather")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                  }
-                  
-                  Spacer()
-                  
-                  Button(action: {
-                     showWeatherSelection = true
-                     // Haptic feedback
-                     let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                     impactFeedback.impactOccurred()
-                  }) {
-                     HStack {
-                        Text(viewModel.logData.weather ?? "Tap to select")
-                           .foregroundStyle(viewModel.logData.weather != nil ? CloveColors.primary : CloveColors.secondaryText)
-                           .font(.system(.body, design: .rounded).weight(.medium))
-                        
-                        if viewModel.logData.weather == nil {
-                           Image(systemName: "plus.circle.fill")
-                              .foregroundStyle(CloveColors.accent)
-                              .font(.system(size: 16))
-                        }
-                     }
-                     .padding(.horizontal, 12)
-                     .padding(.vertical, 8)
-                     .background(CloveColors.card)
-                     .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
-                     .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
-                  }
-                  .accessibilityLabel("Weather selection")
-                  .accessibilityHint("Opens weather selection dialog")
-               }
-            }
-            .padding(.vertical, CloveSpacing.small)
-         }
-         
          if viewModel.settings.trackMeals {
             TagInputView(
                title: "Meals",
                placeholder: "Add a meal...",
                type: .meals,
-               color: .green,
+               color: CloveColors.green,
                items: $viewModel.logData.meals
             )
             .padding(.vertical, CloveSpacing.small)
@@ -144,7 +102,7 @@ struct TodayView: View {
                title: "Activities",
                placeholder: "Add an activity...",
                type: .activities,
-               color: .blue,
+               color: CloveColors.blue,
                items: $viewModel.logData.activities
             )
             .padding(.vertical, CloveSpacing.small)
@@ -192,6 +150,48 @@ struct TodayView: View {
             .padding(.vertical, CloveSpacing.small)
          }
          
+         if viewModel.settings.trackWeather {
+            VStack(spacing: CloveSpacing.small) {
+               HStack {
+                  HStack(spacing: CloveSpacing.small) {
+                     Text(weatherEmoji(for: viewModel.logData.weather))
+                        .font(.system(size: 20))
+                     Text("Weather")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                  }
+                  
+                  Spacer()
+                  
+                  Button(action: {
+                     showWeatherSelection = true
+                     // Haptic feedback
+                     let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                     impactFeedback.impactOccurred()
+                  }) {
+                     HStack {
+                        Text(viewModel.logData.weather ?? "Tap to select")
+                           .foregroundStyle(viewModel.logData.weather != nil ? CloveColors.primary : CloveColors.secondaryText)
+                           .font(.system(.body, design: .rounded).weight(.medium))
+                        
+                        if viewModel.logData.weather == nil {
+                           Image(systemName: "plus.circle.fill")
+                              .foregroundStyle(CloveColors.accent)
+                              .font(.system(size: 16))
+                        }
+                     }
+                     .padding(.horizontal, 12)
+                     .padding(.vertical, 8)
+                     .background(CloveColors.card)
+                     .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
+                     .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+                  }
+                  .accessibilityLabel("Weather selection")
+                  .accessibilityHint("Opens weather selection dialog")
+               }
+            }
+            .padding(.vertical, CloveSpacing.small)
+         }
+            
          if viewModel.settings.showFlareToggle {
             VStack(spacing: CloveSpacing.small) {
                HStack {
