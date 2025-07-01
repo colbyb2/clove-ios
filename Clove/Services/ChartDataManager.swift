@@ -184,7 +184,7 @@ class ChartDataManager {
         let logs = logsRepo.getLogs()
         var availableMetrics: [MetricType] = []
         
-        // Check which metrics have data
+        // Check which metrics have data (excluding bar chart metrics)
         if logs.contains(where: { $0.mood != nil }) {
             availableMetrics.append(.mood)
         }
@@ -194,18 +194,12 @@ class ChartDataManager {
         if logs.contains(where: { $0.energyLevel != nil }) {
             availableMetrics.append(.energyLevel)
         }
-        if logs.contains(where: { $0.isFlareDay }) {
-            availableMetrics.append(.flareDay)
-        }
         if logs.contains(where: { !$0.medicationAdherence.isEmpty }) {
             availableMetrics.append(.medicationAdherence)
         }
-        if logs.contains(where: { !$0.activities.isEmpty }) {
-            availableMetrics.append(.activityCount)
-        }
-        if logs.contains(where: { !$0.meals.isEmpty }) {
-            availableMetrics.append(.mealCount)
-        }
+        
+        // Bar chart metrics (flareDay, activityCount, mealCount) are excluded
+        // These will be used for correlation analysis in future phases
         
         return availableMetrics
     }

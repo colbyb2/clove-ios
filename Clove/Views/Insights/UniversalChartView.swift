@@ -37,15 +37,6 @@ struct ChartConfiguration {
                 showDataPoints: false,
                 enableInteraction: true
             )
-        case .flareDay:
-            return ChartConfiguration(
-                chartType: .bar,
-                primaryColor: CloveColors.orange,
-                showGradient: false,
-                lineWidth: 2.0,
-                showDataPoints: false,
-                enableInteraction: true
-            )
         case .medicationAdherence:
             return ChartConfiguration(
                 chartType: .area,
@@ -55,15 +46,9 @@ struct ChartConfiguration {
                 showDataPoints: true,
                 enableInteraction: true
             )
-        case .activityCount, .mealCount:
-            return ChartConfiguration(
-                chartType: .bar,
-                primaryColor: CloveColors.green,
-                showGradient: false,
-                lineWidth: 2.0,
-                showDataPoints: false,
-                enableInteraction: true
-            )
+        case .flareDay, .activityCount, .mealCount:
+            // These metrics are not available for charting
+            return ChartConfiguration.default
         }
     }
 }
@@ -184,7 +169,8 @@ struct UniversalChartView: View {
             case .area:
                 areaChart(dataPoint)
             case .bar:
-                barChart(dataPoint)
+                // Bar charts are no longer supported
+                lineChart(dataPoint)
             }
         }
         .chartYAxis {
@@ -269,23 +255,6 @@ struct UniversalChartView: View {
         .lineStyle(StrokeStyle(lineWidth: configuration.lineWidth))
     }
     
-    @ChartContentBuilder
-    private func barChart(_ dataPoint: ChartDataPoint) -> some ChartContent {
-        BarMark(
-            x: .value("Date", dataPoint.date),
-            y: .value(metricName, dataPoint.value)
-        )
-        .foregroundStyle(
-            configuration.showGradient ?
-            LinearGradient(
-                colors: [configuration.primaryColor, configuration.primaryColor.opacity(0.7)],
-                startPoint: .top,
-                endPoint: .bottom
-            ) :
-            LinearGradient(colors: [configuration.primaryColor], startPoint: .top, endPoint: .bottom)
-        )
-        .cornerRadius(CloveCorners.small)
-    }
     
     // MARK: - Chart Footer
     
@@ -386,6 +355,7 @@ struct UniversalChartView: View {
     }
     
     // MARK: - Helper Methods
+    
     
     private var xAxisValues: [Date] {
         guard !data.isEmpty else { return [] }
