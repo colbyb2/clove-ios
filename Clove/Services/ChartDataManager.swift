@@ -71,38 +71,6 @@ enum MetricCategory: String, CaseIterable, Identifiable {
     }
 }
 
-enum TimePeriod: String, CaseIterable, Identifiable {
-    case week = "7D"
-    case month = "30D"
-    case threeMonth = "3M"
-    case sixMonth = "6M"
-    case year = "1Y"
-    case allTime = "All"
-    
-    var id: String { rawValue }
-    
-    var displayName: String {
-        switch self {
-        case .week: return "7 Days"
-        case .month: return "30 Days"
-        case .threeMonth: return "3 Months"
-        case .sixMonth: return "6 Months"
-        case .year: return "1 Year"
-        case .allTime: return "All Time"
-        }
-    }
-    
-    var days: Int {
-        switch self {
-        case .week: return 7
-        case .month: return 30
-        case .threeMonth: return 90
-        case .sixMonth: return 180
-        case .year: return 365
-        case .allTime: return Int.max
-        }
-    }
-}
 
 struct ChartDataPoint: Identifiable, Hashable {
     let id = UUID()
@@ -332,12 +300,12 @@ class ChartDataManager {
             return logs.sorted { $0.date < $1.date }
         }
         
-        let calendar = Calendar.current
-        let endDate = Date()
-        let startDate = calendar.date(byAdding: .day, value: -period.days, to: endDate) ?? endDate
+        guard let dateRange = period.dateRange else {
+            return logs.sorted { $0.date < $1.date }
+        }
         
         return logs.filter { log in
-            log.date >= startDate && log.date <= endDate
+            dateRange.contains(log.date)
         }.sorted { $0.date < $1.date }
     }
     
@@ -413,14 +381,17 @@ class ChartDataManager {
     }
     
     private func aggregateDataForPeriod(_ data: [ChartDataPoint], period: TimePeriod) -> [ChartDataPoint] {
-        guard period == .threeMonth || period == .sixMonth || period == .year else {
-            return data // No aggregation needed for shorter periods
+        // Use the aggregation level from TimePeriodManager
+        let aggregationLevel = period.aggregationLevel
+        
+        guard aggregationLevel != .daily else {
+            return data // No aggregation needed for daily data
         }
         
         let calendar = Calendar.current
         var aggregatedData: [ChartDataPoint] = []
         
-        let groupingComponent: Calendar.Component = period == .year ? .month : .weekOfYear
+        let groupingComponent: Calendar.Component = aggregationLevel == .monthly ? .month : .weekOfYear
         
         let grouped = Dictionary(grouping: data) { dataPoint in
             calendar.component(groupingComponent, from: dataPoint.date)
