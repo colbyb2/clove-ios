@@ -245,7 +245,13 @@ private struct RecentMetricData: Codable {
 
 struct MetricSelectorView: View {
     @State private var viewModel = MetricSelectorViewModel()
+    let selectedMetric: SelectableMetric?
     let onMetricSelected: (SelectableMetric) -> Void
+    
+    init(selectedMetric: SelectableMetric? = nil, onMetricSelected: @escaping (SelectableMetric) -> Void) {
+        self.selectedMetric = selectedMetric
+        self.onMetricSelected = onMetricSelected
+    }
     
     @Environment(\.dismiss) private var dismiss
     

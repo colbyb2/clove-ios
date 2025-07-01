@@ -19,6 +19,9 @@ struct InsightsView: View {
                     // New metric exploration section
                     metricExplorationSection
                     
+                    // Smart Insights section
+                    smartInsightsSection
+                    
                     // Foundation preview section
                     foundationPreviewSection
                 }
@@ -286,6 +289,39 @@ struct InsightsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, CloveSpacing.xlarge)
+    }
+    
+    // MARK: - Smart Insights Section
+    
+    private var smartInsightsSection: some View {
+        VStack(alignment: .leading, spacing: CloveSpacing.large) {
+            HStack {
+                Text("Smart Insights")
+                    .font(.system(.title2, design: .rounded).weight(.bold))
+                    .foregroundStyle(CloveColors.primaryText)
+                
+                Spacer()
+                
+                NavigationLink(destination: SmartInsightsView()) {
+                    HStack(spacing: CloveSpacing.xsmall) {
+                        Text("View All")
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12))
+                    }
+                    .font(CloveFonts.small())
+                    .foregroundStyle(CloveColors.accent)
+                    .fontWeight(.semibold)
+                }
+            }
+            
+            SmartInsightsPreviewView()
+        }
+        .padding(CloveSpacing.large)
+        .background(
+            RoundedRectangle(cornerRadius: CloveCorners.medium)
+                .fill(CloveColors.card)
+                .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
+        )
     }
     
     // MARK: - Foundation Preview Section
