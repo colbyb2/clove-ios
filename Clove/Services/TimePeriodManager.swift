@@ -115,12 +115,20 @@ class TimePeriodManager {
     // MARK: - Published Properties
     
     /// Currently selected time period
+    private var _selectedPeriod: TimePeriod?
+    
     var selectedPeriod: TimePeriod {
         get {
+            if let cached = _selectedPeriod {
+                return cached
+            }
             let rawValue = UserDefaults.standard.string(forKey: Constants.TIMEPERIOD) ?? TimePeriod.month.rawValue
-            return TimePeriod(rawValue: rawValue) ?? .month
+            let period = TimePeriod(rawValue: rawValue) ?? .month
+            _selectedPeriod = period
+            return period
         }
         set {
+            _selectedPeriod = newValue
             UserDefaults.standard.set(newValue.rawValue, forKey: Constants.TIMEPERIOD)
             // Clear custom range when selecting a predefined period
             if isUsingCustomRange {

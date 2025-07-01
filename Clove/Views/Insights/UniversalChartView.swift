@@ -197,7 +197,7 @@ struct UniversalChartView: View {
             }
         }
         .chartXAxis {
-            AxisMarks(values: .stride(by: xAxisStride)) { value in
+            AxisMarks(values: xAxisValues) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                     .foregroundStyle(CloveColors.secondaryText.opacity(0.2))
                 AxisValueLabel(format: xAxisFormat)
@@ -387,21 +387,77 @@ struct UniversalChartView: View {
     
     // MARK: - Helper Methods
     
-    private var xAxisStride: Calendar.Component {
-        switch data.count {
-        case 0...7: return .day
-        case 8...30: return .day
-        case 31...90: return .weekOfYear
-        default: return .month
+    private var xAxisValues: [Date] {
+        guard !data.isEmpty else { return [] }
+        
+        let sortedData = data.sorted { $0.date < $1.date }
+        let firstDate = sortedData.first!.date
+        let lastDate = sortedData.last!.date
+        
+        let calendar = Calendar.current
+        let totalDays = calendar.dateComponents([.day], from: firstDate, to: lastDate).day ?? 0
+        
+        // Be very conservative with label count to prevent overlapping
+        let maxLabels: Int
+        switch totalDays {
+        case 0...7: maxLabels = min(4, data.count) // Max 4 labels for a week
+        case 8...30: maxLabels = 4 // Max 4 labels for a month
+        case 31...90: maxLabels = 3 // Max 3 labels for 3 months
+        default: maxLabels = 3 // Max 3 labels for longer periods
         }
+        
+        // For very few data points, just show first and last
+        if data.count <= 2 {
+            return [firstDate, lastDate].compactMap { $0 }
+        }
+        
+        // Generate strategic dates
+        var dates: [Date] = []
+        
+        if maxLabels >= 1 {
+            dates.append(firstDate)
+        }
+        
+        if maxLabels >= 3 && totalDays > 1 {
+            // Add middle date
+            if let middleDate = calendar.date(byAdding: .day, value: totalDays / 2, to: firstDate) {
+                dates.append(middleDate)
+            }
+        }
+        
+        if maxLabels >= 4 && totalDays > 2 {
+            // Add quarter and three-quarter dates
+            dates.removeAll() // Start fresh for 4-point layout
+            dates.append(firstDate)
+            
+            if let quarterDate = calendar.date(byAdding: .day, value: totalDays / 4, to: firstDate) {
+                dates.append(quarterDate)
+            }
+            
+            if let threeQuarterDate = calendar.date(byAdding: .day, value: (totalDays * 3) / 4, to: firstDate) {
+                dates.append(threeQuarterDate)
+            }
+            
+            dates.append(lastDate)
+        } else if maxLabels >= 2 && totalDays > 0 {
+            dates.append(lastDate)
+        }
+        
+        // Remove duplicates and sort
+        let uniqueDates = Array(Set(dates)).sorted()
+        
+        return uniqueDates
     }
     
     private var xAxisFormat: Date.FormatStyle {
-        switch data.count {
-        case 0...7: return .dateTime.day().month(.abbreviated)
-        case 8...30: return .dateTime.day().month(.abbreviated)
-        case 31...90: return .dateTime.month(.abbreviated).day()
-        default: return .dateTime.month(.abbreviated)
+        let calendar = Calendar.current
+        let totalDays = data.isEmpty ? 0 : calendar.dateComponents([.day], from: data.first!.date, to: data.last!.date).day ?? 0
+        
+        switch totalDays {
+        case 0...7: return .dateTime.month(.abbreviated).day() // "Jan 1"
+        case 8...30: return .dateTime.month(.abbreviated).day() // "Jan 1"  
+        case 31...90: return .dateTime.month(.abbreviated) // "Jan"
+        default: return .dateTime.month(.abbreviated) // "Jan"
         }
     }
     

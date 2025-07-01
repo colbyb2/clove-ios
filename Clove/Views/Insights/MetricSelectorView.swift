@@ -184,13 +184,13 @@ class MetricSelectorViewModel {
             
             switch type {
             case .mood, .painLevel, .energyLevel:
-                return String(format: "%.1f", value)
+                return String(Int(value.rounded()))
             case .medicationAdherence:
                 return String(format: "%.0f%%", value)
             case .flareDay:
                 return value == 1.0 ? "Yes" : "No"
             case .activityCount, .mealCount:
-                return String(format: "%.0f", value)
+                return String(Int(value))
             }
         }()
         
@@ -216,7 +216,7 @@ class MetricSelectorViewModel {
         
         let formattedLastValue: String? = {
             guard let value = lastValue else { return nil }
-            return String(format: "%.1f", value)
+            return String(Int(value.rounded()))
         }()
         
         return SelectableMetric(
@@ -262,6 +262,7 @@ struct MetricSelectorView: View {
                         // Recent metrics section
                         if !viewModel.recentMetrics.isEmpty {
                             recentMetricsSection
+                                .padding(.top, CloveSpacing.medium)
                         }
                         
                         // Categorized metrics section
