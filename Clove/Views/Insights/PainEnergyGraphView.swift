@@ -10,17 +10,17 @@ struct PainEnergyGraphView: View {
     }
     
     // Prepare data for pain and energy separately
-    private var painData: [ChartDataPoint] {
+    private var painData: [OldChartDataPoint] {
         sortedLogs.compactMap { log in
             guard let painLevel = log.painLevel else { return nil }
-            return ChartDataPoint(date: log.date, value: Double(painLevel), type: "Pain")
+            return OldChartDataPoint(date: log.date, value: Double(painLevel), type: "Pain")
         }
     }
     
-    private var energyData: [ChartDataPoint] {
+    private var energyData: [OldChartDataPoint] {
         sortedLogs.compactMap { log in
             guard let energyLevel = log.energyLevel else { return nil }
-            return ChartDataPoint(date: log.date, value: Double(energyLevel), type: "Energy")
+            return OldChartDataPoint(date: log.date, value: Double(energyLevel), type: "Energy")
         }
     }
 
@@ -85,7 +85,7 @@ struct PainEnergyGraphView: View {
 }
 
 // Data structure for chart points
-struct ChartDataPoint: Identifiable {
+struct OldChartDataPoint: Identifiable {
     let id = UUID()
     let date: Date
     let value: Double

@@ -1,0 +1,504 @@
+import SwiftUI
+import Charts
+
+// MARK: - Chart Configuration
+
+enum ChartType {
+    case line
+    case area
+    case bar
+}
+
+struct ChartConfiguration {
+    let chartType: ChartType
+    let primaryColor: Color
+    let showGradient: Bool
+    let lineWidth: CGFloat
+    let showDataPoints: Bool
+    let enableInteraction: Bool
+    
+    static let `default` = ChartConfiguration(
+        chartType: .line,
+        primaryColor: CloveColors.accent,
+        showGradient: true,
+        lineWidth: 3.0,
+        showDataPoints: false,
+        enableInteraction: true
+    )
+    
+    static func forMetricType(_ metricType: MetricType) -> ChartConfiguration {
+        switch metricType {
+        case .mood, .painLevel, .energyLevel:
+            return ChartConfiguration(
+                chartType: .line,
+                primaryColor: CloveColors.accent,
+                showGradient: true,
+                lineWidth: 3.0,
+                showDataPoints: false,
+                enableInteraction: true
+            )
+        case .flareDay:
+            return ChartConfiguration(
+                chartType: .bar,
+                primaryColor: CloveColors.orange,
+                showGradient: false,
+                lineWidth: 2.0,
+                showDataPoints: false,
+                enableInteraction: true
+            )
+        case .medicationAdherence:
+            return ChartConfiguration(
+                chartType: .area,
+                primaryColor: CloveColors.blue,
+                showGradient: true,
+                lineWidth: 2.5,
+                showDataPoints: true,
+                enableInteraction: true
+            )
+        case .activityCount, .mealCount:
+            return ChartConfiguration(
+                chartType: .bar,
+                primaryColor: CloveColors.green,
+                showGradient: false,
+                lineWidth: 2.0,
+                showDataPoints: false,
+                enableInteraction: true
+            )
+        }
+    }
+}
+
+// MARK: - Universal Chart View
+
+struct UniversalChartView: View {
+    let data: [ChartDataPoint]
+    let configuration: ChartConfiguration
+    let metricName: String
+    let timeRange: String
+    
+    @State private var selectedDataPoint: ChartDataPoint?
+    @State private var showingTooltip = false
+    @State private var tooltipOffset: CGSize = .zero
+    
+    init(data: [ChartDataPoint], metricName: String, timeRange: String, configuration: ChartConfiguration? = nil) {
+        self.data = data
+        self.metricName = metricName
+        self.timeRange = timeRange
+        self.configuration = configuration ?? ChartConfiguration.default
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: CloveSpacing.medium) {
+            // Chart Header
+            chartHeader
+            
+            // Chart Container
+            chartContainer
+            
+            // Chart Footer with Statistics
+            if !data.isEmpty {
+                chartFooter
+            }
+        }
+        .padding(CloveSpacing.large)
+        .background(
+            RoundedRectangle(cornerRadius: CloveCorners.medium)
+                .fill(CloveColors.card)
+                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+        )
+    }
+    
+    // MARK: - Chart Header
+    
+    private var chartHeader: some View {
+        VStack(alignment: .leading, spacing: CloveSpacing.small) {
+            HStack {
+                Text(metricName)
+                    .font(.system(.title2, design: .rounded).weight(.bold))
+                    .foregroundStyle(CloveColors.primaryText)
+                
+                Spacer()
+                
+                Text(timeRange)
+                    .font(CloveFonts.small())
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .padding(.horizontal, CloveSpacing.small)
+                    .padding(.vertical, CloveSpacing.xsmall)
+                    .background(
+                        RoundedRectangle(cornerRadius: CloveCorners.small)
+                            .fill(configuration.primaryColor.opacity(0.1))
+                    )
+            }
+            
+            if !data.isEmpty {
+                let stats = ChartDataManager.shared.calculateStatistics(for: data)
+                HStack(spacing: CloveSpacing.large) {
+                    StatisticView(title: "Average", value: String(format: "%.1f", stats.mean), color: configuration.primaryColor)
+                    StatisticView(title: "Trend", value: trendText(stats.trend), color: trendColor(stats.trend))
+                    if stats.changePercentage != 0 {
+                        StatisticView(title: "Change", value: String(format: "%+.1f%%", stats.changePercentage), color: trendColor(stats.trend))
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Chart Container
+    
+    private var chartContainer: some View {
+        Group {
+            if data.isEmpty {
+                emptyStateView
+            } else {
+                chartView
+                    .frame(height: 200)
+                    .clipped()
+            }
+        }
+    }
+    
+    private var emptyStateView: some View {
+        VStack(spacing: CloveSpacing.medium) {
+            Image(systemName: "chart.line.uptrend.xyaxis")
+                .font(.system(size: 40))
+                .foregroundStyle(configuration.primaryColor.opacity(0.5))
+            
+            Text("No data available")
+                .font(CloveFonts.body())
+                .foregroundStyle(CloveColors.secondaryText)
+            
+            Text("Start logging to see your \(metricName.lowercased()) trends")
+                .font(CloveFonts.small())
+                .foregroundStyle(CloveColors.secondaryText.opacity(0.7))
+                .multilineTextAlignment(.center)
+        }
+        .frame(height: 200)
+        .frame(maxWidth: .infinity)
+    }
+    
+    private var chartView: some View {
+        Chart(data) { dataPoint in
+            switch configuration.chartType {
+            case .line:
+                lineChart(dataPoint)
+            case .area:
+                areaChart(dataPoint)
+            case .bar:
+                barChart(dataPoint)
+            }
+        }
+        .chartYAxis {
+            AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) { value in
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                    .foregroundStyle(CloveColors.secondaryText.opacity(0.2))
+                AxisValueLabel()
+                    .font(CloveFonts.small())
+                    .foregroundStyle(CloveColors.secondaryText)
+            }
+        }
+        .chartXAxis {
+            AxisMarks(values: .stride(by: xAxisStride)) { value in
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                    .foregroundStyle(CloveColors.secondaryText.opacity(0.2))
+                AxisValueLabel(format: xAxisFormat)
+                    .font(CloveFonts.small())
+                    .foregroundStyle(CloveColors.secondaryText)
+            }
+        }
+        .chartBackground { chartProxy in
+            Color.clear
+                .onTapGesture { location in
+                    if configuration.enableInteraction {
+                        handleChartTap(at: location, chartProxy: chartProxy)
+                    }
+                }
+        }
+        .overlay {
+            if showingTooltip, let selectedPoint = selectedDataPoint {
+                tooltipView(for: selectedPoint)
+            }
+        }
+        .chartYScale(domain: yAxisDomain)
+    }
+    
+    // MARK: - Chart Types Implementation
+    
+    @ChartContentBuilder
+    private func lineChart(_ dataPoint: ChartDataPoint) -> some ChartContent {
+        LineMark(
+            x: .value("Date", dataPoint.date),
+            y: .value(metricName, dataPoint.value)
+        )
+        .foregroundStyle(configuration.primaryColor)
+        .interpolationMethod(.catmullRom)
+        .lineStyle(StrokeStyle(lineWidth: configuration.lineWidth))
+        
+        if configuration.showDataPoints {
+            PointMark(
+                x: .value("Date", dataPoint.date),
+                y: .value(metricName, dataPoint.value)
+            )
+            .foregroundStyle(configuration.primaryColor)
+            .symbolSize(30)
+        }
+    }
+    
+    @ChartContentBuilder
+    private func areaChart(_ dataPoint: ChartDataPoint) -> some ChartContent {
+        AreaMark(
+            x: .value("Date", dataPoint.date),
+            y: .value(metricName, dataPoint.value)
+        )
+        .foregroundStyle(
+            configuration.showGradient ?
+            LinearGradient(
+                colors: [configuration.primaryColor.opacity(0.8), configuration.primaryColor.opacity(0.1)],
+                startPoint: .top,
+                endPoint: .bottom
+            ) :
+            LinearGradient(colors: [configuration.primaryColor], startPoint: .top, endPoint: .bottom)
+        )
+        .interpolationMethod(.catmullRom)
+        
+        LineMark(
+            x: .value("Date", dataPoint.date),
+            y: .value(metricName, dataPoint.value)
+        )
+        .foregroundStyle(configuration.primaryColor)
+        .interpolationMethod(.catmullRom)
+        .lineStyle(StrokeStyle(lineWidth: configuration.lineWidth))
+    }
+    
+    @ChartContentBuilder
+    private func barChart(_ dataPoint: ChartDataPoint) -> some ChartContent {
+        BarMark(
+            x: .value("Date", dataPoint.date),
+            y: .value(metricName, dataPoint.value)
+        )
+        .foregroundStyle(
+            configuration.showGradient ?
+            LinearGradient(
+                colors: [configuration.primaryColor, configuration.primaryColor.opacity(0.7)],
+                startPoint: .top,
+                endPoint: .bottom
+            ) :
+            LinearGradient(colors: [configuration.primaryColor], startPoint: .top, endPoint: .bottom)
+        )
+        .cornerRadius(CloveCorners.small)
+    }
+    
+    // MARK: - Chart Footer
+    
+    private var chartFooter: some View {
+        HStack {
+            Text("\(data.count) data points")
+                .font(CloveFonts.small())
+                .foregroundStyle(CloveColors.secondaryText)
+            
+            Spacer()
+            
+            if let firstPoint = data.first, let lastPoint = data.last {
+                Text("\(firstPoint.date.formatted(date: .abbreviated, time: .omitted)) - \(lastPoint.date.formatted(date: .abbreviated, time: .omitted))")
+                    .font(CloveFonts.small())
+                    .foregroundStyle(CloveColors.secondaryText)
+            }
+        }
+    }
+    
+    // MARK: - Tooltip
+    
+    private func tooltipView(for dataPoint: ChartDataPoint) -> some View {
+        VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
+            Text(dataPoint.date.formatted(date: .abbreviated, time: .omitted))
+                .font(CloveFonts.small())
+                .foregroundStyle(CloveColors.secondaryText)
+            
+            HStack(spacing: CloveSpacing.xsmall) {
+                Circle()
+                    .fill(configuration.primaryColor)
+                    .frame(width: 8, height: 8)
+                
+                Text(metricName)
+                    .font(CloveFonts.small())
+                    .foregroundStyle(CloveColors.primaryText)
+                    .fontWeight(.medium)
+                
+                Spacer()
+                
+                Text(formatValue(dataPoint.value, for: dataPoint.metricType))
+                    .font(CloveFonts.small())
+                    .foregroundStyle(CloveColors.primaryText)
+                    .fontWeight(.bold)
+            }
+        }
+        .padding(CloveSpacing.small)
+        .background(
+            RoundedRectangle(cornerRadius: CloveCorners.small)
+                .fill(CloveColors.card)
+                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+        )
+        .offset(tooltipOffset)
+        .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .bottom)))
+        .zIndex(1)
+    }
+    
+    // MARK: - Interaction Handling
+    
+    private func handleChartTap(at location: CGPoint, chartProxy: ChartProxy) {
+        guard configuration.enableInteraction else { return }
+        
+        // Find the closest data point to the tap location
+        let date: Date? = chartProxy.value(atX: location.x)
+        
+        guard let tappedDate = date else { return }
+        
+        let closestPoint = data.min { point1, point2 in
+            abs(point1.date.timeIntervalSince(tappedDate)) < abs(point2.date.timeIntervalSince(tappedDate))
+        }
+        
+        if let point = closestPoint {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                selectedDataPoint = point
+                showingTooltip = true
+                
+                // Calculate tooltip position
+                let xPosition = chartProxy.position(forX: point.date) ?? location.x
+                let yPosition = chartProxy.position(forY: point.value) ?? location.y
+                
+                tooltipOffset = CGSize(
+                    width: xPosition - 50, // Offset to center tooltip
+                    height: yPosition - 60  // Offset to show above the point
+                )
+            }
+            
+            // Haptic feedback
+            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+            impactFeedback.impactOccurred()
+            
+            // Auto-hide tooltip after 3 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    showingTooltip = false
+                    selectedDataPoint = nil
+                }
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private var xAxisStride: Calendar.Component {
+        switch data.count {
+        case 0...7: return .day
+        case 8...30: return .day
+        case 31...90: return .weekOfYear
+        default: return .month
+        }
+    }
+    
+    private var xAxisFormat: Date.FormatStyle {
+        switch data.count {
+        case 0...7: return .dateTime.day().month(.abbreviated)
+        case 8...30: return .dateTime.day().month(.abbreviated)
+        case 31...90: return .dateTime.month(.abbreviated).day()
+        default: return .dateTime.month(.abbreviated)
+        }
+    }
+    
+    private var yAxisDomain: ClosedRange<Double> {
+        guard !data.isEmpty else { return 0...10 }
+        
+        let values = data.map { $0.value }
+        let minValue = values.min() ?? 0
+        let maxValue = values.max() ?? 10
+        
+        // Add some padding to the range
+        let padding = (maxValue - minValue) * 0.1
+        let paddedMin = max(0, minValue - padding)
+        let paddedMax = maxValue + padding
+        
+        return paddedMin...paddedMax
+    }
+    
+    private func formatValue(_ value: Double, for metricType: MetricType) -> String {
+        switch metricType {
+        case .mood, .painLevel, .energyLevel:
+            return String(format: "%.1f", value)
+        case .medicationAdherence:
+            return String(format: "%.0f%%", value)
+        case .flareDay:
+            return value == 1.0 ? "Yes" : "No"
+        case .activityCount, .mealCount:
+            return String(format: "%.0f", value)
+        }
+    }
+    
+    private func trendText(_ trend: ChartStatistics.TrendDirection) -> String {
+        switch trend {
+        case .increasing: return "↗︎"
+        case .decreasing: return "↘︎"
+        case .stable: return "→"
+        }
+    }
+    
+    private func trendColor(_ trend: ChartStatistics.TrendDirection) -> Color {
+        switch trend {
+        case .increasing: return CloveColors.green
+        case .decreasing: return CloveColors.red
+        case .stable: return CloveColors.secondaryText
+        }
+    }
+}
+
+// MARK: - Supporting Views
+
+struct StatisticView: View {
+    let title: String
+    let value: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(CloveFonts.small())
+                .foregroundStyle(CloveColors.secondaryText)
+            
+            Text(value)
+                .font(CloveFonts.body())
+                .foregroundStyle(color)
+                .fontWeight(.semibold)
+        }
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    let sampleData = [
+        ChartDataPoint(date: Date().addingTimeInterval(-6*24*60*60), value: 7.2, metricType: .mood, metricName: "Mood", category: .coreHealth),
+        ChartDataPoint(date: Date().addingTimeInterval(-5*24*60*60), value: 6.8, metricType: .mood, metricName: "Mood", category: .coreHealth),
+        ChartDataPoint(date: Date().addingTimeInterval(-4*24*60*60), value: 8.1, metricType: .mood, metricName: "Mood", category: .coreHealth),
+        ChartDataPoint(date: Date().addingTimeInterval(-3*24*60*60), value: 7.5, metricType: .mood, metricName: "Mood", category: .coreHealth),
+        ChartDataPoint(date: Date().addingTimeInterval(-2*24*60*60), value: 8.3, metricType: .mood, metricName: "Mood", category: .coreHealth),
+        ChartDataPoint(date: Date().addingTimeInterval(-1*24*60*60), value: 7.9, metricType: .mood, metricName: "Mood", category: .coreHealth),
+        ChartDataPoint(date: Date(), value: 8.5, metricType: .mood, metricName: "Mood", category: .coreHealth)
+    ]
+    
+    VStack(spacing: CloveSpacing.large) {
+        UniversalChartView(
+            data: sampleData,
+            metricName: "Mood",
+            timeRange: "7 Days",
+            configuration: ChartConfiguration.forMetricType(.mood)
+        )
+        
+        UniversalChartView(
+            data: [],
+            metricName: "Energy Level",
+            timeRange: "30 Days",
+            configuration: ChartConfiguration.forMetricType(.energyLevel)
+        )
+    }
+    .padding()
+    .background(CloveColors.background)
+}

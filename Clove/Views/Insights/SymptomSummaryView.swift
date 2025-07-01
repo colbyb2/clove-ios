@@ -30,12 +30,12 @@ struct SymptomSummaryView: View {
    }
    
    // Computed property to get the chart data for the selected symptom
-   private var chartData: [SymptomDataPoint] {
+   private var chartData: [LocalSymptomDataPoint] {
       guard let selectedSymptomId = selectedSymptomId else { return [] }
       
-      return logs.compactMap { log -> SymptomDataPoint? in
+      return logs.compactMap { log -> LocalSymptomDataPoint? in
          if let rating = log.symptomRatings.first(where: { $0.symptomId == selectedSymptomId }) {
-            return SymptomDataPoint(date: log.date, rating: rating.rating)
+            return LocalSymptomDataPoint(date: log.date, rating: rating.rating)
          }
          return nil
       }.sorted(by: { $0.date < $1.date })
@@ -126,7 +126,7 @@ struct SymptomSummaryView: View {
 }
 
 // Data structure for the symptom chart
-private struct SymptomDataPoint: Identifiable {
+private struct LocalSymptomDataPoint: Identifiable {
    let id = UUID()
    let date: Date
    let rating: Int
