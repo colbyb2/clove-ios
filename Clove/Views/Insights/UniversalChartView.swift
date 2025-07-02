@@ -46,6 +46,15 @@ struct ChartConfiguration {
                 showDataPoints: true,
                 enableInteraction: true
             )
+        case .weather:
+            return ChartConfiguration(
+                chartType: .line,
+                primaryColor: CloveColors.blue,
+                showGradient: true,
+                lineWidth: 3.0,
+                showDataPoints: true,
+                enableInteraction: true
+            )
         case .flareDay, .activityCount, .mealCount:
             // These metrics are not available for charting
             return ChartConfiguration.default
@@ -437,6 +446,21 @@ struct UniversalChartView: View {
             return value == 1.0 ? "Yes" : "No"
         case .activityCount, .mealCount:
             return String(format: "%.0f", value)
+        case .weather:
+            return convertNumericToWeather(value)
+        }
+    }
+    
+    /// Convert numerical weather value back to readable string
+    private func convertNumericToWeather(_ numericValue: Double) -> String {
+        switch numericValue {
+        case 1.0: return "Stormy"
+        case 2.0: return "Rainy"
+        case 3.0: return "Gloomy"
+        case 4.0: return "Cloudy"
+        case 5.0: return "Snow"
+        case 6.0: return "Sunny"
+        default: return "Mixed"
         }
     }
     

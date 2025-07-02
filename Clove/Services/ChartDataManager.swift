@@ -11,6 +11,7 @@ enum MetricType: String, CaseIterable, Identifiable {
     case medicationAdherence
     case activityCount
     case mealCount
+    case weather
     
     var id: String { rawValue }
     
@@ -23,6 +24,7 @@ enum MetricType: String, CaseIterable, Identifiable {
         case .medicationAdherence: return "Medication Adherence"
         case .activityCount: return "Activity Count"
         case .mealCount: return "Meal Count"
+        case .weather: return "Weather"
         }
     }
     
@@ -35,6 +37,7 @@ enum MetricType: String, CaseIterable, Identifiable {
         case .medicationAdherence: return "Percentage of medications taken as prescribed"
         case .activityCount: return "Number of activities logged per day"
         case .mealCount: return "Number of meals logged per day"
+        case .weather: return "Daily weather conditions (clear to stormy scale)"
         }
     }
     
@@ -47,6 +50,20 @@ enum MetricType: String, CaseIterable, Identifiable {
         case .medicationAdherence: return "💊"
         case .activityCount: return "🏃"
         case .mealCount: return "🍎"
+        case .weather: return "🌤️"
+        }
+    }
+    
+    var category: MetricCategory {
+        switch self {
+        case .mood, .painLevel, .energyLevel, .flareDay:
+            return .coreHealth
+        case .medicationAdherence:
+            return .medications
+        case .activityCount, .mealCount:
+            return .lifestyle
+        case .weather:
+            return .environmental
         }
     }
 }
@@ -197,6 +214,9 @@ class ChartDataManager {
         if logs.contains(where: { !$0.medicationAdherence.isEmpty }) {
             availableMetrics.append(.medicationAdherence)
         }
+        if logs.contains(where: { $0.weather != nil }) {
+            availableMetrics.append(.weather)
+        }
         
         // Bar chart metrics (flareDay, activityCount, mealCount) are excluded
         // These will be used for correlation analysis in future phases
@@ -268,6 +288,8 @@ class ChartDataManager {
             return logs.filter { !$0.activities.isEmpty }.count
         case .mealCount:
             return logs.filter { !$0.meals.isEmpty }.count
+        case .weather:
+            return logs.compactMap { $0.weather }.count
         }
     }
     
@@ -332,6 +354,9 @@ class ChartDataManager {
             case .mealCount:
                 value = Double(log.meals.count)
                 category = .lifestyle
+            case .weather:
+                value = log.weather.map { convertWeatherToNumeric($0) }
+                category = .environmental
             }
             
             if let value = value {
@@ -372,6 +397,27 @@ class ChartDataManager {
         
         let takenCount = adherence.filter { $0.wasTaken }.count
         return (Double(takenCount) / Double(adherence.count)) * 100.0
+    }
+    
+    /// Convert weather string to numerical value for correlation analysis
+    /// Scale: 1 (Stormy/harsh) to 6 (Sunny/clear) 
+    private func convertWeatherToNumeric(_ weather: String) -> Double {
+        switch weather.lowercased() {
+        case "stormy":
+            return 1.0
+        case "rainy":
+            return 2.0
+        case "gloomy":
+            return 3.0
+        case "cloudy":
+            return 4.0
+        case "snow":
+            return 5.0  // Snow can be pleasant for some people
+        case "sunny":
+            return 6.0
+        default:
+            return 3.5  // Neutral/unknown weather
+        }
     }
     
     private func aggregateDataForPeriod(_ data: [ChartDataPoint], period: TimePeriod) -> [ChartDataPoint] {
@@ -476,19 +522,3 @@ class ChartDataManager {
     }
 }
 
-// MARK: - Extensions
-
-extension MetricType {
-    var category: MetricCategory {
-        switch self {
-        case .mood, .painLevel, .energyLevel:
-            return .coreHealth
-        case .medicationAdherence:
-            return .medications
-        case .activityCount, .mealCount:
-            return .lifestyle
-        case .flareDay:
-            return .environmental
-        }
-    }
-}

@@ -244,9 +244,9 @@ struct FullScreenChartView: View {
                 let stats = ChartDataManager.shared.calculateStatistics(for: data)
                 
                 VStack(spacing: CloveSpacing.medium) {
-                    StatView(title: "Average", value: String(format: "%.1f", stats.mean), color: configuration.primaryColor)
-                    StatView(title: "Min", value: String(format: "%.1f", stats.min), color: CloveColors.blue)
-                    StatView(title: "Max", value: String(format: "%.1f", stats.max), color: CloveColors.green)
+                    StatView(title: "Average", value: formatValue(stats.mean, for: data.first?.metricType ?? .mood), color: configuration.primaryColor)
+                    StatView(title: "Min", value: formatValue(stats.min, for: data.first?.metricType ?? .mood), color: CloveColors.blue)
+                    StatView(title: "Max", value: formatValue(stats.max, for: data.first?.metricType ?? .mood), color: CloveColors.green)
                     StatView(title: "Trend", value: trendText(stats.trend), color: trendColor(stats.trend))
                     
                     if stats.changePercentage != 0 {
@@ -431,6 +431,21 @@ struct FullScreenChartView: View {
             return value == 1.0 ? "Yes" : "No"
         case .activityCount, .mealCount:
             return String(format: "%.0f", value)
+        case .weather:
+            return convertNumericToWeather(value)
+        }
+    }
+    
+    /// Convert numerical weather value back to readable string
+    private func convertNumericToWeather(_ numericValue: Double) -> String {
+        switch numericValue {
+        case 1.0: return "Stormy"
+        case 2.0: return "Rainy"
+        case 3.0: return "Gloomy"
+        case 4.0: return "Cloudy"
+        case 5.0: return "Snow"
+        case 6.0: return "Sunny"
+        default: return "Mixed"
         }
     }
     

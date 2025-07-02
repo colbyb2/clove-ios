@@ -246,8 +246,23 @@ struct QuickStatItem: View {
             return String(format: "%.1f", value)
         case .medicationAdherence:
             return String(format: "%.0f%%", value)
+        case .weather:
+            return convertNumericToWeather(value)
         default:
             return String(format: "%.0f", value)
+        }
+    }
+    
+    /// Convert numerical weather value back to readable string
+    private func convertNumericToWeather(_ numericValue: Double) -> String {
+        switch numericValue {
+        case 1.0: return "Stormy"
+        case 2.0: return "Rainy"
+        case 3.0: return "Gloomy"
+        case 4.0: return "Cloudy"
+        case 5.0: return "Snow"
+        case 6.0: return "Sunny"
+        default: return "Mixed"
         }
     }
 }
