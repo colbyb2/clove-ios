@@ -64,6 +64,7 @@ struct UniversalChartView: View {
     @State private var selectedDataPoint: ChartDataPoint?
     @State private var showingTooltip = false
     @State private var tooltipOffset: CGSize = .zero
+    @State private var showingFullScreen = false
     
     init(data: [ChartDataPoint], metricName: String, timeRange: String, configuration: ChartConfiguration? = nil) {
         self.data = data
@@ -91,6 +92,14 @@ struct UniversalChartView: View {
                 .fill(CloveColors.card)
                 .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
         )
+        .fullScreenCover(isPresented: $showingFullScreen) {
+            FullScreenChartView(
+                data: data,
+                configuration: configuration,
+                metricName: metricName,
+                timeRange: timeRange
+            )
+        }
     }
     
     // MARK: - Chart Header
@@ -191,13 +200,15 @@ struct UniversalChartView: View {
                     .foregroundStyle(CloveColors.secondaryText)
             }
         }
-        .chartBackground { chartProxy in
-            Color.clear
-                .onTapGesture { location in
-                    if configuration.enableInteraction {
-                        handleChartTap(at: location, chartProxy: chartProxy)
-                    }
-                }
+        .chartOverlay { chart in
+            Rectangle()
+              .fill(Color.clear)
+              .contentShape(Rectangle())
+              .onTapGesture {
+                 if configuration.enableInteraction {
+                     handleChartTap()
+                 }
+              }
         }
         .overlay {
             if showingTooltip, let selectedPoint = selectedDataPoint {
@@ -313,45 +324,15 @@ struct UniversalChartView: View {
     
     // MARK: - Interaction Handling
     
-    private func handleChartTap(at location: CGPoint, chartProxy: ChartProxy) {
+    private func handleChartTap() {
         guard configuration.enableInteraction else { return }
         
-        // Find the closest data point to the tap location
-        let date: Date? = chartProxy.value(atX: location.x)
+        // Show fullscreen chart view
+        showingFullScreen = true
         
-        guard let tappedDate = date else { return }
-        
-        let closestPoint = data.min { point1, point2 in
-            abs(point1.date.timeIntervalSince(tappedDate)) < abs(point2.date.timeIntervalSince(tappedDate))
-        }
-        
-        if let point = closestPoint {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                selectedDataPoint = point
-                showingTooltip = true
-                
-                // Calculate tooltip position
-                let xPosition = chartProxy.position(forX: point.date) ?? location.x
-                let yPosition = chartProxy.position(forY: point.value) ?? location.y
-                
-                tooltipOffset = CGSize(
-                    width: xPosition - 50, // Offset to center tooltip
-                    height: yPosition - 60  // Offset to show above the point
-                )
-            }
-            
-            // Haptic feedback
-            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-            impactFeedback.impactOccurred()
-            
-            // Auto-hide tooltip after 3 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                    showingTooltip = false
-                    selectedDataPoint = nil
-                }
-            }
-        }
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
     }
     
     // MARK: - Helper Methods

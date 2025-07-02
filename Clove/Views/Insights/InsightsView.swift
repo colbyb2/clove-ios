@@ -4,23 +4,106 @@ struct InsightsView: View {
    @State private var viewModel = InsightsViewModel()
    @State private var showingMetricSelector = false
    
+   // Insights customization settings
+   @AppStorage(Constants.INSIGHTS_OVERVIEW_DASHBOARD) private var overviewDashboard: Bool = true
+   @AppStorage(Constants.INSIGHTS_SMART_INSIGHTS) private var smartInsights: Bool = true
+   @AppStorage(Constants.INSIGHTS_METRIC_CHARTS) private var metricCharts: Bool = true
+   @AppStorage(Constants.INSIGHTS_CORRELATIONS) private var correlations: Bool = true
+   
+   // MARK: - Customization Prompt Section
+   
+   private var customizationPromptSection: some View {
+      VStack(spacing: CloveSpacing.medium) {
+         HStack {
+            Image(systemName: "slider.horizontal.3")
+               .font(.system(size: 20))
+               .foregroundStyle(CloveColors.accent)
+            
+            VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
+               Text("Want More Insights?")
+                  .font(.system(.body, design: .rounded).weight(.semibold))
+                  .foregroundStyle(CloveColors.primaryText)
+               
+               Text("You can enable additional features anytime")
+                  .font(CloveFonts.small())
+                  .foregroundStyle(CloveColors.secondaryText)
+            }
+            
+            Spacer()
+         }
+         
+         NavigationLink(destination: InsightsCustomizationView()) {
+            HStack(spacing: CloveSpacing.small) {
+               Image(systemName: "gear")
+                  .font(.system(size: 14))
+               Text("Customize Insights")
+                  .font(CloveFonts.body())
+                  .fontWeight(.semibold)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, CloveSpacing.large)
+            .padding(.vertical, CloveSpacing.medium)
+            .background(
+               RoundedRectangle(cornerRadius: CloveCorners.medium)
+                  .fill(
+                     LinearGradient(
+                        colors: [CloveColors.accent, CloveColors.accent.opacity(0.8)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                     )
+                  )
+                  .shadow(color: CloveColors.accent.opacity(0.3), radius: 6, x: 0, y: 3)
+            )
+         }
+         .buttonStyle(PlainButtonStyle())
+      }
+      .padding(CloveSpacing.large)
+      .background(
+         RoundedRectangle(cornerRadius: CloveCorners.medium)
+            .fill(
+               LinearGradient(
+                  colors: [CloveColors.accent.opacity(0.05), CloveColors.accent.opacity(0.02)],
+                  startPoint: .topLeading,
+                  endPoint: .bottomTrailing
+               )
+            )
+            .overlay(
+               RoundedRectangle(cornerRadius: CloveCorners.medium)
+                  .stroke(CloveColors.accent.opacity(0.2), lineWidth: 1)
+            )
+      )
+   }
+   
    var body: some View {
       ScrollView {
          VStack(spacing: CloveSpacing.large) {
             // Overview Dashboard section
-            overviewDashboardSection
+            if overviewDashboard {
+               overviewDashboardSection
+            }
             
-            // Time period selector header
+            // Time period selector header - always show as it's essential
             timePeriodSelectorSection
             
             // New metric exploration section
-            metricExplorationSection
+            if metricCharts {
+               metricExplorationSection
+            }
+            
+            // Cross Reference section
+            if correlations {
+               crossReferenceSection
+            }
             
             // Smart Insights section
-            smartInsightsSection
+            if smartInsights {
+               smartInsightsSection
+            }
             
-            // Foundation preview section
-            foundationPreviewSection
+            // Customization prompt if user has minimal features enabled
+            if [overviewDashboard, metricCharts, smartInsights, correlations].filter({ $0 }).count <= 1 {
+               customizationPromptSection
+            }
          }
          .padding(.horizontal, CloveSpacing.large)
          .padding(.bottom, CloveSpacing.xlarge)
@@ -274,6 +357,39 @@ struct InsightsView: View {
       )
    }
    
+   // MARK: - Cross Reference Section
+   
+   private var crossReferenceSection: some View {
+      VStack(alignment: .leading, spacing: CloveSpacing.large) {
+         HStack {
+            Text("Cross Reference")
+               .font(.system(.title2, design: .rounded).weight(.bold))
+               .foregroundStyle(CloveColors.primaryText)
+            
+            Spacer()
+            
+            NavigationLink(destination: CrossReferenceView()) {
+               HStack(spacing: CloveSpacing.xsmall) {
+                  Text("View All")
+                  Image(systemName: "chevron.right")
+                     .font(.system(size: 12))
+               }
+               .font(CloveFonts.small())
+               .foregroundStyle(CloveColors.accent)
+               .fontWeight(.semibold)
+            }
+         }
+         
+         CrossReferencePreviewView()
+      }
+      .padding(CloveSpacing.large)
+      .background(
+         RoundedRectangle(cornerRadius: CloveCorners.medium)
+            .fill(CloveColors.card)
+            .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
+      )
+   }
+   
    // MARK: - Smart Insights Section
    
    private var smartInsightsSection: some View {
@@ -304,51 +420,6 @@ struct InsightsView: View {
          RoundedRectangle(cornerRadius: CloveCorners.medium)
             .fill(CloveColors.card)
             .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
-      )
-   }
-   
-   // MARK: - Foundation Preview Section
-   
-   private var foundationPreviewSection: some View {
-      VStack(alignment: .leading, spacing: CloveSpacing.large) {
-         Text("Coming Soon")
-            .font(.system(.title2, design: .rounded).weight(.bold))
-            .foregroundStyle(CloveColors.primaryText)
-         
-         VStack(spacing: CloveSpacing.medium) {
-            InsightsFeaturePreviewCard(
-               icon: "chart.bar.xaxis",
-               title: "Correlation Analysis",
-               description: "Compare any two metrics to discover patterns and relationships in your health data"
-            )
-            
-            InsightsFeaturePreviewCard(
-               icon: "brain.head.profile",
-               title: "Smart Insights",
-               description: "AI-powered analysis to identify trends, predict patterns, and provide personalized recommendations"
-            )
-            
-            InsightsFeaturePreviewCard(
-               icon: "calendar.badge.clock",
-               title: "Advanced Time Controls",
-               description: "Custom date ranges, comparison modes, and seasonal pattern detection"
-            )
-         }
-      }
-      .padding(CloveSpacing.large)
-      .background(
-         RoundedRectangle(cornerRadius: CloveCorners.medium)
-            .fill(
-               LinearGradient(
-                  colors: [CloveColors.accent.opacity(0.05), CloveColors.accent.opacity(0.02)],
-                  startPoint: .topLeading,
-                  endPoint: .bottomTrailing
-               )
-            )
-            .overlay(
-               RoundedRectangle(cornerRadius: CloveCorners.medium)
-                  .stroke(CloveColors.accent.opacity(0.2), lineWidth: 1)
-            )
       )
    }
 }
@@ -454,6 +525,115 @@ struct InsightsFeaturePreviewCard: View {
             .fill(CloveColors.card)
             .overlay(
                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                  .stroke(CloveColors.accent.opacity(0.1), lineWidth: 1)
+            )
+      )
+   }
+}
+
+struct CrossReferencePreviewView: View {
+   var body: some View {
+      VStack(spacing: CloveSpacing.medium) {
+         HStack {
+            VStack(alignment: .leading, spacing: CloveSpacing.small) {
+               Text("Correlation Analysis")
+                  .font(.system(.body, design: .rounded).weight(.semibold))
+                  .foregroundStyle(CloveColors.primaryText)
+               
+               Text("Compare metrics to discover patterns")
+                  .font(CloveFonts.small())
+                  .foregroundStyle(CloveColors.secondaryText)
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chart.bar.xaxis")
+               .font(.system(size: 28))
+               .foregroundStyle(CloveColors.accent)
+         }
+         
+         // Sample correlation cards
+         VStack(spacing: CloveSpacing.small) {
+            correlationPreviewCard(
+               primary: "Mood",
+               secondary: "Energy",
+               correlation: 0.78,
+               strength: "Strong",
+               direction: "Positive"
+            )
+            
+            correlationPreviewCard(
+               primary: "Pain",
+               secondary: "Sleep",
+               correlation: -0.65,
+               strength: "Moderate",
+               direction: "Negative"
+            )
+         }
+         
+         // Action button
+         NavigationLink(destination: CrossReferenceView()) {
+            HStack(spacing: CloveSpacing.small) {
+               Image(systemName: "plus.circle")
+                  .font(.system(size: 14))
+               Text("Create Analysis")
+                  .font(CloveFonts.small())
+                  .fontWeight(.semibold)
+            }
+            .foregroundStyle(CloveColors.accent)
+            .padding(.horizontal, CloveSpacing.medium)
+            .padding(.vertical, CloveSpacing.small)
+            .background(
+               RoundedRectangle(cornerRadius: CloveCorners.medium)
+                  .fill(CloveColors.accent.opacity(0.1))
+                  .overlay(
+                     RoundedRectangle(cornerRadius: CloveCorners.medium)
+                        .stroke(CloveColors.accent.opacity(0.3), lineWidth: 1)
+                  )
+            )
+         }
+         .buttonStyle(PlainButtonStyle())
+      }
+   }
+   
+   private func correlationPreviewCard(primary: String, secondary: String, correlation: Double, strength: String, direction: String) -> some View {
+      HStack {
+         HStack(spacing: CloveSpacing.xsmall) {
+            Text(primary)
+               .font(CloveFonts.small())
+               .fontWeight(.medium)
+               .foregroundStyle(CloveColors.primaryText)
+            
+            Image(systemName: "arrow.right")
+               .font(.system(size: 10))
+               .foregroundStyle(CloveColors.secondaryText)
+            
+            Text(secondary)
+               .font(CloveFonts.small())
+               .fontWeight(.medium)
+               .foregroundStyle(CloveColors.primaryText)
+         }
+         
+         Spacer()
+         
+         VStack(alignment: .trailing, spacing: 2) {
+            Text(String(format: "%.2f", correlation))
+               .font(CloveFonts.small())
+               .fontWeight(.bold)
+               .foregroundStyle(correlation > 0 ? CloveColors.green : CloveColors.red)
+            
+            Text("\(strength)")
+               .font(.system(size: 10))
+               .foregroundStyle(CloveColors.secondaryText)
+         }
+      }
+      .padding(.horizontal, CloveSpacing.medium)
+      .padding(.vertical, CloveSpacing.small)
+      .background(
+         RoundedRectangle(cornerRadius: CloveCorners.small)
+            .fill(CloveColors.background)
+            .overlay(
+               RoundedRectangle(cornerRadius: CloveCorners.small)
                   .stroke(CloveColors.accent.opacity(0.1), lineWidth: 1)
             )
       )

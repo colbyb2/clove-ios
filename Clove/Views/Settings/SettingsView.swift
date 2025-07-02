@@ -10,9 +10,25 @@ struct SettingsView: View {
       ZStack {
          Form {
             Section(header: Text("Customization")) {
-               NavigationLink("Feature Selection") {
-                  CustomizeTrackerView()
-                     .environment(viewModel)
+               HStack {
+                  Image(systemName: "gear")
+                     .font(.system(size: 16, weight: .medium))
+                     .foregroundStyle(CloveColors.accent)
+                  NavigationLink("Feature Selection") {
+                     CustomizeTrackerView()
+                        .environment(viewModel)
+                  }
+               }
+            }
+            
+            Section(header: Text("Insights")) {
+               HStack {
+                  Image(systemName: "sparkles")
+                     .font(.system(size: 16, weight: .medium))
+                     .foregroundStyle(CloveColors.accent)
+                  NavigationLink("Complexity") {
+                     InsightsCustomizationView()
+                  }
                }
             }
             
