@@ -385,10 +385,26 @@ class ChartDataManager {
         let calendar = Calendar.current
         var aggregatedData: [ChartDataPoint] = []
         
+        // For week and month periods, we want to show daily data points, not aggregate them
+        // Only aggregate for longer periods (3+ months)
+        if period == .week || period == .month {
+            return data // Return daily data for week and month views
+        }
+        
         let groupingComponent: Calendar.Component = aggregationLevel == .monthly ? .month : .weekOfYear
         
         let grouped = Dictionary(grouping: data) { dataPoint in
-            calendar.component(groupingComponent, from: dataPoint.date)
+            if aggregationLevel == .monthly {
+                // Group by year-month combination to avoid cross-year issues
+                let year = calendar.component(.year, from: dataPoint.date)
+                let month = calendar.component(.month, from: dataPoint.date)
+                return year * 100 + month
+            } else {
+                // Group by year-week combination to avoid cross-year issues
+                let year = calendar.component(.year, from: dataPoint.date)
+                let week = calendar.component(.weekOfYear, from: dataPoint.date)
+                return year * 100 + week
+            }
         }
         
         for (_, points) in grouped {

@@ -112,7 +112,9 @@ class InsightsEngine {
     // MARK: - Public API
     
     func generateInsights(forPeriod period: TimePeriod = .month) async {
-        isGeneratingInsights = true
+        await MainActor.run {
+            self.isGeneratingInsights = true
+        }
         
         do {
             let insights = try await performInsightGeneration(period: period)
