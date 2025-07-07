@@ -19,6 +19,7 @@ struct CustomizeTrackerView: View {
                 Toggle("Activities", isOn: $vm.settings.trackActivities)
                 Toggle("Medications", isOn: $vm.settings.trackMeds)
                 Toggle("Weather", isOn: $vm.settings.trackWeather)
+                Toggle("Notes", isOn: $vm.settings.trackNotes)
                 Toggle("Flare Toggle", isOn: $vm.settings.showFlareToggle)
             }
             

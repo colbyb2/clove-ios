@@ -11,6 +11,7 @@ class LogData {
    var meals: [String] = []
    var activities: [String] = []
    var medicationAdherence: [MedicationAdherence] = []
+   var notes: String? = nil
    
    // Computed property to get medications that were taken
    var medicationsTaken: [String] {
@@ -37,6 +38,7 @@ class LogData {
       self.meals = log.meals
       self.activities = log.activities
       self.medicationAdherence = log.medicationAdherence
+      self.notes = log.notes
       self.symptomRatings = log.symptomRatings.map({ s in
          return SymptomRatingVM(symptomId: s.symptomId, symptomName: s.symptomName, ratingDouble: Double(s.rating))
       })

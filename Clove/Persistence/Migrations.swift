@@ -10,7 +10,8 @@ enum Migrations {
         SymptomIdMigration(),
         WeatherFieldMigration(),
         WeatherSettingMigration(),
-        MedicationTrackingMigration()
+        MedicationTrackingMigration(),
+        NotesTrackingMigration()
     ]
 }
 
@@ -182,6 +183,19 @@ struct MedicationTrackingMigration: Migration {
         // Add medicationAdherenceJSON column to DailyLog table
         try db.alter(table: "dailyLog") { t in
             t.add(column: "medicationAdherenceJSON", .text).notNull().defaults(to: "[]")
+        }
+    }
+}
+
+/// Migration to add notes tracking setting to UserSettings table
+struct NotesTrackingMigration: Migration {
+    var identifier: String {
+        return "notesTracking_010725"
+    }
+    
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "userSettings") { t in
+            t.add(column: "trackNotes", .boolean).notNull().defaults(to: false)
         }
     }
 }

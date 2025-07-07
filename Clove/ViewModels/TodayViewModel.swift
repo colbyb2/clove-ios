@@ -150,7 +150,7 @@ class TodayViewModel {
          activities: settings.trackActivities ? logData.activities : [],
          medicationsTaken: medicationsTaken,
          medicationAdherence: settings.trackMeds ? logData.medicationAdherence : [],
-         notes: nil,
+         notes: settings.trackNotes ? logData.notes : nil,
          isFlareDay: logData.isFlareDay,
          weather: settings.trackWeather ? logData.weather : nil,
          symptomRatings: logData.symptomRatings.map { $0.toModel() }

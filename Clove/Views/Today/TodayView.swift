@@ -6,6 +6,7 @@ struct TodayView: View {
    @State private var showEditSymptoms: Bool = false
    @State private var showWeatherSelection: Bool = false
    @State private var showMedicationSelection: Bool = false
+   @State private var showNotesEntry: Bool = false
    
    var body: some View {
       ScrollView {
@@ -191,6 +192,49 @@ struct TodayView: View {
             }
             .padding(.vertical, CloveSpacing.small)
          }
+         
+         if viewModel.settings.trackNotes {
+            VStack(spacing: CloveSpacing.small) {
+               HStack {
+                  HStack(spacing: CloveSpacing.small) {
+                     Text("📝")
+                        .font(.system(size: 20))
+                     Text("Notes")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                  }
+                  
+                  Spacer()
+                  
+                  Button(action: {
+                     showNotesEntry = true
+                     // Haptic feedback
+                     let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                     impactFeedback.impactOccurred()
+                  }) {
+                     HStack {
+                        Text(notesSummaryText())
+                           .foregroundStyle(viewModel.logData.notes != nil ? CloveColors.primary : CloveColors.secondaryText)
+                           .font(.system(.body, design: .rounded).weight(.medium))
+                           .lineLimit(1)
+                        
+                        if viewModel.logData.notes == nil {
+                           Image(systemName: "plus.circle.fill")
+                              .foregroundStyle(Theme.shared.accent)
+                              .font(.system(size: 16))
+                        }
+                     }
+                     .padding(.horizontal, 12)
+                     .padding(.vertical, 8)
+                     .background(CloveColors.card)
+                     .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
+                     .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+                  }
+                  .accessibilityLabel("Notes entry")
+                  .accessibilityHint("Opens notes editor for this day")
+               }
+            }
+            .padding(.vertical, CloveSpacing.small)
+         }
             
          if viewModel.settings.showFlareToggle {
             VStack(spacing: CloveSpacing.small) {
@@ -285,6 +329,12 @@ struct TodayView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
       }
+      .sheet(isPresented: $showNotesEntry) {
+         NotesEntrySheet(
+            notes: $viewModel.logData.notes,
+            date: viewModel.selectedDate
+         )
+      }
    }
    
    private func weatherEmoji(for weather: String?) -> String {
@@ -316,10 +366,24 @@ struct TodayView: View {
          return "\(takenCount) of \(totalCount) taken"
       }
    }
+   
+   private func notesSummaryText() -> String {
+      guard let notes = viewModel.logData.notes, !notes.isEmpty else {
+         return "Tap to add notes"
+      }
+      
+      // Show first 40 characters with ellipsis if longer
+      let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+      if trimmedNotes.count <= 40 {
+         return trimmedNotes
+      } else {
+         return String(trimmedNotes.prefix(40)) + "..."
+      }
+   }
 }
 
 #Preview {
    NavigationStack {
-      TodayView(viewModel: TodayViewModel(settings: UserSettings(trackMood: true, trackPain: true, trackEnergy: true, trackSymptoms: true, trackMeals: false, trackActivities: false, trackMeds: false, showFlareToggle: true, trackWeather: false)))
+      TodayView(viewModel: TodayViewModel(settings: UserSettings(trackMood: true, trackPain: true, trackEnergy: true, trackSymptoms: true, trackMeals: false, trackActivities: false, trackMeds: false, showFlareToggle: true, trackWeather: false, trackNotes: true)))
    }
 }

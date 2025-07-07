@@ -12,6 +12,7 @@ struct UserSettings: Codable, FetchableRecord, PersistableRecord, Identifiable {
    var trackMeds: Bool
    var showFlareToggle: Bool
    var trackWeather: Bool
+   var trackNotes: Bool
 }
 
 extension UserSettings {
@@ -25,7 +26,8 @@ extension UserSettings {
       trackActivities: false,
       trackMeds: false,
       showFlareToggle: true,
-      trackWeather: true
+      trackWeather: true,
+      trackNotes: false
    )
    
    /// Blank settings
@@ -38,12 +40,13 @@ extension UserSettings {
       trackActivities: false,
       trackMeds: false,
       showFlareToggle: false,
-      trackWeather: false
+      trackWeather: false,
+      trackNotes: false
    )
 }
 
 extension UserSettings {
    func isSomeEnabled() -> Bool {
-      return trackMood || trackPain || trackEnergy || trackSymptoms || trackMeals || trackActivities || trackMeds || showFlareToggle || trackWeather
+      return trackMood || trackPain || trackEnergy || trackSymptoms || trackMeals || trackActivities || trackMeds || showFlareToggle || trackWeather || trackNotes
    }
 }
