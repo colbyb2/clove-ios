@@ -63,6 +63,14 @@ struct DailyLogDetailView: View {
                     .foregroundStyle(Theme.shared.accent)
                     .fontWeight(.semibold)
                 }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Edit") {
+                        editThisDay()
+                    }
+                    .foregroundStyle(Theme.shared.accent)
+                    .fontWeight(.semibold)
+                }
             }
         }
         .presentationDetents([.medium, .large])
@@ -290,6 +298,18 @@ struct DailyLogDetailView: View {
     // MARK: - Helper Functions
     private func loadTrackedSymptoms() {
         trackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
+    }
+    
+    private func editThisDay() {
+        // Navigate to Today tab and set the date for editing
+        NavigationCoordinator.shared.editDayInTodayView(date: log.date)
+        
+        // Dismiss this view
+        dismiss()
+        
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
     }
     
     private func moodColor(for mood: Int) -> Color {

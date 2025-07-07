@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TodayView: View {
    @State var viewModel = TodayViewModel()
+   @Environment(NavigationCoordinator.self) private var navigationCoordinator
    
    @State private var showEditSymptoms: Bool = false
    @State private var showWeatherSelection: Bool = false
@@ -13,7 +14,7 @@ struct TodayView: View {
          VStack(alignment: .leading, spacing: 24) {
             
             // Date Navigation Header
-            DateNavigationHeader() { newDate in
+            DateNavigationHeader(selectedDate: $viewModel.selectedDate) { newDate in
                self.viewModel.loadLogData(for: newDate)
             }
             
@@ -312,6 +313,12 @@ struct TodayView: View {
       .padding(.vertical)
       .onAppear {
          viewModel.load()
+      }
+      .onChange(of: navigationCoordinator.targetDate) { _, newDate in
+         if let targetDate = newDate {
+            viewModel.loadLogData(for: targetDate)
+            navigationCoordinator.clearTargetDate()
+         }
       }
       .sheet(isPresented: $showEditSymptoms) {
          EditSymptomsSheet(

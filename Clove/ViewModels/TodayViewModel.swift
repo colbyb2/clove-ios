@@ -42,7 +42,7 @@ class TodayViewModel {
       guard !mocked else { return }
       loadSettings()
       loadTrackedSymptoms()
-      loadLogData(for: Date())
+      loadLogData(for: selectedDate)
       loadYesterdayLog()
    }
    

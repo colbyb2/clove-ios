@@ -1,12 +1,13 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @State private var selectedTab = 0
+    @State private var navigationCoordinator = NavigationCoordinator.shared
     
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: $navigationCoordinator.selectedTab) {
             NavigationStack {
                 TodayView()
+                    .environment(navigationCoordinator)
             }
             .tabItem {
                 Label("Today", systemImage: "calendar")

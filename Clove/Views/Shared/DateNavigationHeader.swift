@@ -1,9 +1,14 @@
 import SwiftUI
 
 struct DateNavigationHeader: View {
-   @State private var selectedDate = Date()
+   @Binding var selectedDate: Date
    
    var onDateChange: (Date) -> Void = {_ in}
+   
+   init(selectedDate: Binding<Date> = .constant(Date()), onDateChange: @escaping (Date) -> Void = {_ in}) {
+      self._selectedDate = selectedDate
+      self.onDateChange = onDateChange
+   }
    
    
    var body: some View {
