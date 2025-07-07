@@ -19,7 +19,7 @@ struct ChartConfiguration {
     
     static let `default` = ChartConfiguration(
         chartType: .line,
-        primaryColor: CloveColors.accent,
+        primaryColor: Theme.shared.accent,
         showGradient: true,
         lineWidth: 3.0,
         showDataPoints: false,
@@ -31,7 +31,7 @@ struct ChartConfiguration {
         case .mood, .painLevel, .energyLevel:
             return ChartConfiguration(
                 chartType: .line,
-                primaryColor: CloveColors.accent,
+                primaryColor: Theme.shared.accent,
                 showGradient: true,
                 lineWidth: 3.0,
                 showDataPoints: false,

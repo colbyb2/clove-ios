@@ -135,6 +135,12 @@ class TodayViewModel {
    }
    
    func saveLog() {
+      // Extract medication names that were marked as taken
+      let medicationsTaken = settings.trackMeds ? 
+         logData.medicationAdherence
+            .filter { $0.wasTaken }
+            .map { $0.medicationName } : []
+      
       let log = DailyLog(
          date: selectedDate,
          mood: settings.trackMood ? Int(logData.mood) : nil,
@@ -142,7 +148,7 @@ class TodayViewModel {
          energyLevel: settings.trackEnergy ? Int(logData.energyLevel) : nil,
          meals: settings.trackMeals ? logData.meals : [],
          activities: settings.trackActivities ? logData.activities : [],
-         medicationsTaken: [],
+         medicationsTaken: medicationsTaken,
          medicationAdherence: settings.trackMeds ? logData.medicationAdherence : [],
          notes: nil,
          isFlareDay: logData.isFlareDay,

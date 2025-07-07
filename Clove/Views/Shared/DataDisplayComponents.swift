@@ -20,7 +20,7 @@ struct SectionHeaderView: View {
             } else if let icon = icon {
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
             }
             
             Text(title)
@@ -40,7 +40,7 @@ struct RatingDisplayView: View {
     let emoji: String?
     let color: Color
     
-    init(value: Int, maxValue: Int = 10, label: String, emoji: String? = nil, color: Color = CloveColors.accent) {
+    init(value: Int, maxValue: Int = 10, label: String, emoji: String? = nil, color: Color = Theme.shared.accent) {
         self.value = value
         self.maxValue = maxValue
         self.label = label
@@ -138,7 +138,7 @@ struct TagListView: View {
     let items: [String]
     let color: Color
     
-    init(items: [String], color: Color = CloveColors.accent) {
+    init(items: [String], color: Color = Theme.shared.accent) {
         self.items = items
         self.color = color
     }
@@ -252,7 +252,7 @@ struct DataCardView<Content: View>: View {
         
         ProgressRatingView(value: 8, maxValue: 10, label: "Energy Level", color: CloveColors.green)
         
-        TagListView(items: ["Breakfast", "Lunch", "Snack"], color: CloveColors.accent)
+        TagListView(items: ["Breakfast", "Lunch", "Snack"], color: Theme.shared.accent)
         
         NotesDisplayView(notes: "Had a good day overall. Felt energetic in the morning but pain increased in the afternoon.")
         

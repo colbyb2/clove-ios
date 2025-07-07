@@ -90,9 +90,9 @@ struct WeatherOptionCard: View {
             .frame(height: 100)
             .background(
                 RoundedRectangle(cornerRadius: CloveCorners.medium)
-                    .fill(isSelected ? CloveColors.accent : CloveColors.card)
+                    .fill(isSelected ? Theme.shared.accent : CloveColors.card)
                     .shadow(
-                        color: isSelected ? CloveColors.accent.opacity(0.3) : .gray.opacity(0.2),
+                        color: isSelected ? Theme.shared.accent.opacity(0.3) : .gray.opacity(0.2),
                         radius: isSelected ? 8 : 4,
                         x: 0,
                         y: isSelected ? 4 : 2

@@ -34,7 +34,7 @@ struct MedicationTimelineView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                     .fontWeight(.semibold)
                 }
             }
@@ -199,7 +199,7 @@ struct TimelineEntryView: View {
         switch changeType {
         case "added": return CloveColors.success
         case "removed": return CloveColors.error
-        case "dosage_changed": return CloveColors.accent
+        case "dosage_changed": return Theme.shared.accent
         case "name_changed": return CloveColors.primary
         case "instructions_changed": return .blue
         case "schedule_changed": return .orange

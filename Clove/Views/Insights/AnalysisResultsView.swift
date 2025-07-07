@@ -122,7 +122,7 @@ struct AnalysisResultsView: View {
                 VStack(alignment: .leading, spacing: CloveSpacing.small) {
                     Text(analysis.primaryMetric.name)
                         .font(CloveFonts.body())
-                        .foregroundStyle(CloveColors.accent)
+                        .foregroundStyle(Theme.shared.accent)
                         .fontWeight(.semibold)
                     
                     Chart {
@@ -131,7 +131,7 @@ struct AnalysisResultsView: View {
                                 x: .value("Date", point.0),
                                 y: .value("Value", point.1)
                             )
-                            .foregroundStyle(CloveColors.accent)
+                            .foregroundStyle(Theme.shared.accent)
                             .lineStyle(StrokeStyle(lineWidth: 3))
                             .interpolationMethod(.catmullRom)
 
@@ -139,7 +139,7 @@ struct AnalysisResultsView: View {
                                 x: .value("Date", point.0),
                                 y: .value("Value", point.1)
                             )
-                            .foregroundStyle(CloveColors.accent)
+                            .foregroundStyle(Theme.shared.accent)
                             .symbolSize(25)
                         }
                     }
@@ -152,7 +152,7 @@ struct AnalysisResultsView: View {
                             AxisValueLabel {
                                 Text(formatValueForAxis(value.as(Double.self) ?? 0, for: analysis.primaryMetric))
                                     .font(CloveFonts.small())
-                                    .foregroundStyle(CloveColors.accent)
+                                    .foregroundStyle(Theme.shared.accent)
                             }
                         }
                     }
@@ -231,7 +231,7 @@ struct AnalysisResultsView: View {
                     HStack(alignment: .top, spacing: CloveSpacing.small) {
                         Image(systemName: "lightbulb.fill")
                             .font(.system(size: 14))
-                            .foregroundStyle(CloveColors.accent)
+                            .foregroundStyle(Theme.shared.accent)
                             .frame(width: 20)
 
                         Text(insight)
@@ -266,7 +266,7 @@ struct AnalysisResultsView: View {
                 .padding(.vertical, CloveSpacing.medium)
                 .background(
                     RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .fill(CloveColors.accent)
+                        .fill(Theme.shared.accent)
                 )
             }
             Spacer()
@@ -287,7 +287,7 @@ struct AnalysisResultsView: View {
                 .foregroundStyle(.orange)
         } else if absCoeff < 0.6 {
             return Image(systemName: isPositive ? "arrow.up.right.circle.fill" : "arrow.down.right.circle.fill")
-                .foregroundStyle(CloveColors.accent)
+                .foregroundStyle(Theme.shared.accent)
         } else {
             return Image(systemName: isPositive ? "arrow.up.right.circle.fill" : "arrow.down.right.circle.fill")
                 .foregroundStyle(CloveColors.green)
@@ -354,7 +354,7 @@ struct AnalysisResultsView: View {
         let absCoeff = abs(analysis.coefficient)
         switch absCoeff {
         case 0.6...: return CloveColors.green
-        case 0.4..<0.6: return CloveColors.accent
+        case 0.4..<0.6: return Theme.shared.accent
         case 0.2..<0.4: return .orange
         default: return CloveColors.secondaryText
         }
@@ -394,8 +394,19 @@ struct AnalysisResultsView: View {
             case .activityCount, .mealCount:
                 return String(format: "%.0f", value)
             }
-        } else {
+        } else if metric.symptomName != nil {
             // Symptom metric
+            return String(format: "%.1f", value)
+        } else if metric.medicationName != nil {
+            // Medication metric
+            return value == 1.0 ? "Taken" : "Not taken"
+        } else if metric.activityName != nil {
+            // Activity metric
+            return value == 1.0 ? "Done" : "Not done"
+        } else if metric.mealName != nil {
+            // Meal metric
+            return value == 1.0 ? "Eaten" : "Not eaten"
+        } else {
             return String(format: "%.1f", value)
         }
     }
@@ -434,7 +445,7 @@ struct AnalysisResultsView: View {
         case 0.6...:
             return CloveColors.green
         case 0.3..<0.6:
-            return CloveColors.accent
+            return Theme.shared.accent
         default:
             return CloveColors.secondaryText
         }

@@ -37,7 +37,7 @@ struct MainTabView: View {
             }
             .tag(3)
         }
-        .tint(CloveColors.accent)
+        .tint(Theme.shared.accent)
         .onAppear {
             // Customize TabBar appearance
             let appearance = UITabBarAppearance()

@@ -34,7 +34,7 @@ struct OverviewDashboardPreviewView: View {
     private var loadingView: some View {
         HStack(spacing: CloveSpacing.medium) {
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: CloveColors.accent))
+                .progressViewStyle(CircularProgressViewStyle(tint: Theme.shared.accent))
                 .scaleEffect(0.8)
             
             Text("Loading dashboard...")
@@ -55,7 +55,7 @@ struct OverviewDashboardPreviewView: View {
             HStack(spacing: CloveSpacing.medium) {
                 Image(systemName: "square.grid.2x2")
                     .font(.system(size: 20))
-                    .foregroundStyle(CloveColors.accent.opacity(0.6))
+                    .foregroundStyle(Theme.shared.accent.opacity(0.6))
                 
                 VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
                     Text("Dashboard ready")
@@ -108,7 +108,7 @@ struct PreviewWidgetCard: View {
             HStack {
                 Image(systemName: widget.type.icon)
                     .font(.system(size: 14))
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                 
                 Text(widget.type.displayName)
                     .font(.system(.caption, design: .rounded).weight(.semibold))
@@ -141,7 +141,7 @@ struct PreviewWidgetCard: View {
                 .fill(CloveColors.background)
                 .overlay(
                     RoundedRectangle(cornerRadius: CloveCorners.small)
-                        .stroke(CloveColors.accent.opacity(0.1), lineWidth: 1)
+                        .stroke(Theme.shared.accent.opacity(0.1), lineWidth: 1)
                 )
         )
         .frame(height: 80)
@@ -244,7 +244,7 @@ struct PreviewWidgetCard: View {
                 HStack(spacing: 2) {
                     ForEach(Array(pattern.value.prefix(7).enumerated()), id: \.offset) { _, value in
                         RoundedRectangle(cornerRadius: 1)
-                            .fill(CloveColors.accent.opacity(min(1.0, max(0.1, value / 10.0))))
+                            .fill(Theme.shared.accent.opacity(min(1.0, max(0.1, value / 10.0))))
                             .frame(width: 6, height: 12)
                     }
                 }
@@ -301,7 +301,7 @@ struct PreviewWidgetCard: View {
     private func getScoreColor(_ score: Double) -> Color {
         switch score {
         case 80...100: return CloveColors.green
-        case 60..<80: return CloveColors.accent
+        case 60..<80: return Theme.shared.accent
         case 40..<60: return .orange
         default: return CloveColors.red
         }
@@ -310,7 +310,7 @@ struct PreviewWidgetCard: View {
     private func priorityColor(_ priority: InsightPriority) -> Color {
         switch priority {
         case .low: return CloveColors.blue
-        case .medium: return CloveColors.accent
+        case .medium: return Theme.shared.accent
         case .high: return .orange
         case .critical: return CloveColors.red
         }
@@ -320,7 +320,7 @@ struct PreviewWidgetCard: View {
         let abs = abs(correlation)
         switch abs {
         case 0.7...1.0: return CloveColors.green
-        case 0.4..<0.7: return CloveColors.accent
+        case 0.4..<0.7: return Theme.shared.accent
         case 0.2..<0.4: return .orange
         default: return CloveColors.secondaryText
         }

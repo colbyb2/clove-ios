@@ -74,9 +74,9 @@ struct CategoryChip: View {
             .padding(.vertical, CloveSpacing.small)
             .background(
                 RoundedRectangle(cornerRadius: CloveCorners.full)
-                    .fill(isSelected ? CloveColors.accent : CloveColors.card)
+                    .fill(isSelected ? Theme.shared.accent : CloveColors.card)
                     .shadow(
-                        color: isSelected ? CloveColors.accent.opacity(0.3) : .black.opacity(0.05),
+                        color: isSelected ? Theme.shared.accent.opacity(0.3) : .black.opacity(0.05),
                         radius: isSelected ? 4 : 2,
                         x: 0,
                         y: isSelected ? 2 : 1

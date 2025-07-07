@@ -157,22 +157,28 @@ class CrossReferenceViewModel {
     }
     
     private func getPrimaryMetricData(metric: SelectableMetric, period: TimePeriod) -> [(Date, Double)] {
-        if let metricType = metric.type {
-            return chartDataManager.getChartData(for: metricType, period: period)
-                .map { ($0.date, $0.value) }
-        } else if let symptomName = metric.symptomName {
-            return chartDataManager.getSymptomChartData(symptomName: symptomName, period: period)
-                .map { ($0.date, $0.value) }
-        }
-        return []
+        return getMetricData(metric: metric, period: period)
     }
     
     private func getSecondaryMetricData(metric: SelectableMetric, period: TimePeriod) -> [(Date, Double)] {
+        return getMetricData(metric: metric, period: period)
+    }
+    
+    private func getMetricData(metric: SelectableMetric, period: TimePeriod) -> [(Date, Double)] {
         if let metricType = metric.type {
             return chartDataManager.getChartData(for: metricType, period: period)
                 .map { ($0.date, $0.value) }
         } else if let symptomName = metric.symptomName {
             return chartDataManager.getSymptomChartData(symptomName: symptomName, period: period)
+                .map { ($0.date, $0.value) }
+        } else if let medicationName = metric.medicationName {
+            return chartDataManager.getMedicationChartData(medicationName: medicationName, period: period)
+                .map { ($0.date, $0.value) }
+        } else if let activityName = metric.activityName {
+            return chartDataManager.getActivityChartData(activityName: activityName, period: period)
+                .map { ($0.date, $0.value) }
+        } else if let mealName = metric.mealName {
+            return chartDataManager.getMealChartData(mealName: mealName, period: period)
                 .map { ($0.date, $0.value) }
         }
         return []

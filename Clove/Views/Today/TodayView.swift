@@ -61,7 +61,7 @@ struct TodayView: View {
                   let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                   impactFeedback.impactOccurred()
                }
-               .foregroundStyle(CloveColors.accent)
+               .foregroundStyle(Theme.shared.accent)
                .fontWeight(.semibold)
                .frame(minWidth: 44, minHeight: 44) // Minimum touch target
                .accessibilityLabel("Edit symptoms")
@@ -133,7 +133,7 @@ struct TodayView: View {
                         
                         if viewModel.logData.medicationAdherence.isEmpty {
                            Image(systemName: "plus.circle.fill")
-                              .foregroundStyle(CloveColors.accent)
+                              .foregroundStyle(Theme.shared.accent)
                               .font(.system(size: 16))
                         }
                      }
@@ -175,7 +175,7 @@ struct TodayView: View {
                         
                         if viewModel.logData.weather == nil {
                            Image(systemName: "plus.circle.fill")
-                              .foregroundStyle(CloveColors.accent)
+                              .foregroundStyle(Theme.shared.accent)
                               .font(.system(size: 16))
                         }
                      }
@@ -251,8 +251,8 @@ struct TodayView: View {
             .frame(height: 56) // Large touch target
             .background(
                RoundedRectangle(cornerRadius: CloveCorners.medium)
-                  .fill(viewModel.isSaving ? CloveColors.secondaryText : CloveColors.accent)
-                  .shadow(color: CloveColors.accent.opacity(0.3), radius: 4, x: 0, y: 2)
+                  .fill(viewModel.isSaving ? CloveColors.secondaryText : Theme.shared.accent)
+                  .shadow(color: Theme.shared.accent.opacity(0.3), radius: 4, x: 0, y: 2)
             )
          }
          .disabled(viewModel.isSaving)

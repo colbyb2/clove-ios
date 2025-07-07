@@ -74,6 +74,8 @@ enum MetricCategory: String, CaseIterable, Identifiable {
     case medications
     case lifestyle
     case environmental
+    case activities
+    case meals
     
     var id: String { rawValue }
     
@@ -84,6 +86,8 @@ enum MetricCategory: String, CaseIterable, Identifiable {
         case .medications: return "Medications"
         case .lifestyle: return "Lifestyle"
         case .environmental: return "Environmental"
+        case .activities: return "Activities"
+        case .meals: return "Meals"
         }
     }
 }
@@ -128,6 +132,34 @@ struct SymptomDataPoint: Identifiable, Hashable {
         lhs.date == rhs.date &&
         lhs.value == rhs.value &&
         lhs.symptomName == rhs.symptomName
+    }
+}
+
+struct ItemDataPoint: Identifiable, Hashable {
+    let id = UUID()
+    let date: Date
+    let value: Double // 1.0 if taken/done, 0.0 if not
+    let itemName: String
+    let itemType: ItemType
+    
+    enum ItemType: String {
+        case medication
+        case activity
+        case meal
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(date)
+        hasher.combine(value)
+        hasher.combine(itemName)
+        hasher.combine(itemType)
+    }
+    
+    static func == (lhs: ItemDataPoint, rhs: ItemDataPoint) -> Bool {
+        lhs.date == rhs.date &&
+        lhs.value == rhs.value &&
+        lhs.itemName == rhs.itemName &&
+        lhs.itemType == rhs.itemType
     }
 }
 
@@ -196,6 +228,51 @@ class ChartDataManager {
         return data
     }
     
+    /// Get chart data for a specific medication and time period
+    func getMedicationChartData(medicationName: String, period: TimePeriod) -> [ItemDataPoint] {
+        let cacheKey = "medication_\(medicationName)_\(period.rawValue)"
+        
+        if let cachedTimestamp = cacheTimestamps[cacheKey],
+           Date().timeIntervalSince(cachedTimestamp) < cacheTimeout {
+            return getItemDataFromLogs(itemName: medicationName, itemType: .medication, period: period)
+        }
+        
+        let data = getItemDataFromLogs(itemName: medicationName, itemType: .medication, period: period)
+        cacheTimestamps[cacheKey] = Date()
+        
+        return data
+    }
+    
+    /// Get chart data for a specific activity and time period
+    func getActivityChartData(activityName: String, period: TimePeriod) -> [ItemDataPoint] {
+        let cacheKey = "activity_\(activityName)_\(period.rawValue)"
+        
+        if let cachedTimestamp = cacheTimestamps[cacheKey],
+           Date().timeIntervalSince(cachedTimestamp) < cacheTimeout {
+            return getItemDataFromLogs(itemName: activityName, itemType: .activity, period: period)
+        }
+        
+        let data = getItemDataFromLogs(itemName: activityName, itemType: .activity, period: period)
+        cacheTimestamps[cacheKey] = Date()
+        
+        return data
+    }
+    
+    /// Get chart data for a specific meal and time period
+    func getMealChartData(mealName: String, period: TimePeriod) -> [ItemDataPoint] {
+        let cacheKey = "meal_\(mealName)_\(period.rawValue)"
+        
+        if let cachedTimestamp = cacheTimestamps[cacheKey],
+           Date().timeIntervalSince(cachedTimestamp) < cacheTimeout {
+            return getItemDataFromLogs(itemName: mealName, itemType: .meal, period: period)
+        }
+        
+        let data = getItemDataFromLogs(itemName: mealName, itemType: .meal, period: period)
+        cacheTimestamps[cacheKey] = Date()
+        
+        return data
+    }
+    
     /// Get all available core health metrics
     func getAvailableMetrics() -> [MetricType] {
         let logs = logsRepo.getLogs()
@@ -236,6 +313,69 @@ class ChartDataManager {
             }
             return hasData ? symptom.name : nil
         }
+    }
+    
+    /// Get all available medications that have been tracked
+    func getAvailableMedications() -> [String] {
+        let logs = logsRepo.getLogs()
+        var medicationCounts: [String: Int] = [:]
+        
+        // Count frequency of each medication
+        for log in logs {
+            for medication in log.medicationsTaken {
+                let cleanName = medication.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !cleanName.isEmpty {
+                    medicationCounts[cleanName, default: 0] += 1
+                }
+            }
+        }
+        
+        // Return medications that have been taken at least once
+        return medicationCounts.compactMap { (medication, count) in
+            count >= 1 ? medication : nil
+        }.sorted()
+    }
+    
+    /// Get all available activities that have been tracked
+    func getAvailableActivities() -> [String] {
+        let logs = logsRepo.getLogs()
+        var activityCounts: [String: Int] = [:]
+        
+        // Count frequency of each activity
+        for log in logs {
+            for activity in log.activities {
+                let cleanName = activity.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !cleanName.isEmpty {
+                    activityCounts[cleanName, default: 0] += 1
+                }
+            }
+        }
+        
+        // Return activities that have been logged at least once
+        return activityCounts.compactMap { (activity, count) in
+            count >= 1 ? activity : nil
+        }.sorted()
+    }
+    
+    /// Get all available meals that have been tracked
+    func getAvailableMeals() -> [String] {
+        let logs = logsRepo.getLogs()
+        var mealCounts: [String: Int] = [:]
+        
+        // Count frequency of each meal
+        for log in logs {
+            for meal in log.meals {
+                let cleanName = meal.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !cleanName.isEmpty {
+                    mealCounts[cleanName, default: 0] += 1
+                }
+            }
+        }
+        
+        // Return meals that have been eaten at least once
+        return mealCounts.compactMap { (meal, count) in
+            count >= 1 ? meal : nil
+        }.sorted()
     }
     
     /// Calculate statistics for a dataset
@@ -298,6 +438,30 @@ class ChartDataManager {
         let logs = logsRepo.getLogs()
         return logs.filter { log in
             log.symptomRatings.contains { $0.symptomName == symptomName }
+        }.count
+    }
+    
+    /// Get data point count for a medication
+    func getMedicationDataPointCount(medicationName: String) -> Int {
+        let logs = logsRepo.getLogs()
+        return logs.filter { log in
+            log.medicationsTaken.contains(medicationName)
+        }.count
+    }
+    
+    /// Get data point count for an activity
+    func getActivityDataPointCount(activityName: String) -> Int {
+        let logs = logsRepo.getLogs()
+        return logs.filter { log in
+            log.activities.contains(activityName)
+        }.count
+    }
+    
+    /// Get data point count for a meal
+    func getMealDataPointCount(mealName: String) -> Int {
+        let logs = logsRepo.getLogs()
+        return logs.filter { log in
+            log.meals.contains(mealName)
         }.count
     }
     
@@ -387,6 +551,34 @@ class ChartDataManager {
                 )
                 dataPoints.append(dataPoint)
             }
+        }
+        
+        return dataPoints
+    }
+    
+    private func getItemDataFromLogs(itemName: String, itemType: ItemDataPoint.ItemType, period: TimePeriod) -> [ItemDataPoint] {
+        let logs = getLogsForPeriod(period)
+        var dataPoints: [ItemDataPoint] = []
+        
+        for log in logs {
+            let isPresent: Bool
+            
+            switch itemType {
+            case .medication:
+                isPresent = log.medicationsTaken.contains(itemName)
+            case .activity:
+                isPresent = log.activities.contains(itemName)
+            case .meal:
+                isPresent = log.meals.contains(itemName)
+            }
+            
+            let dataPoint = ItemDataPoint(
+                date: log.date,
+                value: isPresent ? 1.0 : 0.0,
+                itemName: itemName,
+                itemType: itemType
+            )
+            dataPoints.append(dataPoint)
         }
         
         return dataPoints

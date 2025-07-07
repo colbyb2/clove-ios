@@ -13,7 +13,7 @@ struct SettingsView: View {
                HStack {
                   Image(systemName: "gear")
                      .font(.system(size: 16, weight: .medium))
-                     .foregroundStyle(CloveColors.accent)
+                     .foregroundStyle(Theme.shared.accent)
                   NavigationLink("Feature Selection") {
                      CustomizeTrackerView()
                         .environment(viewModel)
@@ -25,7 +25,7 @@ struct SettingsView: View {
                HStack {
                   Image(systemName: "sparkles")
                      .font(.system(size: 16, weight: .medium))
-                     .foregroundStyle(CloveColors.accent)
+                     .foregroundStyle(Theme.shared.accent)
                   NavigationLink("Complexity") {
                      InsightsCustomizationView()
                   }
@@ -42,7 +42,7 @@ struct SettingsView: View {
                   HStack {
                      Image(systemName: "pills")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(CloveColors.accent)
+                        .foregroundStyle(Theme.shared.accent)
                      
                      Text("Manage Medications")
                         .foregroundStyle(CloveColors.primaryText)
@@ -66,7 +66,7 @@ struct SettingsView: View {
                   HStack {
                      Image(systemName: "clock")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(CloveColors.accent)
+                        .foregroundStyle(Theme.shared.accent)
                      
                      Text("Medication History")
                         .foregroundStyle(CloveColors.primaryText)
@@ -92,7 +92,7 @@ struct SettingsView: View {
                   HStack {
                      Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(CloveColors.accent)
+                        .foregroundStyle(Theme.shared.accent)
                      
                      Text("Export Data")
                         .foregroundStyle(CloveColors.primaryText)

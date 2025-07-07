@@ -11,6 +11,7 @@ import CoreLocation
 @main
 struct CloveApp: App {
    @AppStorage(Constants.ONBOARDING_FLAG) var onboardingCompleted: Bool = false
+   @AppStorage(Constants.SELECTED_COLOR) var selectedColor = ""
    @State private var appState = AppState()
    
    var body: some Scene {
@@ -36,6 +37,9 @@ struct CloveApp: App {
    }
    
    init() {
+      if !selectedColor.isEmpty, let color = selectedColor.toColor() {
+         Theme.shared.accent = color
+      }
       do {
          try DatabaseManager.shared.setupDatabase()
       } catch {

@@ -55,7 +55,7 @@ struct SmartInsightsView: View {
             HStack {
                 Image(systemName: "brain.head.profile")
                     .font(.system(size: 24))
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                 
                 VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
                     Text("AI-Powered Insights")
@@ -74,7 +74,7 @@ struct SmartInsightsView: View {
                 HStack(spacing: CloveSpacing.small) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 12))
-                        .foregroundStyle(CloveColors.accent)
+                        .foregroundStyle(Theme.shared.accent)
                     
                     Text("Last updated: \(lastGeneration.formatted(date: .omitted, time: .shortened))")
                         .font(CloveFonts.small())
@@ -100,7 +100,7 @@ struct SmartInsightsView: View {
             InsightSummaryBadge(
                 count: insightsEngine.getActionableInsights().count,
                 label: "Actionable",
-                color: CloveColors.accent
+                color: Theme.shared.accent
             )
             
             InsightSummaryBadge(
@@ -126,7 +126,7 @@ struct SmartInsightsView: View {
                     .font(CloveFonts.small())
                     .fontWeight(.semibold)
             }
-            .foregroundStyle(CloveColors.accent)
+            .foregroundStyle(Theme.shared.accent)
         }
     }
     
@@ -164,7 +164,7 @@ struct SmartInsightsView: View {
     private var loadingSection: some View {
         VStack(spacing: CloveSpacing.medium) {
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: CloveColors.accent))
+                .progressViewStyle(CircularProgressViewStyle(tint: Theme.shared.accent))
                 .scaleEffect(1.2)
             
             Text("Analyzing your health data...")
@@ -186,7 +186,7 @@ struct SmartInsightsView: View {
         VStack(spacing: CloveSpacing.large) {
             Image(systemName: "lightbulb")
                 .font(.system(size: 48))
-                .foregroundStyle(CloveColors.accent.opacity(0.6))
+                .foregroundStyle(Theme.shared.accent.opacity(0.6))
             
             VStack(spacing: CloveSpacing.small) {
                 Text("No insights available")
@@ -216,7 +216,7 @@ struct SmartInsightsView: View {
                 .padding(.vertical, CloveSpacing.medium)
                 .background(
                     RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .fill(CloveColors.accent)
+                        .fill(Theme.shared.accent)
                 )
             }
         }
@@ -277,7 +277,7 @@ struct InsightGroupView: View {
             HStack {
                 Image(systemName: insights.first?.typeIcon ?? "circle")
                     .font(.system(size: 20))
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                 
                 Text(type.rawValue.capitalized)
                     .font(.system(.title3, design: .rounded).weight(.bold))
@@ -292,7 +292,7 @@ struct InsightGroupView: View {
                     .padding(.vertical, CloveSpacing.xsmall)
                     .background(
                         RoundedRectangle(cornerRadius: CloveCorners.full)
-                            .fill(CloveColors.accent.opacity(0.1))
+                            .fill(Theme.shared.accent.opacity(0.1))
                     )
             }
             
@@ -389,7 +389,7 @@ struct InsightCardView: View {
                     .foregroundStyle(CloveColors.secondaryText)
                 
                 ProgressView(value: insight.confidence, total: 1.0)
-                    .progressViewStyle(LinearProgressViewStyle(tint: CloveColors.accent))
+                    .progressViewStyle(LinearProgressViewStyle(tint: Theme.shared.accent))
                     .frame(width: 60)
                 
                 Text("\(Int(insight.confidence * 100))%")
@@ -422,7 +422,7 @@ struct InsightCardView: View {
         HStack(spacing: CloveSpacing.medium) {
             Image(systemName: "lightbulb.fill")
                 .font(.system(size: 16))
-                .foregroundStyle(CloveColors.accent)
+                .foregroundStyle(Theme.shared.accent)
             
             Text(actionableText)
                 .font(CloveFonts.body())
@@ -432,10 +432,10 @@ struct InsightCardView: View {
         .padding(CloveSpacing.medium)
         .background(
             RoundedRectangle(cornerRadius: CloveCorners.medium)
-                .fill(CloveColors.accent.opacity(0.1))
+                .fill(Theme.shared.accent.opacity(0.1))
                 .overlay(
                     RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .stroke(CloveColors.accent.opacity(0.2), lineWidth: 1)
+                        .stroke(Theme.shared.accent.opacity(0.2), lineWidth: 1)
                 )
         )
     }
@@ -443,7 +443,7 @@ struct InsightCardView: View {
     private var priorityColor: Color {
         switch insight.priority {
         case .low: return CloveColors.blue
-        case .medium: return CloveColors.accent
+        case .medium: return Theme.shared.accent
         case .high: return .orange
         case .critical: return CloveColors.red
         }
@@ -514,7 +514,7 @@ struct InsightFilterView: View {
                         dismiss()
                     }
                     .font(CloveFonts.body())
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                     .fontWeight(.semibold)
                 }
             }
@@ -546,12 +546,12 @@ struct FilterOptionRow: View {
             HStack(spacing: CloveSpacing.medium) {
                 Image(systemName: icon)
                     .font(.system(size: 20))
-                    .foregroundStyle(isSelected ? CloveColors.accent : CloveColors.secondaryText)
+                    .foregroundStyle(isSelected ? Theme.shared.accent : CloveColors.secondaryText)
                     .frame(width: 24)
                 
                 Text(title)
                     .font(CloveFonts.body())
-                    .foregroundStyle(isSelected ? CloveColors.accent : CloveColors.primaryText)
+                    .foregroundStyle(isSelected ? Theme.shared.accent : CloveColors.primaryText)
                     .fontWeight(isSelected ? .semibold : .regular)
                 
                 Spacer()
@@ -559,14 +559,14 @@ struct FilterOptionRow: View {
                 if isSelected {
                     Image(systemName: "checkmark")
                         .font(.system(size: 16))
-                        .foregroundStyle(CloveColors.accent)
+                        .foregroundStyle(Theme.shared.accent)
                         .fontWeight(.semibold)
                 }
             }
             .padding(CloveSpacing.medium)
             .background(
                 RoundedRectangle(cornerRadius: CloveCorners.medium)
-                    .fill(isSelected ? CloveColors.accent.opacity(0.1) : Color.clear)
+                    .fill(isSelected ? Theme.shared.accent.opacity(0.1) : Color.clear)
             )
         }
         .buttonStyle(PlainButtonStyle())

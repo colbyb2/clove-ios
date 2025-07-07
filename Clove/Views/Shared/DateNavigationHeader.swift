@@ -95,12 +95,12 @@ struct DateNavigationHeader: View {
                      Text("Today")
                         .font(.system(size: 12, weight: .medium))
                   }
-                  .foregroundStyle(CloveColors.accent)
+                  .foregroundStyle(Theme.shared.accent)
                   .padding(.horizontal, CloveSpacing.small)
                   .padding(.vertical, 6)
                   .background(
                      Capsule()
-                        .fill(CloveColors.accent.opacity(0.1))
+                        .fill(Theme.shared.accent.opacity(0.1))
                   )
                }
                .accessibilityLabel("Jump to today")

@@ -49,7 +49,7 @@ struct EditSymptomsSheet: View {
                             Button(action: addSymptom) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.system(size: 24))
-                                    .foregroundStyle(CloveColors.accent)
+                                    .foregroundStyle(Theme.shared.accent)
                             }
                             .disabled(newSymptomName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             .opacity(newSymptomName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1.0)
@@ -121,7 +121,7 @@ struct EditSymptomsSheet: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                     .fontWeight(.semibold)
                 }
             }
@@ -177,7 +177,7 @@ struct SymptomRowView: View {
         HStack(spacing: CloveSpacing.medium) {
             Image(systemName: "circle.fill")
                 .font(.system(size: 8))
-                .foregroundStyle(CloveColors.accent)
+                .foregroundStyle(Theme.shared.accent)
             
             if isEditing {
                 TextField("Symptom name", text: $editingName)
@@ -190,7 +190,7 @@ struct SymptomRowView: View {
                     onSave()
                 }
                 .font(CloveFonts.small())
-                .foregroundStyle(CloveColors.accent)
+                .foregroundStyle(Theme.shared.accent)
                 .fontWeight(.semibold)
                 
                 Button("Cancel") {
@@ -209,7 +209,7 @@ struct SymptomRowView: View {
                     onEdit()
                 }
                 .font(CloveFonts.small())
-                .foregroundStyle(CloveColors.accent)
+                .foregroundStyle(Theme.shared.accent)
                 .fontWeight(.semibold)
             }
         }

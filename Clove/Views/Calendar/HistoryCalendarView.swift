@@ -44,7 +44,7 @@ struct HistoryCalendarView: View {
       case .allData:
          // Show a general indicator if any data exists
          if log.mood != nil || log.painLevel != nil || log.energyLevel != nil || !log.symptomRatings.isEmpty {
-            return CloveColors.accent.opacity(0.7)
+            return Theme.shared.accent.opacity(0.7)
          }
          return .clear
          
@@ -86,17 +86,17 @@ struct HistoryCalendarView: View {
          
       case .meals:
          if !log.meals.isEmpty {
-            return CloveColors.accent.opacity(0.8)
+            return Theme.shared.accent.opacity(0.8)
          }
          
       case .activities:
          if !log.activities.isEmpty {
-            return CloveColors.accent.opacity(0.8)
+            return Theme.shared.accent.opacity(0.8)
          }
          
       case .medications:
          if !log.medicationsTaken.isEmpty {
-            return CloveColors.accent.opacity(0.8)
+            return Theme.shared.accent.opacity(0.8)
          }
          
       case .symptom(let id, _):

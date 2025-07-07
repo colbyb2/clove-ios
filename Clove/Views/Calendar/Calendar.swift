@@ -145,8 +145,8 @@ struct CalendarRecord {
 
 extension CalendarTheme {
    static let defaultTheme = CalendarTheme(
-      primary: CloveColors.accent,
-      todayBorder: CloveColors.accent,
+      primary: Theme.shared.accent,
+      todayBorder: Theme.shared.accent,
       textColor: CloveColors.primaryText,
       selectedTextColor: CloveColors.primaryText,
       eventDotColor: CloveColors.primary

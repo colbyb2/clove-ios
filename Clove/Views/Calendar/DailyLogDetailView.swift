@@ -60,7 +60,7 @@ struct DailyLogDetailView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                     .fontWeight(.semibold)
                 }
             }

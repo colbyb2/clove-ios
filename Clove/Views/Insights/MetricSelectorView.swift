@@ -7,6 +7,9 @@ struct SelectableMetric: Identifiable, Hashable {
     let name: String
     let type: MetricType?
     let symptomName: String?
+    let medicationName: String?
+    let activityName: String?
+    let mealName: String?
     let category: MetricCategory
     let icon: String
     let description: String
@@ -18,6 +21,9 @@ struct SelectableMetric: Identifiable, Hashable {
         name: String,
         type: MetricType? = nil,
         symptomName: String? = nil,
+        medicationName: String? = nil,
+        activityName: String? = nil,
+        mealName: String? = nil,
         category: MetricCategory,
         icon: String,
         description: String,
@@ -28,12 +34,31 @@ struct SelectableMetric: Identifiable, Hashable {
         self.name = name
         self.type = type
         self.symptomName = symptomName
+        self.medicationName = medicationName
+        self.activityName = activityName
+        self.mealName = mealName
         self.category = category
         self.icon = icon
         self.description = description
         self.isAvailable = isAvailable
         self.lastValue = lastValue
         self.dataPointCount = dataPointCount
+    }
+    
+    var metricItemType: MetricItemType {
+        if let type = type {
+            return .coreMetric(type)
+        } else if let symptomName = symptomName {
+            return .symptom(symptomName)
+        } else if let medicationName = medicationName {
+            return .medication(medicationName)
+        } else if let activityName = activityName {
+            return .activity(activityName)
+        } else if let mealName = mealName {
+            return .meal(mealName)
+        } else {
+            return .coreMetric(.mood) // fallback
+        }
     }
     
     func hash(into hasher: inout Hasher) {
@@ -43,6 +68,14 @@ struct SelectableMetric: Identifiable, Hashable {
     static func == (lhs: SelectableMetric, rhs: SelectableMetric) -> Bool {
         lhs.id == rhs.id
     }
+}
+
+enum MetricItemType: Hashable {
+    case coreMetric(MetricType)
+    case symptom(String)
+    case medication(String)
+    case activity(String)
+    case meal(String)
 }
 
 // MARK: - Metric Selector ViewModel
@@ -129,6 +162,9 @@ class MetricSelectorViewModel {
                 name: metric.name,
                 type: metric.type?.rawValue,
                 symptomName: metric.symptomName,
+                medicationName: metric.medicationName,
+                activityName: metric.activityName,
+                mealName: metric.mealName,
                 category: metric.category.rawValue
             )
         }
@@ -145,6 +181,15 @@ class MetricSelectorViewModel {
         } else if let symptomName = recentData.symptomName {
             // Symptom metric
             return createSymptomMetric(symptomName: symptomName)
+        } else if let medicationName = recentData.medicationName {
+            // Medication metric
+            return createMedicationMetric(medicationName: medicationName)
+        } else if let activityName = recentData.activityName {
+            // Activity metric
+            return createActivityMetric(activityName: activityName)
+        } else if let mealName = recentData.mealName {
+            // Meal metric
+            return createMealMetric(mealName: mealName)
         }
         return nil
     }
@@ -164,6 +209,30 @@ class MetricSelectorViewModel {
         let availableSymptoms = chartDataManager.getAvailableSymptoms()
         for symptomName in availableSymptoms {
             if let metric = createSymptomMetric(symptomName: symptomName) {
+                metrics.append(metric)
+            }
+        }
+        
+        // Load medication metrics
+        let availableMedications = chartDataManager.getAvailableMedications()
+        for medicationName in availableMedications {
+            if let metric = createMedicationMetric(medicationName: medicationName) {
+                metrics.append(metric)
+            }
+        }
+        
+        // Load activity metrics
+        let availableActivities = chartDataManager.getAvailableActivities()
+        for activityName in availableActivities {
+            if let metric = createActivityMetric(activityName: activityName) {
+                metrics.append(metric)
+            }
+        }
+        
+        // Load meal metrics
+        let availableMeals = chartDataManager.getAvailableMeals()
+        for mealName in availableMeals {
+            if let metric = createMealMetric(mealName: mealName) {
                 metrics.append(metric)
             }
         }
@@ -233,6 +302,99 @@ class MetricSelectorViewModel {
         )
     }
     
+    private func createMedicationMetric(medicationName: String) -> SelectableMetric? {
+        let dataPointCount = chartDataManager.getMedicationDataPointCount(medicationName: medicationName)
+        let isAvailable = dataPointCount > 0
+        
+        // Get last value (taken or not taken)
+        let recentData = chartDataManager.getMedicationChartData(medicationName: medicationName, period: .week)
+        let lastValue = recentData.last?.value
+        
+        let formattedLastValue: String? = {
+            guard let value = lastValue else { return nil }
+            return value == 1.0 ? "Taken" : "Not taken"
+        }()
+        
+        let description = if dataPointCount < 3 {
+            "Days when \(medicationName) was taken (limited data - need more entries for reliable correlation)"
+        } else {
+            "Days when \(medicationName) was taken"
+        }
+        
+        return SelectableMetric(
+            name: medicationName,
+            medicationName: medicationName,
+            category: .medications,
+            icon: "💊",
+            description: description,
+            isAvailable: isAvailable,
+            lastValue: formattedLastValue,
+            dataPointCount: dataPointCount
+        )
+    }
+    
+    private func createActivityMetric(activityName: String) -> SelectableMetric? {
+        let dataPointCount = chartDataManager.getActivityDataPointCount(activityName: activityName)
+        let isAvailable = dataPointCount > 0
+        
+        // Get last value (done or not done)
+        let recentData = chartDataManager.getActivityChartData(activityName: activityName, period: .week)
+        let lastValue = recentData.last?.value
+        
+        let formattedLastValue: String? = {
+            guard let value = lastValue else { return nil }
+            return value == 1.0 ? "Done" : "Not done"
+        }()
+        
+        let description = if dataPointCount < 3 {
+            "Days when \(activityName.lowercased()) was done (limited data - need more entries for reliable correlation)"
+        } else {
+            "Days when \(activityName.lowercased()) was done"
+        }
+        
+        return SelectableMetric(
+            name: activityName,
+            activityName: activityName,
+            category: .activities,
+            icon: "🏃",
+            description: description,
+            isAvailable: isAvailable,
+            lastValue: formattedLastValue,
+            dataPointCount: dataPointCount
+        )
+    }
+    
+    private func createMealMetric(mealName: String) -> SelectableMetric? {
+        let dataPointCount = chartDataManager.getMealDataPointCount(mealName: mealName)
+        let isAvailable = dataPointCount > 0
+        
+        // Get last value (eaten or not eaten)
+        let recentData = chartDataManager.getMealChartData(mealName: mealName, period: .week)
+        let lastValue = recentData.last?.value
+        
+        let formattedLastValue: String? = {
+            guard let value = lastValue else { return nil }
+            return value == 1.0 ? "Eaten" : "Not eaten"
+        }()
+        
+        let description = if dataPointCount < 3 {
+            "Days when \(mealName.lowercased()) was eaten (limited data - need more entries for reliable correlation)"
+        } else {
+            "Days when \(mealName.lowercased()) was eaten"
+        }
+        
+        return SelectableMetric(
+            name: mealName,
+            mealName: mealName,
+            category: .meals,
+            icon: "🍽️",
+            description: description,
+            isAvailable: isAvailable,
+            lastValue: formattedLastValue,
+            dataPointCount: dataPointCount
+        )
+    }
+    
     /// Convert numerical weather value back to readable string
     private func convertNumericToWeather(_ numericValue: Double) -> String {
         switch numericValue {
@@ -253,6 +415,9 @@ private struct RecentMetricData: Codable {
     let name: String
     let type: String?
     let symptomName: String?
+    let medicationName: String?
+    let activityName: String?
+    let mealName: String?
     let category: String
 }
 
@@ -342,7 +507,7 @@ struct MetricSelectorView: View {
                     .fill(CloveColors.card)
                     .overlay(
                         RoundedRectangle(cornerRadius: CloveCorners.medium)
-                            .stroke(CloveColors.accent.opacity(0.2), lineWidth: 1)
+                            .stroke(Theme.shared.accent.opacity(0.2), lineWidth: 1)
                     )
             )
             
@@ -397,7 +562,7 @@ struct MetricSelectorView: View {
                     .padding(.vertical, CloveSpacing.xsmall)
                     .background(
                         RoundedRectangle(cornerRadius: CloveCorners.small)
-                            .fill(CloveColors.accent.opacity(0.1))
+                            .fill(Theme.shared.accent.opacity(0.1))
                     )
             }
             
@@ -438,7 +603,7 @@ struct MetricSelectorView: View {
         VStack(spacing: CloveSpacing.large) {
             Image(systemName: "chart.bar.doc.horizontal")
                 .font(.system(size: 48))
-                .foregroundStyle(CloveColors.accent.opacity(0.5))
+                .foregroundStyle(Theme.shared.accent.opacity(0.5))
             
             VStack(spacing: CloveSpacing.small) {
                 Text("No metrics found")
@@ -483,12 +648,12 @@ struct InsightsCategoryChip: View {
             Text(title)
                 .font(CloveFonts.small())
                 .fontWeight(.medium)
-                .foregroundStyle(isSelected ? .white : CloveColors.accent)
+                .foregroundStyle(isSelected ? .white : Theme.shared.accent)
                 .padding(.horizontal, CloveSpacing.medium)
                 .padding(.vertical, CloveSpacing.small)
                 .background(
                     RoundedRectangle(cornerRadius: CloveCorners.full)
-                        .fill(isSelected ? CloveColors.accent : CloveColors.accent.opacity(0.1))
+                        .fill(isSelected ? Theme.shared.accent : Theme.shared.accent.opacity(0.1))
                 )
         }
         .buttonStyle(PlainButtonStyle())
@@ -515,7 +680,7 @@ struct CompactInsightsMetricCard: View {
                 if let lastValue = metric.lastValue {
                     Text(lastValue)
                         .font(CloveFonts.small())
-                        .foregroundStyle(CloveColors.accent)
+                        .foregroundStyle(Theme.shared.accent)
                         .fontWeight(.semibold)
                 }
             }
@@ -525,7 +690,7 @@ struct CompactInsightsMetricCard: View {
                     .fill(CloveColors.card)
                     .overlay(
                         RoundedRectangle(cornerRadius: CloveCorners.medium)
-                            .stroke(CloveColors.accent.opacity(0.1), lineWidth: 1)
+                            .stroke(Theme.shared.accent.opacity(0.1), lineWidth: 1)
                     )
                     .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
             )
@@ -605,7 +770,7 @@ struct InsightsMetricCard: View {
                             
                             Text(lastValue)
                                 .font(CloveFonts.body())
-                                .foregroundStyle(CloveColors.accent)
+                                .foregroundStyle(Theme.shared.accent)
                                 .fontWeight(.semibold)
                         }
                     }
@@ -631,7 +796,7 @@ struct InsightsMetricCard: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: CloveCorners.medium)
                             .stroke(
-                                metric.isAvailable ? CloveColors.accent.opacity(0.2) : CloveColors.secondaryText.opacity(0.1),
+                                metric.isAvailable ? Theme.shared.accent.opacity(0.2) : CloveColors.secondaryText.opacity(0.1),
                                 lineWidth: 1
                             )
                     )

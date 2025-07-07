@@ -34,7 +34,7 @@ struct InsightsCustomizationView: View {
          HStack {
             Image(systemName: "slider.horizontal.3")
                .font(.system(size: 24))
-               .foregroundStyle(CloveColors.accent)
+               .foregroundStyle(Theme.shared.accent)
             
             VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
                Text("Insights Complexity")
@@ -214,7 +214,7 @@ struct ComplexityPresetCard: View {
          HStack(spacing: CloveSpacing.medium) {
             Image(systemName: icon)
                .font(.system(size: 20))
-               .foregroundStyle(isSelected ? .white : CloveColors.accent)
+               .foregroundStyle(isSelected ? .white : Theme.shared.accent)
                .frame(width: 28, height: 28)
             
             VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
@@ -238,10 +238,10 @@ struct ComplexityPresetCard: View {
          .padding(CloveSpacing.large)
          .background(
             RoundedRectangle(cornerRadius: CloveCorners.medium)
-               .fill(isSelected ? CloveColors.accent : CloveColors.background)
+               .fill(isSelected ? Theme.shared.accent : CloveColors.background)
                .overlay(
                   RoundedRectangle(cornerRadius: CloveCorners.medium)
-                     .stroke(CloveColors.accent.opacity(isSelected ? 0 : 0.3), lineWidth: 1)
+                     .stroke(Theme.shared.accent.opacity(isSelected ? 0 : 0.3), lineWidth: 1)
                )
          )
       }
@@ -260,7 +260,7 @@ struct InsightToggleRow: View {
       HStack(spacing: CloveSpacing.medium) {
          Image(systemName: icon)
             .font(.system(size: 20))
-            .foregroundStyle(CloveColors.accent)
+            .foregroundStyle(Theme.shared.accent)
             .frame(width: 28, height: 28)
          
          VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
@@ -280,7 +280,7 @@ struct InsightToggleRow: View {
             get: { isEnabled },
             set: { onToggle($0) }
          ))
-         .toggleStyle(SwitchToggleStyle(tint: CloveColors.accent))
+         .toggleStyle(SwitchToggleStyle(tint: Theme.shared.accent))
       }
       .padding(CloveSpacing.large)
       .background(
@@ -288,7 +288,7 @@ struct InsightToggleRow: View {
             .fill(CloveColors.background)
             .overlay(
                RoundedRectangle(cornerRadius: CloveCorners.medium)
-                  .stroke(CloveColors.accent.opacity(0.1), lineWidth: 1)
+                  .stroke(Theme.shared.accent.opacity(0.1), lineWidth: 1)
             )
       )
    }

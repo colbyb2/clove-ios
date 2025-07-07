@@ -34,7 +34,7 @@ struct SmartInsightsPreviewView: View {
     private var loadingView: some View {
         HStack(spacing: CloveSpacing.medium) {
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: CloveColors.accent))
+                .progressViewStyle(CircularProgressViewStyle(tint: Theme.shared.accent))
                 .scaleEffect(0.8)
             
             Text("Analyzing your data...")
@@ -55,7 +55,7 @@ struct SmartInsightsPreviewView: View {
             HStack(spacing: CloveSpacing.medium) {
                 Image(systemName: "lightbulb")
                     .font(.system(size: 20))
-                    .foregroundStyle(CloveColors.accent.opacity(0.6))
+                    .foregroundStyle(Theme.shared.accent.opacity(0.6))
                 
                 VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
                     Text("No insights yet")
@@ -152,7 +152,7 @@ struct InsightPreviewCard: View {
             if insight.isActionable {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 14))
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
             }
         }
         .padding(CloveSpacing.medium)
@@ -175,7 +175,7 @@ struct InsightPreviewCard: View {
     private var priorityColor: Color {
         switch insight.priority {
         case .low: return CloveColors.blue
-        case .medium: return CloveColors.accent
+        case .medium: return Theme.shared.accent
         case .high: return .orange
         case .critical: return CloveColors.red
         }

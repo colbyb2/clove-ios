@@ -11,7 +11,7 @@ struct TrendOverviewWidget: View {
             HStack {
                 Image(systemName: "chart.bar.fill")
                     .font(.system(size: 18))
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                 
                 Text("Metrics Overview")
                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
@@ -26,7 +26,7 @@ struct TrendOverviewWidget: View {
                     .padding(.vertical, CloveSpacing.xsmall)
                     .background(
                         RoundedRectangle(cornerRadius: CloveCorners.small)
-                            .fill(CloveColors.accent.opacity(0.1))
+                            .fill(Theme.shared.accent.opacity(0.1))
                     )
             }
             
@@ -106,7 +106,7 @@ struct WeeklyPatternWidget: View {
             HStack {
                 Image(systemName: "calendar")
                     .font(.system(size: 18))
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                 
                 Text("Weekly Pattern")
                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
@@ -125,7 +125,7 @@ struct WeeklyPatternWidget: View {
                         ForEach(Array(firstPattern.value.enumerated()), id: \.offset) { index, value in
                             VStack(spacing: CloveSpacing.xsmall) {
                                 RoundedRectangle(cornerRadius: 4)
-                                  .fill(CloveColors.accent.opacity(intensityOpacity(value, maxValue: firstPattern.value.max() ?? 1)))
+                                  .fill(Theme.shared.accent.opacity(intensityOpacity(value, maxValue: firstPattern.value.max() ?? 1)))
                                     .frame(width: 20, height: 30)
                                 
                                 Text(weekdays[index])
@@ -165,7 +165,7 @@ struct CorrelationHighlightWidget: View {
             HStack {
                 Image(systemName: "link")
                     .font(.system(size: 18))
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                 
                 Text("Top Correlation")
                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
@@ -211,7 +211,7 @@ struct CorrelationHighlightWidget: View {
         let abs = abs(correlation)
         switch abs {
         case 0.7...1.0: return CloveColors.green
-        case 0.4..<0.7: return CloveColors.accent
+        case 0.4..<0.7: return Theme.shared.accent
         case 0.2..<0.4: return .orange
         default: return CloveColors.secondaryText
         }
@@ -270,14 +270,14 @@ struct DashboardCustomizationView: View {
                     dismiss()
                 }
                 .font(CloveFonts.body())
-                .foregroundStyle(CloveColors.accent)
+                .foregroundStyle(Theme.shared.accent)
                 .fontWeight(.semibold)
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
                 EditButton()
                     .font(CloveFonts.body())
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
             }
         }
     }
@@ -293,7 +293,7 @@ struct WidgetCustomizationRow: View {
         HStack(spacing: CloveSpacing.medium) {
             Image(systemName: widget.type.icon)
                 .font(.system(size: 20))
-                .foregroundStyle(widget.isEnabled ? CloveColors.accent : CloveColors.secondaryText)
+                .foregroundStyle(widget.isEnabled ? Theme.shared.accent : CloveColors.secondaryText)
                 .frame(width: 30)
             
             VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
@@ -314,7 +314,7 @@ struct WidgetCustomizationRow: View {
                 get: { widget.isEnabled },
                 set: { _ in dashboardManager.toggleWidget(widget.type) }
             ))
-            .toggleStyle(SwitchToggleStyle(tint: CloveColors.accent))
+            .toggleStyle(SwitchToggleStyle(tint: Theme.shared.accent))
         }
         .padding(.vertical, CloveSpacing.xsmall)
     }

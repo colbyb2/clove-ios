@@ -208,7 +208,7 @@ struct CrossReferenceView: View {
    private var loadingSection: some View {
       VStack(spacing: CloveSpacing.medium) {
          ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: CloveColors.accent))
+            .progressViewStyle(CircularProgressViewStyle(tint: Theme.shared.accent))
             .scaleEffect(1.2)
          
          Text("Calculating correlation...")
@@ -230,7 +230,7 @@ struct CrossReferenceView: View {
       VStack(spacing: CloveSpacing.large) {
          Image(systemName: "chart.bar.xaxis")
             .font(.system(size: 48))
-            .foregroundStyle(CloveColors.accent.opacity(0.6))
+            .foregroundStyle(Theme.shared.accent.opacity(0.6))
          
          VStack(spacing: CloveSpacing.small) {
             Text("Select Two Metrics")
@@ -286,7 +286,7 @@ struct CrossReferenceHeaderView: View {
          HStack {
             Image(systemName: "chart.bar.xaxis")
                .font(.system(size: 24))
-               .foregroundStyle(CloveColors.accent)
+               .foregroundStyle(Theme.shared.accent)
             
             VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
                Text("Correlation Analysis")
@@ -305,7 +305,7 @@ struct CrossReferenceHeaderView: View {
             HStack(spacing: CloveSpacing.small) {
                Image(systemName: "info.circle.fill")
                   .font(.system(size: 14))
-                  .foregroundStyle(CloveColors.accent)
+                  .foregroundStyle(Theme.shared.accent)
                
                Text("Analyzing \(analysis.dataPoints.count) matching data points")
                   .font(CloveFonts.small())
@@ -353,7 +353,7 @@ struct MetricSelectionCardView: View {
             
             Image(systemName: "arrow.left.and.right")
                .font(.system(size: 20))
-               .foregroundStyle(CloveColors.accent)
+               .foregroundStyle(Theme.shared.accent)
                .frame(width: 30)
             
             MetricPairSelector(
@@ -382,7 +382,7 @@ struct MetricSelectionCardView: View {
       .padding(.vertical, CloveSpacing.small)
       .background(
          RoundedRectangle(cornerRadius: CloveCorners.full)
-            .fill(CloveColors.accent)
+            .fill(Theme.shared.accent)
       )
    }
 }
@@ -410,7 +410,7 @@ struct MetricPairSelector: View {
                   
                   Image(systemName: "plus.circle.dashed")
                      .font(.system(size: 24))
-                     .foregroundStyle(CloveColors.accent)
+                     .foregroundStyle(Theme.shared.accent)
                }
                
                Spacer()
@@ -422,10 +422,10 @@ struct MetricPairSelector: View {
             .padding(CloveSpacing.medium)
             .background(
                RoundedRectangle(cornerRadius: CloveCorners.medium)
-                  .fill(selectedMetric != nil ? CloveColors.accent.opacity(0.1) : CloveColors.background)
+                  .fill(selectedMetric != nil ? Theme.shared.accent.opacity(0.1) : CloveColors.background)
                   .overlay(
                      RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .stroke(CloveColors.accent.opacity(0.3), lineWidth: 1)
+                        .stroke(Theme.shared.accent.opacity(0.3), lineWidth: 1)
                   )
             )
          }
@@ -473,7 +473,7 @@ struct SavedCorrelationCard: View {
          Button(action: onTap) {
             Text("Load Analysis")
                .font(CloveFonts.small())
-               .foregroundStyle(CloveColors.accent)
+               .foregroundStyle(Theme.shared.accent)
                .fontWeight(.semibold)
          }
          .buttonStyle(PlainButtonStyle())
@@ -485,7 +485,7 @@ struct SavedCorrelationCard: View {
             .fill(CloveColors.background)
             .overlay(
                RoundedRectangle(cornerRadius: CloveCorners.medium)
-                  .stroke(CloveColors.accent.opacity(0.2), lineWidth: 1)
+                  .stroke(Theme.shared.accent.opacity(0.2), lineWidth: 1)
             )
       )
    }
@@ -500,7 +500,7 @@ struct SuggestedCorrelationRow: View {
          HStack(spacing: CloveSpacing.medium) {
             Image(systemName: "lightbulb")
                .font(.system(size: 20))
-               .foregroundStyle(CloveColors.accent)
+               .foregroundStyle(Theme.shared.accent)
                .frame(width: 24)
             
             VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
@@ -526,7 +526,7 @@ struct SuggestedCorrelationRow: View {
                .fill(CloveColors.background)
                .overlay(
                   RoundedRectangle(cornerRadius: CloveCorners.medium)
-                     .stroke(CloveColors.accent.opacity(0.1), lineWidth: 1)
+                     .stroke(Theme.shared.accent.opacity(0.1), lineWidth: 1)
                )
          )
       }

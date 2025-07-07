@@ -10,7 +10,7 @@ struct AccessibleRatingInput: View {
     let step: Int
     let showAlternativeControls: Bool
     
-    @State private var showSlider = true
+    @AppStorage(Constants.USE_SLIDER_INPUT) private var useSliderInput = true
     
     init(
         value: Binding<Double>,
@@ -49,30 +49,30 @@ struct AccessibleRatingInput: View {
                 // Current value display
                 Text("\(Int(value))")
                     .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                 
                 if showAlternativeControls {
                     // Toggle input method button
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.3)) {
-                            showSlider.toggle()
+                            useSliderInput.toggle()
                         }
                         // Haptic feedback for mode switch
                         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                         impactFeedback.impactOccurred()
                     }) {
-                        Image(systemName: showSlider ? "plusminus" : "slider.horizontal.below.rectangle")
+                        Image(systemName: useSliderInput ? "plusminus" : "slider.horizontal.below.rectangle")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(CloveColors.secondaryText)
                             .frame(width: 44, height: 44) // Minimum touch target
                     }
                     .accessibilityLabel("Switch input method")
-                    .accessibilityHint(showSlider ? "Switch to plus minus buttons" : "Switch to slider")
+                    .accessibilityHint(useSliderInput ? "Switch to plus minus buttons" : "Switch to slider")
                 }
             }
             
             // Input control
-            if showSlider {
+            if useSliderInput {
                 AccessibleSlider(
                     value: $value,
                     minValue: minValue,
@@ -117,7 +117,7 @@ struct AccessibleSlider: View {
                     
                     // Progress
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(CloveColors.accent)
+                        .fill(Theme.shared.accent)
                         .frame(
                             width: geometry.size.width * CGFloat((value - Double(minValue)) / Double(maxValue - minValue)),
                             height: 8
@@ -127,7 +127,7 @@ struct AccessibleSlider: View {
                     let thumbPosition = geometry.size.width * CGFloat((value - Double(minValue)) / Double(maxValue - minValue))
                     
                     Circle()
-                        .fill(CloveColors.accent)
+                        .fill(Theme.shared.accent)
                         .frame(width: isDragging ? 28 : 24, height: isDragging ? 28 : 24)
                         .overlay(
                             Circle()
@@ -249,7 +249,7 @@ struct PlusMinusControls: View {
                 VStack(spacing: 4) {
                     Text("\(Int(value))")
                         .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundStyle(CloveColors.accent)
+                        .foregroundStyle(Theme.shared.accent)
                     
                     Text("out of \(maxValue)")
                         .font(CloveFonts.small())
@@ -323,7 +323,7 @@ struct AccessibleStepperButton: View {
     
     private var backgroundColor: Color {
         switch style {
-        case .primary: return CloveColors.accent
+        case .primary: return Theme.shared.accent
         case .secondary: return CloveColors.card
         }
     }
@@ -331,13 +331,13 @@ struct AccessibleStepperButton: View {
     private var foregroundColor: Color {
         switch style {
         case .primary: return .white
-        case .secondary: return CloveColors.accent
+        case .secondary: return Theme.shared.accent
         }
     }
     
     private var shadowColor: Color {
         switch style {
-        case .primary: return CloveColors.accent.opacity(0.3)
+        case .primary: return Theme.shared.accent.opacity(0.3)
         case .secondary: return .black.opacity(0.1)
         }
     }

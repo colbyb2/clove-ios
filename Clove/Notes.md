@@ -201,7 +201,7 @@ Transform the InsightsView from a basic chart display into a comprehensive analy
 
 #### 2. **Overview Tab Design**
 **Smart Insights Card**: Top priority
-- **Gradient background** with CloveColors.accent
+- **Gradient background** with Theme.shared.accent
 - **Rotating insights** with smooth animations
 - **Achievement badges** for positive trends
 - **Quick action buttons** for "Learn More" or "View Chart"

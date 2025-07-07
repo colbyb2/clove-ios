@@ -26,7 +26,7 @@ struct MedicationSetupSheet: View {
             ZStack {
                 // Gradient background
                 LinearGradient(
-                    colors: [CloveColors.accent.opacity(0.03), Color.clear],
+                    colors: [Theme.shared.accent.opacity(0.03), Color.clear],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -98,12 +98,12 @@ struct MedicationSetupSheet: View {
                                 RoundedRectangle(cornerRadius: 20)
                                     .fill(
                                         LinearGradient(
-                                            colors: [CloveColors.accent, CloveColors.accent.opacity(0.8)],
+                                            colors: [Theme.shared.accent, Theme.shared.accent.opacity(0.8)],
                                             startPoint: .topLeading,
                                             endPoint: .bottomTrailing
                                         )
                                     )
-                                    .shadow(color: CloveColors.accent.opacity(0.3), radius: 4, x: 0, y: 2)
+                                    .shadow(color: Theme.shared.accent.opacity(0.3), radius: 4, x: 0, y: 2)
                             )
                     }
                 }
@@ -270,7 +270,7 @@ struct MedicationRowView: View {
             HStack(spacing: CloveSpacing.medium) {
                 Image(systemName: medication.isAsNeeded ? "pills.circle" : "pills.fill")
                     .font(.system(size: 16))
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                 
                 if isEditing {
                     VStack(alignment: .leading, spacing: CloveSpacing.small) {
@@ -300,7 +300,7 @@ struct MedicationRowView: View {
                             onSave()
                         }
                         .font(CloveFonts.small())
-                        .foregroundStyle(CloveColors.accent)
+                        .foregroundStyle(Theme.shared.accent)
                         .fontWeight(.semibold)
                         
                         Button("Cancel") {
@@ -352,7 +352,7 @@ struct MedicationRowView: View {
                         onEdit()
                     }
                     .font(CloveFonts.small())
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                     .fontWeight(.semibold)
                 }
             }
@@ -465,7 +465,7 @@ struct MedicationRowView: View {
 //                    .frame(height: 44)
 //                    .background(
 //                        RoundedRectangle(cornerRadius: CloveCorners.small)
-//                            .fill(isAddButtonEnabled ? CloveColors.accent : CloveColors.secondaryText)
+//                            .fill(isAddButtonEnabled ? Theme.shared.accent : CloveColors.secondaryText)
 //                    )
 //                }
 //                .disabled(!isAddButtonEnabled)
@@ -634,7 +634,7 @@ struct MedicationRowView: View {
 //                HStack {
 //                    Image(systemName: "clock.badge.checkmark")
 //                        .font(.system(size: 16))
-//                        .foregroundStyle(CloveColors.accent)
+//                        .foregroundStyle(Theme.shared.accent)
 //                    
 //                    Text("Recent Changes (\(recentChanges.count))")
 //                        .font(CloveFonts.body())
@@ -656,7 +656,7 @@ struct MedicationRowView: View {
 //                    ForEach(recentChanges.prefix(5), id: \.id) { change in
 //                        HStack {
 //                            Text("•")
-//                                .foregroundStyle(CloveColors.accent)
+//                                .foregroundStyle(Theme.shared.accent)
 //                            
 //                            Text(changeDescription(change))
 //                                .font(CloveFonts.small())
@@ -685,10 +685,10 @@ struct MedicationRowView: View {
 //        .padding(.horizontal, CloveSpacing.medium)
 //        .background(
 //            RoundedRectangle(cornerRadius: CloveCorners.medium)
-//                .fill(CloveColors.accent.opacity(0.1))
+//                .fill(Theme.shared.accent.opacity(0.1))
 //                .overlay(
 //                    RoundedRectangle(cornerRadius: CloveCorners.medium)
-//                        .stroke(CloveColors.accent.opacity(0.3), lineWidth: 1)
+//                        .stroke(Theme.shared.accent.opacity(0.3), lineWidth: 1)
 //                )
 //        )
 //    }
@@ -750,7 +750,7 @@ struct ModernMedicationHeaderView: View {
          RoundedRectangle(cornerRadius: CloveCorners.medium)
                 .fill(
                     LinearGradient(
-                        colors: [CloveColors.accent.opacity(0.08), CloveColors.accent.opacity(0.03)],
+                        colors: [Theme.shared.accent.opacity(0.08), Theme.shared.accent.opacity(0.03)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -759,14 +759,14 @@ struct ModernMedicationHeaderView: View {
                     RoundedRectangle(cornerRadius: CloveCorners.medium)
                         .stroke(
                             LinearGradient(
-                                colors: [CloveColors.accent.opacity(0.2), CloveColors.accent.opacity(0.1)],
+                                colors: [Theme.shared.accent.opacity(0.2), Theme.shared.accent.opacity(0.1)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
                             lineWidth: 1
                         )
                 )
-                .shadow(color: CloveColors.accent.opacity(0.1), radius: 8, x: 0, y: 4)
+                .shadow(color: Theme.shared.accent.opacity(0.1), radius: 8, x: 0, y: 4)
         )
     }
 }
@@ -892,7 +892,7 @@ struct ModernInputField: View {
                             .fill(CloveColors.card)
                             .overlay(
                                 RoundedRectangle(cornerRadius: CloveCorners.medium)
-                                    .stroke(CloveColors.accent.opacity(0.2), lineWidth: 1)
+                                    .stroke(Theme.shared.accent.opacity(0.2), lineWidth: 1)
                             )
                             .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
                     )
@@ -962,7 +962,7 @@ struct ModernDosageField: View {
                         .fill(CloveColors.card)
                         .overlay(
                             RoundedRectangle(cornerRadius: CloveCorners.medium)
-                                .stroke(CloveColors.accent.opacity(0.2), lineWidth: 1)
+                                .stroke(Theme.shared.accent.opacity(0.2), lineWidth: 1)
                         )
                         .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
                 )
@@ -980,12 +980,12 @@ struct ModernDosageField: View {
                         impactFeedback.impactOccurred()
                     }
                     .font(CloveFonts.small())
-                    .foregroundStyle(text == dosage ? .white : CloveColors.accent)
+                    .foregroundStyle(text == dosage ? .white : Theme.shared.accent)
                     .padding(.horizontal, CloveSpacing.small)
                     .padding(.vertical, CloveSpacing.xsmall)
                     .background(
                         RoundedRectangle(cornerRadius: CloveCorners.small)
-                            .fill(text == dosage ? CloveColors.accent : CloveColors.accent.opacity(0.1))
+                            .fill(text == dosage ? Theme.shared.accent : Theme.shared.accent.opacity(0.1))
                     )
                     .scaleEffect(text == dosage ? 1.05 : 1.0)
                     .animation(.spring(response: 0.3, dampingFraction: 0.8), value: text)
@@ -1036,7 +1036,7 @@ struct ModernToggleField: View {
                 .frame(width: 44, height: 24)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(isOn ? CloveColors.accent : CloveColors.secondaryText.opacity(0.3))
+                        .fill(isOn ? Theme.shared.accent : CloveColors.secondaryText.opacity(0.3))
                 )
             }
             .buttonStyle(PlainButtonStyle())
@@ -1047,7 +1047,7 @@ struct ModernToggleField: View {
                 .fill(CloveColors.card)
                 .overlay(
                     RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .stroke(CloveColors.accent.opacity(0.2), lineWidth: 1)
+                        .stroke(Theme.shared.accent.opacity(0.2), lineWidth: 1)
                 )
                 .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
         )
@@ -1086,13 +1086,13 @@ struct ModernAddButton: View {
                 RoundedRectangle(cornerRadius: CloveCorners.medium)
                     .fill(
                         LinearGradient(
-                            colors: isEnabled ? [CloveColors.accent, CloveColors.accent.opacity(0.8)] : [CloveColors.secondaryText, CloveColors.secondaryText.opacity(0.8)],
+                            colors: isEnabled ? [Theme.shared.accent, Theme.shared.accent.opacity(0.8)] : [CloveColors.secondaryText, CloveColors.secondaryText.opacity(0.8)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .shadow(
-                        color: isEnabled ? CloveColors.accent.opacity(0.3) : .clear,
+                        color: isEnabled ? Theme.shared.accent.opacity(0.3) : .clear,
                         radius: 8,
                         x: 0,
                         y: 4
@@ -1181,7 +1181,7 @@ struct ModernMedicationCard: View {
                             .font(.system(size: 20))
                             .foregroundStyle(
                                 LinearGradient(
-                                    colors: [CloveColors.accent, CloveColors.accent.opacity(0.7)],
+                                    colors: [Theme.shared.accent, Theme.shared.accent.opacity(0.7)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -1189,7 +1189,7 @@ struct ModernMedicationCard: View {
                             .frame(width: 32, height: 32)
                             .background(
                                 Circle()
-                                    .fill(CloveColors.accent.opacity(0.1))
+                                    .fill(Theme.shared.accent.opacity(0.1))
                             )
                         
                         Text("Edit Medication")
@@ -1239,7 +1239,7 @@ struct ModernMedicationCard: View {
                                 .frame(width: 44, height: 24)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(editingIsAsNeeded ? CloveColors.accent : CloveColors.secondaryText.opacity(0.3))
+                                        .fill(editingIsAsNeeded ? Theme.shared.accent : CloveColors.secondaryText.opacity(0.3))
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())
@@ -1296,7 +1296,7 @@ struct ModernMedicationCard: View {
                         .font(.system(size: 20))
                         .foregroundStyle(
                             LinearGradient(
-                                colors: [CloveColors.accent, CloveColors.accent.opacity(0.7)],
+                                colors: [Theme.shared.accent, Theme.shared.accent.opacity(0.7)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -1304,7 +1304,7 @@ struct ModernMedicationCard: View {
                         .frame(width: 32, height: 32)
                         .background(
                             Circle()
-                                .fill(CloveColors.accent.opacity(0.1))
+                                .fill(Theme.shared.accent.opacity(0.1))
                         )
                     
                     // Medication details
@@ -1317,15 +1317,15 @@ struct ModernMedicationCard: View {
                             if medication.isAsNeeded {
                                 Text("As needed")
                                     .font(CloveFonts.small())
-                                    .foregroundStyle(CloveColors.accent)
+                                    .foregroundStyle(Theme.shared.accent)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 3)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .fill(CloveColors.accent.opacity(0.1))
+                                            .fill(Theme.shared.accent.opacity(0.1))
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 12)
-                                                    .stroke(CloveColors.accent.opacity(0.3), lineWidth: 1)
+                                                    .stroke(Theme.shared.accent.opacity(0.3), lineWidth: 1)
                                             )
                                     )
                             }
@@ -1355,7 +1355,7 @@ struct ModernMedicationCard: View {
                             }
                         }
                         .font(CloveFonts.small())
-                        .foregroundStyle(CloveColors.accent)
+                        .foregroundStyle(Theme.shared.accent)
                         .fontWeight(.semibold)
                         .buttonStyle(BounceButtonStyle())
                         
@@ -1375,7 +1375,7 @@ struct ModernMedicationCard: View {
                 .fill(
                     isEditing ?
                     LinearGradient(
-                        colors: [CloveColors.accent.opacity(0.05), CloveColors.accent.opacity(0.02)],
+                        colors: [Theme.shared.accent.opacity(0.05), Theme.shared.accent.opacity(0.02)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ) :
@@ -1390,8 +1390,8 @@ struct ModernMedicationCard: View {
                         .stroke(
                             LinearGradient(
                                 colors: isEditing ?
-                                [CloveColors.accent.opacity(0.3), CloveColors.accent.opacity(0.2)] :
-                                [CloveColors.accent.opacity(0.1), CloveColors.accent.opacity(0.05)],
+                                [Theme.shared.accent.opacity(0.3), Theme.shared.accent.opacity(0.2)] :
+                                [Theme.shared.accent.opacity(0.1), Theme.shared.accent.opacity(0.05)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
@@ -1415,7 +1415,7 @@ struct ModernEditField: View {
                     .fill(CloveColors.card)
                     .overlay(
                         RoundedRectangle(cornerRadius: CloveCorners.small)
-                            .stroke(CloveColors.accent.opacity(0.2), lineWidth: 1)
+                            .stroke(Theme.shared.accent.opacity(0.2), lineWidth: 1)
                     )
             )
     }
@@ -1442,7 +1442,7 @@ struct ModernRecentChangesView: View {
                 HStack {
                     Image(systemName: "clock.badge.checkmark")
                         .font(.system(size: 16))
-                        .foregroundStyle(CloveColors.accent)
+                        .foregroundStyle(Theme.shared.accent)
                     
                     Text("Recent Changes (\(recentChanges.count))")
                         .font(.system(.body, design: .rounded).weight(.semibold))
@@ -1463,7 +1463,7 @@ struct ModernRecentChangesView: View {
                     ForEach(recentChanges.prefix(5), id: \.id) { change in
                         HStack {
                             Circle()
-                                .fill(CloveColors.accent)
+                                .fill(Theme.shared.accent)
                                 .frame(width: 6, height: 6)
                             
                             Text(changeDescription(change))
@@ -1494,16 +1494,16 @@ struct ModernRecentChangesView: View {
             RoundedRectangle(cornerRadius: CloveCorners.medium)
                 .fill(
                     LinearGradient(
-                        colors: [CloveColors.accent.opacity(0.08), CloveColors.accent.opacity(0.03)],
+                        colors: [Theme.shared.accent.opacity(0.08), Theme.shared.accent.opacity(0.03)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .stroke(CloveColors.accent.opacity(0.2), lineWidth: 1)
+                        .stroke(Theme.shared.accent.opacity(0.2), lineWidth: 1)
                 )
-                .shadow(color: CloveColors.accent.opacity(0.1), radius: 6, x: 0, y: 3)
+                .shadow(color: Theme.shared.accent.opacity(0.1), radius: 6, x: 0, y: 3)
         )
     }
     
@@ -1534,7 +1534,7 @@ struct ModernMedicationEmptyStateView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [CloveColors.accent.opacity(0.6), CloveColors.accent.opacity(0.3)],
+                        colors: [Theme.shared.accent.opacity(0.6), Theme.shared.accent.opacity(0.3)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -1558,7 +1558,7 @@ struct ModernMedicationEmptyStateView: View {
                 .fill(CloveColors.card)
                 .overlay(
                     RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .stroke(CloveColors.accent.opacity(0.1), lineWidth: 1)
+                        .stroke(Theme.shared.accent.opacity(0.1), lineWidth: 1)
                 )
                 .shadow(color: .black.opacity(0.02), radius: 4, x: 0, y: 2)
         )

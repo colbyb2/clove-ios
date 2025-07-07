@@ -11,6 +11,13 @@ class LogData {
    var meals: [String] = []
    var activities: [String] = []
    var medicationAdherence: [MedicationAdherence] = []
+   
+   // Computed property to get medications that were taken
+   var medicationsTaken: [String] {
+      return medicationAdherence
+         .filter { $0.wasTaken }
+         .map { $0.medicationName }
+   }
    var symptomRatings: [SymptomRatingVM] = []
    
    init() {}

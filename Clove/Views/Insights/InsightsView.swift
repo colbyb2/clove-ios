@@ -17,7 +17,7 @@ struct InsightsView: View {
          HStack {
             Image(systemName: "slider.horizontal.3")
                .font(.system(size: 20))
-               .foregroundStyle(CloveColors.accent)
+               .foregroundStyle(Theme.shared.accent)
             
             VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
                Text("Want More Insights?")
@@ -47,12 +47,12 @@ struct InsightsView: View {
                RoundedRectangle(cornerRadius: CloveCorners.medium)
                   .fill(
                      LinearGradient(
-                        colors: [CloveColors.accent, CloveColors.accent.opacity(0.8)],
+                        colors: [Theme.shared.accent, Theme.shared.accent.opacity(0.8)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                      )
                   )
-                  .shadow(color: CloveColors.accent.opacity(0.3), radius: 6, x: 0, y: 3)
+                  .shadow(color: Theme.shared.accent.opacity(0.3), radius: 6, x: 0, y: 3)
             )
          }
          .buttonStyle(PlainButtonStyle())
@@ -62,14 +62,14 @@ struct InsightsView: View {
          RoundedRectangle(cornerRadius: CloveCorners.medium)
             .fill(
                LinearGradient(
-                  colors: [CloveColors.accent.opacity(0.05), CloveColors.accent.opacity(0.02)],
+                  colors: [Theme.shared.accent.opacity(0.05), Theme.shared.accent.opacity(0.02)],
                   startPoint: .topLeading,
                   endPoint: .bottomTrailing
                )
             )
             .overlay(
                RoundedRectangle(cornerRadius: CloveCorners.medium)
-                  .stroke(CloveColors.accent.opacity(0.2), lineWidth: 1)
+                  .stroke(Theme.shared.accent.opacity(0.2), lineWidth: 1)
             )
       )
    }
@@ -131,12 +131,12 @@ struct InsightsView: View {
                   RoundedRectangle(cornerRadius: CloveCorners.full)
                      .fill(
                         LinearGradient(
-                           colors: [CloveColors.accent, CloveColors.accent.opacity(0.8)],
+                           colors: [Theme.shared.accent, Theme.shared.accent.opacity(0.8)],
                            startPoint: .topLeading,
                            endPoint: .bottomTrailing
                         )
                      )
-                     .shadow(color: CloveColors.accent.opacity(0.3), radius: 4, x: 0, y: 2)
+                     .shadow(color: Theme.shared.accent.opacity(0.3), radius: 4, x: 0, y: 2)
                )
             }
          }
@@ -214,7 +214,7 @@ struct InsightsView: View {
                showingMetricSelector = true
             }
             .font(CloveFonts.small())
-            .foregroundStyle(CloveColors.accent)
+            .foregroundStyle(Theme.shared.accent)
             .fontWeight(.semibold)
          }
          .padding(.horizontal)
@@ -281,7 +281,7 @@ struct InsightsView: View {
       VStack(spacing: CloveSpacing.large) {
          Image(systemName: "chart.line.uptrend.xyaxis")
             .font(.system(size: 48))
-            .foregroundStyle(CloveColors.accent.opacity(0.6))
+            .foregroundStyle(Theme.shared.accent.opacity(0.6))
          
          VStack(spacing: CloveSpacing.small) {
             Text("Explore Your Data")
@@ -311,12 +311,12 @@ struct InsightsView: View {
                RoundedRectangle(cornerRadius: CloveCorners.medium)
                   .fill(
                      LinearGradient(
-                        colors: [CloveColors.accent, CloveColors.accent.opacity(0.8)],
+                        colors: [Theme.shared.accent, Theme.shared.accent.opacity(0.8)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                      )
                   )
-                  .shadow(color: CloveColors.accent.opacity(0.3), radius: 6, x: 0, y: 3)
+                  .shadow(color: Theme.shared.accent.opacity(0.3), radius: 6, x: 0, y: 3)
             )
          }
       }
@@ -342,7 +342,7 @@ struct InsightsView: View {
                      .font(.system(size: 12))
                }
                .font(CloveFonts.small())
-               .foregroundStyle(CloveColors.accent)
+               .foregroundStyle(Theme.shared.accent)
                .fontWeight(.semibold)
             }
          }
@@ -375,7 +375,7 @@ struct InsightsView: View {
                      .font(.system(size: 12))
                }
                .font(CloveFonts.small())
-               .foregroundStyle(CloveColors.accent)
+               .foregroundStyle(Theme.shared.accent)
                .fontWeight(.semibold)
             }
          }
@@ -408,7 +408,7 @@ struct InsightsView: View {
                      .font(.system(size: 12))
                }
                .font(CloveFonts.small())
-               .foregroundStyle(CloveColors.accent)
+               .foregroundStyle(Theme.shared.accent)
                .fontWeight(.semibold)
             }
          }
@@ -436,15 +436,15 @@ struct InsightsTimePeriodChip: View {
          Text(period.shortDisplayName)
             .font(CloveFonts.small())
             .fontWeight(.semibold)
-            .foregroundStyle(isSelected ? .white : CloveColors.accent)
+            .foregroundStyle(isSelected ? .white : Theme.shared.accent)
             .padding(.horizontal, CloveSpacing.medium)
             .padding(.vertical, CloveSpacing.small)
             .background(
                RoundedRectangle(cornerRadius: CloveCorners.full)
-                  .fill(isSelected ? CloveColors.accent : CloveColors.accent.opacity(0.1))
+                  .fill(isSelected ? Theme.shared.accent : Theme.shared.accent.opacity(0.1))
                   .overlay(
                      RoundedRectangle(cornerRadius: CloveCorners.full)
-                        .stroke(CloveColors.accent.opacity(0.3), lineWidth: 1)
+                        .stroke(Theme.shared.accent.opacity(0.3), lineWidth: 1)
                   )
             )
       }
@@ -456,7 +456,7 @@ struct InsightsLoadingChartView: View {
    var body: some View {
       VStack(spacing: CloveSpacing.medium) {
          ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: CloveColors.accent))
+            .progressViewStyle(CircularProgressViewStyle(tint: Theme.shared.accent))
             .scaleEffect(1.2)
          
          Text("Loading chart data...")
@@ -503,7 +503,7 @@ struct InsightsFeaturePreviewCard: View {
       HStack(spacing: CloveSpacing.medium) {
          Image(systemName: icon)
             .font(.system(size: 24))
-            .foregroundStyle(CloveColors.accent)
+            .foregroundStyle(Theme.shared.accent)
             .frame(width: 32, height: 32)
          
          VStack(alignment: .leading, spacing: CloveSpacing.small) {
@@ -525,7 +525,7 @@ struct InsightsFeaturePreviewCard: View {
             .fill(CloveColors.card)
             .overlay(
                RoundedRectangle(cornerRadius: CloveCorners.medium)
-                  .stroke(CloveColors.accent.opacity(0.1), lineWidth: 1)
+                  .stroke(Theme.shared.accent.opacity(0.1), lineWidth: 1)
             )
       )
    }
@@ -549,7 +549,7 @@ struct CrossReferencePreviewView: View {
             
             Image(systemName: "chart.bar.xaxis")
                .font(.system(size: 28))
-               .foregroundStyle(CloveColors.accent)
+               .foregroundStyle(Theme.shared.accent)
          }
          
          // Sample correlation cards
@@ -563,8 +563,8 @@ struct CrossReferencePreviewView: View {
             )
             
             correlationPreviewCard(
-               primary: "Pain",
-               secondary: "Sleep",
+               primary: "Weather",
+               secondary: "Bloating",
                correlation: -0.65,
                strength: "Moderate",
                direction: "Negative"
@@ -580,15 +580,15 @@ struct CrossReferencePreviewView: View {
                   .font(CloveFonts.small())
                   .fontWeight(.semibold)
             }
-            .foregroundStyle(CloveColors.accent)
+            .foregroundStyle(Theme.shared.accent)
             .padding(.horizontal, CloveSpacing.medium)
             .padding(.vertical, CloveSpacing.small)
             .background(
                RoundedRectangle(cornerRadius: CloveCorners.medium)
-                  .fill(CloveColors.accent.opacity(0.1))
+                  .fill(Theme.shared.accent.opacity(0.1))
                   .overlay(
                      RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .stroke(CloveColors.accent.opacity(0.3), lineWidth: 1)
+                        .stroke(Theme.shared.accent.opacity(0.3), lineWidth: 1)
                   )
             )
          }
@@ -634,7 +634,7 @@ struct CrossReferencePreviewView: View {
             .fill(CloveColors.background)
             .overlay(
                RoundedRectangle(cornerRadius: CloveCorners.small)
-                  .stroke(CloveColors.accent.opacity(0.1), lineWidth: 1)
+                  .stroke(Theme.shared.accent.opacity(0.1), lineWidth: 1)
             )
       )
    }

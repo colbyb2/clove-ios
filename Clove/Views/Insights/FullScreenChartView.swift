@@ -46,7 +46,7 @@ struct FullScreenChartView: View {
                         VStack(spacing: CloveSpacing.xlarge) {
                             Image(systemName: "iphone.landscape")
                                 .font(.system(size: 60))
-                                .foregroundStyle(CloveColors.accent)
+                                .foregroundStyle(Theme.shared.accent)
                             
                             VStack(spacing: CloveSpacing.medium) {
                                 Text("Rotate for Better View")

@@ -90,7 +90,7 @@ struct SymptomSummaryView: View {
             x: .value("Date", dataPoint.date),
             y: .value("Rating", dataPoint.rating)
          )
-         .foregroundStyle(CloveColors.accent)
+         .foregroundStyle(Theme.shared.accent)
          .interpolationMethod(.catmullRom)
          .lineStyle(StrokeStyle(lineWidth: 3))
       }

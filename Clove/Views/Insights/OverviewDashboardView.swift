@@ -72,7 +72,7 @@ struct OverviewDashboardView: View {
                         
                         Text(lastRefresh.formatted(date: .omitted, time: .shortened))
                             .font(CloveFonts.small())
-                            .foregroundStyle(CloveColors.accent)
+                            .foregroundStyle(Theme.shared.accent)
                             .fontWeight(.medium)
                     }
                 }
@@ -160,7 +160,7 @@ struct OverviewDashboardView: View {
     private var loadingSection: some View {
         VStack(spacing: CloveSpacing.medium) {
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: CloveColors.accent))
+                .progressViewStyle(CircularProgressViewStyle(tint: Theme.shared.accent))
                 .scaleEffect(1.2)
             
             Text("Loading dashboard...")
@@ -185,7 +185,7 @@ struct OverviewDashboardView: View {
                     .font(CloveFonts.small())
                     .fontWeight(.semibold)
             }
-            .foregroundStyle(CloveColors.accent)
+            .foregroundStyle(Theme.shared.accent)
         }
     }
     
@@ -382,7 +382,7 @@ struct HealthScoreWidget: View {
     private func getScoreColor(_ score: Double) -> Color {
         switch score {
         case 80...100: return CloveColors.green
-        case 60..<80: return CloveColors.accent
+        case 60..<80: return Theme.shared.accent
         case 40..<60: return .orange
         default: return CloveColors.red
         }
@@ -453,7 +453,7 @@ struct RecentInsightsWidget: View {
             HStack {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 18))
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                 
                 Text("Insights")
                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
@@ -521,7 +521,7 @@ struct InsightPreviewRow: View {
     private var priorityColor: Color {
         switch insight.priority {
         case .low: return CloveColors.blue
-        case .medium: return CloveColors.accent
+        case .medium: return Theme.shared.accent
         case .high: return .orange
         case .critical: return CloveColors.red
         }

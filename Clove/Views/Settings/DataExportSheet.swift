@@ -50,7 +50,7 @@ struct DataExportSheet: View {
                                     impactFeedback.impactOccurred()
                                 }
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(CloveColors.accent)
+                                .foregroundStyle(Theme.shared.accent)
                             }
                             
                             LazyVGrid(columns: [
@@ -96,7 +96,7 @@ struct DataExportSheet: View {
                                         impactFeedback.impactOccurred()
                                     }
                                     .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(CloveColors.accent)
+                                    .foregroundStyle(Theme.shared.accent)
                                 }
                                 
                                 LazyVGrid(columns: [
@@ -164,7 +164,7 @@ struct DataExportSheet: View {
                             .frame(height: 48)
                             .background(
                                 RoundedRectangle(cornerRadius: CloveCorners.medium)
-                                    .fill(hasSelections ? CloveColors.accent : CloveColors.secondaryText)
+                                    .fill(hasSelections ? Theme.shared.accent : CloveColors.secondaryText)
                             )
                         }
                         .disabled(!hasSelections || isLoading)
@@ -184,7 +184,7 @@ struct DataExportSheet: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundStyle(CloveColors.accent)
+                    .foregroundStyle(Theme.shared.accent)
                 }
             }
         }
@@ -322,7 +322,7 @@ struct CategoryToggleCard: View {
             VStack(spacing: CloveSpacing.small) {
                 Image(systemName: category.icon)
                     .font(.system(size: 24, weight: .medium))
-                    .foregroundStyle(isSelected ? CloveColors.accent : CloveColors.secondaryText)
+                    .foregroundStyle(isSelected ? Theme.shared.accent : CloveColors.secondaryText)
                 
                 Text(category.rawValue)
                     .font(.system(size: 14, weight: .semibold))
@@ -339,8 +339,8 @@ struct CategoryToggleCard: View {
             .padding(CloveSpacing.medium)
             .background(
                 RoundedRectangle(cornerRadius: CloveCorners.medium)
-                    .fill(isSelected ? CloveColors.accent.opacity(0.1) : CloveColors.card)
-                    .stroke(isSelected ? CloveColors.accent : CloveColors.background, lineWidth: 2)
+                    .fill(isSelected ? Theme.shared.accent.opacity(0.1) : CloveColors.card)
+                    .stroke(isSelected ? Theme.shared.accent : CloveColors.background, lineWidth: 2)
             )
         }
         .accessibilityLabel("\(category.rawValue) export option")
@@ -359,7 +359,7 @@ struct SymptomToggleCard: View {
             HStack(spacing: CloveSpacing.small) {
                 Image(systemName: "stethoscope")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(isSelected ? CloveColors.accent : CloveColors.secondaryText)
+                    .foregroundStyle(isSelected ? Theme.shared.accent : CloveColors.secondaryText)
                 
                 Text(symptom.name)
                     .font(.system(size: 14, weight: .medium))
@@ -370,13 +370,13 @@ struct SymptomToggleCard: View {
                 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(isSelected ? CloveColors.accent : CloveColors.secondaryText)
+                    .foregroundStyle(isSelected ? Theme.shared.accent : CloveColors.secondaryText)
             }
             .padding(CloveSpacing.medium)
             .background(
                 RoundedRectangle(cornerRadius: CloveCorners.medium)
-                    .fill(isSelected ? CloveColors.accent.opacity(0.1) : CloveColors.card)
-                    .stroke(isSelected ? CloveColors.accent : CloveColors.background, lineWidth: 1)
+                    .fill(isSelected ? Theme.shared.accent.opacity(0.1) : CloveColors.card)
+                    .stroke(isSelected ? Theme.shared.accent : CloveColors.background, lineWidth: 1)
             )
         }
         .accessibilityLabel("\(symptom.name) symptom export option")
