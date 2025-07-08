@@ -268,12 +268,25 @@ struct InsightsView: View {
                   data: chartData,
                   metricName: viewModel.getCurrentMetricName(),
                   timeRange: viewModel.getCurrentTimeRangeText(),
-                  configuration: metric.type.map { ChartConfiguration.forMetricType($0) }
+                  configuration: getChartConfiguration(for: metric)
                )
             } else {
                InsightsEmptyChartView(metricName: metric.name)
             }
          }
+      }
+   }
+   
+   private func getChartConfiguration(for metric: SelectableMetric) -> ChartConfiguration {
+      if let metricType = metric.type {
+         // Regular metrics use the standard configuration
+         return ChartConfiguration.forMetricType(metricType)
+      } else if metric.medicationName != nil || metric.activityName != nil || metric.mealName != nil {
+         // Individual medications, activities, and meals use binary data configuration
+         return ChartConfiguration.forBinaryData()
+      } else {
+         // Fallback for symptoms and other cases
+         return ChartConfiguration.default
       }
    }
    

@@ -29,7 +29,6 @@ class InsightsViewModel {
     
     func loadSelectedMetricData() {
         guard let metric = selectedMetricForChart else { return }
-        
         isLoadingChartData = true
         
         Task { @MainActor in
@@ -50,6 +49,45 @@ class InsightsViewModel {
                     )
                     self.selectedSymptomData = data
                     self.selectedMetricData = []
+                } else if let medicationName = metric.medicationName {
+                   let data = chartDataManager.getMedicationChartData(medicationName: medicationName, period: timePeriodManager.selectedPeriod)
+                   let mappedData = data.map { dp in
+                      return ChartDataPoint(
+                         date: dp.date,
+                         value: dp.value,
+                         metricType: .medication,
+                         metricName: dp.itemName,
+                         category: .medications
+                      )
+                   }
+                   self.selectedMetricData = mappedData
+                   self.selectedSymptomData = []
+                } else if let activityName = metric.activityName {
+                   let data = chartDataManager.getActivityChartData(activityName: activityName, period: timePeriodManager.selectedPeriod)
+                   let mappedData = data.map { dp in
+                      return ChartDataPoint(
+                         date: dp.date,
+                         value: dp.value,
+                         metricType: .activity,
+                         metricName: dp.itemName,
+                         category: .activities
+                      )
+                   }
+                   self.selectedMetricData = mappedData
+                   self.selectedSymptomData = []
+                } else if let mealName = metric.mealName {
+                   let data = chartDataManager.getMealChartData(mealName: mealName, period: timePeriodManager.selectedPeriod)
+                   let mappedData = data.map { dp in
+                      return ChartDataPoint(
+                         date: dp.date,
+                         value: dp.value,
+                         metricType: .meal,
+                         metricName: dp.itemName,
+                         category: .meals
+                      )
+                   }
+                   self.selectedMetricData = mappedData
+                   self.selectedSymptomData = []
                 }
                 
                 self.isLoadingChartData = false

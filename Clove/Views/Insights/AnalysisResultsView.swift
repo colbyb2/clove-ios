@@ -393,6 +393,12 @@ struct AnalysisResultsView: View {
                 return value == 1.0 ? "Yes" : "No"
             case .activityCount, .mealCount:
                 return String(format: "%.0f", value)
+            case .medication:
+                return value == 1.0 ? "Taken" : "Not taken"
+            case .activity:
+                return value == 1.0 ? "Done" : "Not done"
+            case .meal:
+                return value == 1.0 ? "Eaten" : "Not eaten"
             }
         } else if metric.symptomName != nil {
             // Symptom metric

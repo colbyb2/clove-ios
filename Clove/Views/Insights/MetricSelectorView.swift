@@ -262,6 +262,12 @@ class MetricSelectorViewModel {
                 return String(Int(value))
             case .weather:
                 return convertNumericToWeather(value)
+            case .medication:
+                return value == 1.0 ? "Taken" : "Not taken"
+            case .activity:
+                return value == 1.0 ? "Done" : "Not done"
+            case .meal:
+                return value == 1.0 ? "Eaten" : "Not eaten"
             }
         }()
         

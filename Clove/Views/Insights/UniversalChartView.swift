@@ -58,7 +58,21 @@ struct ChartConfiguration {
         case .flareDay, .activityCount, .mealCount:
             // These metrics are not available for charting
             return ChartConfiguration.default
+        case .medication, .activity, .meal:
+            // Binary data for individual items
+            return ChartConfiguration.forBinaryData()
         }
+    }
+    
+    static func forBinaryData() -> ChartConfiguration {
+        return ChartConfiguration(
+            chartType: .bar,
+            primaryColor: Theme.shared.accent,
+            showGradient: false,
+            lineWidth: 2.0,
+            showDataPoints: true,
+            enableInteraction: true
+        )
     }
 }
 
@@ -187,17 +201,32 @@ struct UniversalChartView: View {
             case .area:
                 areaChart(dataPoint)
             case .bar:
-                // Bar charts are no longer supported
-                lineChart(dataPoint)
+                barChart(dataPoint)
             }
         }
         .chartYAxis {
-            AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) { value in
-                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                    .foregroundStyle(CloveColors.secondaryText.opacity(0.2))
-                AxisValueLabel()
-                    .font(CloveFonts.small())
-                    .foregroundStyle(CloveColors.secondaryText)
+            if configuration.chartType == .bar && data.allSatisfy({ $0.value == 0.0 || $0.value == 1.0 }) {
+                // Binary data: show custom labels
+                AxisMarks(position: .leading, values: [0.0, 1.0]) { value in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                        .foregroundStyle(CloveColors.secondaryText.opacity(0.2))
+                    AxisValueLabel {
+                        if let doubleValue = value.as(Double.self) {
+                            Text(doubleValue == 1.0 ? "Taken" : "Not taken")
+                                .font(CloveFonts.small())
+                                .foregroundStyle(CloveColors.secondaryText)
+                        }
+                    }
+                }
+            } else {
+                // Regular data: show automatic labels
+                AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) { value in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                        .foregroundStyle(CloveColors.secondaryText.opacity(0.2))
+                    AxisValueLabel()
+                        .font(CloveFonts.small())
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
             }
         }
         .chartXAxis {
@@ -273,6 +302,16 @@ struct UniversalChartView: View {
         .foregroundStyle(configuration.primaryColor)
         .interpolationMethod(.catmullRom)
         .lineStyle(StrokeStyle(lineWidth: configuration.lineWidth))
+    }
+    
+    @ChartContentBuilder
+    private func barChart(_ dataPoint: ChartDataPoint) -> some ChartContent {
+        BarMark(
+            x: .value("Date", dataPoint.date),
+            y: .value(metricName, dataPoint.value)
+        )
+        .foregroundStyle(configuration.primaryColor)
+        .cornerRadius(4)
     }
     
     
@@ -428,6 +467,11 @@ struct UniversalChartView: View {
         let minValue = values.min() ?? 0
         let maxValue = values.max() ?? 10
         
+        // For binary data (0.0 to 1.0), use a fixed domain
+        if configuration.chartType == .bar && values.allSatisfy({ $0 == 0.0 || $0 == 1.0 }) {
+            return -0.1...1.1
+        }
+        
         // Add some padding to the range
         let padding = (maxValue - minValue) * 0.1
         let paddedMin = max(0, minValue - padding)
@@ -448,6 +492,8 @@ struct UniversalChartView: View {
             return String(format: "%.0f", value)
         case .weather:
             return convertNumericToWeather(value)
+        case .medication, .activity, .meal:
+            return value == 1.0 ? "Taken" : "Not taken"
         }
     }
     
