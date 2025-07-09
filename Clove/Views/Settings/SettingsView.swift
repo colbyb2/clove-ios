@@ -6,6 +6,18 @@ struct SettingsView: View {
    @State private var showMedicationSetup = false
    @State private var showMedicationTimeline = false
    
+   // Get app version from bundle
+   private var appVersion: String {
+      let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+      let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+      
+      if let build = build, build != version {
+         return "\(version) (\(build))"
+      } else {
+         return version
+      }
+   }
+   
    var body: some View {
       ZStack {
          Form {
@@ -103,11 +115,25 @@ struct SettingsView: View {
                .accessibilityLabel("Export data")
                .accessibilityHint("Export your health data as a CSV file")
             }
+            
+            // Version indicator section
+            Section(footer:
+                     HStack {
+               Spacer()
+               Text("Clove\nVersion 1.0.0")
+                  .font(.footnote)
+                  .multilineTextAlignment(.center)
+                  .foregroundColor(.secondary)
+               Spacer()
+            }
+            ) {
+               EmptyView() // No row content
+            }
          }
       }
       .navigationTitle("Settings")
       .onAppear {
-          viewModel.load()
+         viewModel.load()
       }
       .sheet(isPresented: $showExportSheet) {
          DataExportSheet()
