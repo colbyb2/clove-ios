@@ -4,7 +4,7 @@
 ![iOS](https://img.shields.io/badge/iOS-17.0+-blue.svg)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-5.0-green.svg)
 ![GRDB](https://img.shields.io/badge/GRDB-6.0+-purple.svg)
-![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)
+![License](https://img.shields.io/badge/License-CCANC4.0-brightgreen.svg)
 
 Clove is a comprehensive, privacy-focused iOS health tracking application built with SwiftUI that empowers users to monitor their symptoms, mood, pain levels, energy, medications, activities, and other health metrics. With its intuitive interface and powerful analytics, Clove helps users understand patterns in their health data and make informed decisions about their wellbeing.
 
