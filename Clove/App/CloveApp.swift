@@ -46,7 +46,7 @@ struct CloveApp: App {
          print("Database setup failed: \(error)")
       }
       
-      if !onboardingCompleted {
+      if onboardingCompleted {
          appState.phase = .onboarding
       } else {
          appState.phase = .main

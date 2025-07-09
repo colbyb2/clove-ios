@@ -55,12 +55,29 @@ struct ChartConfiguration {
                 showDataPoints: true,
                 enableInteraction: true
             )
-        case .flareDay, .activityCount, .mealCount:
+        case .flareDay:
+            // Binary data for flare days - use line chart
+            return ChartConfiguration(
+                chartType: .line,
+                primaryColor: Theme.shared.accent,
+                showGradient: false,
+                lineWidth: 3.0,
+                showDataPoints: true,
+                enableInteraction: true
+            )
+        case .activityCount, .mealCount:
             // These metrics are not available for charting
             return ChartConfiguration.default
         case .medication, .activity, .meal:
-            // Binary data for individual items
-            return ChartConfiguration.forBinaryData()
+            // Binary data for individual items - use line chart
+            return ChartConfiguration(
+                chartType: .line,
+                primaryColor: Theme.shared.accent,
+                showGradient: false,
+                lineWidth: 3.0,
+                showDataPoints: true,
+                enableInteraction: true
+            )
         }
     }
     
@@ -196,23 +213,21 @@ struct UniversalChartView: View {
     private var chartView: some View {
         Chart(data) { dataPoint in
             switch configuration.chartType {
-            case .line:
+            case .line, .bar:
                 lineChart(dataPoint)
             case .area:
                 areaChart(dataPoint)
-            case .bar:
-                barChart(dataPoint)
             }
         }
         .chartYAxis {
-            if configuration.chartType == .bar && data.allSatisfy({ $0.value == 0.0 || $0.value == 1.0 }) {
-                // Binary data: show custom labels
+            if isBinaryMetricType() {
+                // Binary data: show Yes/No labels
                 AxisMarks(position: .leading, values: [0.0, 1.0]) { value in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                         .foregroundStyle(CloveColors.secondaryText.opacity(0.2))
                     AxisValueLabel {
                         if let doubleValue = value.as(Double.self) {
-                            Text(doubleValue == 1.0 ? "Taken" : "Not taken")
+                            Text(doubleValue == 1.0 ? "Yes" : "No")
                                 .font(CloveFonts.small())
                                 .foregroundStyle(CloveColors.secondaryText)
                         }
@@ -304,17 +319,6 @@ struct UniversalChartView: View {
         .lineStyle(StrokeStyle(lineWidth: configuration.lineWidth))
     }
     
-    @ChartContentBuilder
-    private func barChart(_ dataPoint: ChartDataPoint) -> some ChartContent {
-        BarMark(
-            x: .value("Date", dataPoint.date),
-            y: .value(metricName, dataPoint.value)
-        )
-        .foregroundStyle(configuration.primaryColor)
-        .cornerRadius(4)
-    }
-    
-    
     // MARK: - Chart Footer
     
     private var chartFooter: some View {
@@ -385,6 +389,16 @@ struct UniversalChartView: View {
     
     // MARK: - Helper Methods
     
+    private func isBinaryMetricType() -> Bool {
+        guard let firstDataPoint = data.first else { return false }
+        let metricType = firstDataPoint.metricType
+        
+        // Check if it's a binary metric type or if all values are binary
+        let isBinaryType = metricType == .medication || metricType == .activity || metricType == .meal || metricType == .flareDay
+        let allValuesBinary = data.allSatisfy { $0.value == 0.0 || $0.value == 1.0 }
+        
+        return isBinaryType || allValuesBinary
+    }
     
     private var xAxisValues: [Date] {
         guard !data.isEmpty else { return [] }
@@ -468,7 +482,7 @@ struct UniversalChartView: View {
         let maxValue = values.max() ?? 10
         
         // For binary data (0.0 to 1.0), use a fixed domain
-        if configuration.chartType == .bar && values.allSatisfy({ $0 == 0.0 || $0 == 1.0 }) {
+        if isBinaryMetricType() {
             return -0.1...1.1
         }
         
