@@ -3,9 +3,6 @@ import SwiftUI
 struct CustomizeTrackerView: View {
    @Environment(UserSettingsViewModel.self) var viewModel
    @AppStorage(Constants.USE_SLIDER_INPUT) private var useSliderInput = true
-   @AppStorage(Constants.SELECTED_COLOR) private var selectedColor = ""
-   
-   @State private var appColor: Color = Theme.shared.accent
 
     var body: some View {
         Form {
@@ -35,15 +32,6 @@ struct CustomizeTrackerView: View {
                     .font(.footnote)
                     .foregroundStyle(CloveColors.secondaryText)
             }
-           
-           Section(header: Text("Theme")) {
-              ColorPicker("App Color", selection: $appColor)
-              Button("Reset") {
-                 Theme.shared.accent = Color.accent
-                 selectedColor = Color.accent.toString()
-              }
-              .disabled(Theme.shared.accent == Color.accent)
-           }
 
             Section {
                 Button("Save Changes") {
@@ -52,9 +40,5 @@ struct CustomizeTrackerView: View {
             }
         }
         .navigationTitle("Customize Tracker")
-        .onChange(of: appColor) { _, newValue in
-           Theme.shared.accent = newValue
-           selectedColor = newValue.toString()
-        }
     }
 }

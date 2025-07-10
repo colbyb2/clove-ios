@@ -21,13 +21,21 @@ struct Toast: View {
                 .padding(.vertical, 14)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(ToastManager.shared.color)
+                        .fill(ToastManager.shared.color.opacity(0.7))
                         .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
                         .shadow(color: .black.opacity(0.04), radius: 2, x: 0, y: 1)
                 )
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 .offset(y: ToastManager.shared.offset)
+                .gesture(
+                    DragGesture()
+                        .onEnded { value in
+                            if value.translation.height < -50 {
+                                ToastManager.shared.hide()
+                            }
+                        }
+                )
                 .transition(.asymmetric(
                     insertion: .move(edge: .top).combined(with: .opacity),
                     removal: .move(edge: .top).combined(with: .opacity)
@@ -66,14 +74,14 @@ class ToastManager {
 
     var offset: CGFloat = 0
     var message: String = ""
-    var color: Color = .blue
+    var color: Color = .black
     var icon: Image? = nil
     var duration: Double = 3.0
     var isVisible: Bool = false
     
     private var hideTask: Task<Void, Never>?
 
-    func showToast(message: String, color: Color = .blue, icon: Image? = nil, duration: Double = 3.0) {
+    func showToast(message: String, color: Color = .black, icon: Image? = nil, duration: Double = 3.0) {
         // Cancel any existing hide task
         hideTask?.cancel()
         
@@ -123,4 +131,7 @@ class ToastManager {
 
 #Preview {
    Toast()
+      .onAppear {
+         ToastManager.shared.showToast(message: "🚨 Test Toast Message")
+      }
 }

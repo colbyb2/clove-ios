@@ -5,6 +5,8 @@ struct SettingsView: View {
    @State private var showExportSheet = false
    @State private var showMedicationSetup = false
    @State private var showMedicationTimeline = false
+   @State private var showSymptomsSheet = false
+   @State private var trackedSymptoms: [TrackedSymptom] = []
    
    // Get app version from bundle
    private var appVersion: String {
@@ -18,6 +20,10 @@ struct SettingsView: View {
       }
    }
    
+   private func loadTrackedSymptoms() {
+      trackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
+   }
+   
    var body: some View {
       ZStack {
          Form {
@@ -29,6 +35,14 @@ struct SettingsView: View {
                   NavigationLink("Feature Selection") {
                      CustomizeTrackerView()
                         .environment(viewModel)
+                  }
+               }
+               HStack {
+                  Image(systemName: "paintpalette.fill")
+                     .font(.system(size: 16, weight: .medium))
+                     .foregroundStyle(Theme.shared.accent)
+                  NavigationLink("Theme") {
+                     ThemeCustomizationView()
                   }
                }
             }
@@ -94,6 +108,32 @@ struct SettingsView: View {
                .accessibilityHint("View timeline of medication changes")
             }
             
+            Section(header: Text("Symptoms")) {
+               Button(action: {
+                  showSymptomsSheet = true
+                  // Haptic feedback
+                  let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                  impactFeedback.impactOccurred()
+               }) {
+                  HStack {
+                     Image(systemName: "bandage")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(Theme.shared.accent)
+                     
+                     Text("Manage Symptoms")
+                        .foregroundStyle(CloveColors.primaryText)
+                     
+                     Spacer()
+                     
+                     Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(CloveColors.secondaryText)
+                  }
+               }
+               .accessibilityLabel("Manage symptoms")
+               .accessibilityHint("Add, edit, or remove symptoms for daily tracking")
+            }
+            
             Section(header: Text("Data")) {
                Button(action: {
                   showExportSheet = true
@@ -134,6 +174,7 @@ struct SettingsView: View {
       .navigationTitle("Settings")
       .onAppear {
          viewModel.load()
+         loadTrackedSymptoms()
       }
       .sheet(isPresented: $showExportSheet) {
          DataExportSheet()
@@ -143,6 +184,19 @@ struct SettingsView: View {
       }
       .sheet(isPresented: $showMedicationTimeline) {
          MedicationTimelineView()
+      }
+      .sheet(isPresented: $showSymptomsSheet) {
+         let todayViewModel = TodayViewModel()
+         EditSymptomsSheet(
+            viewModel: todayViewModel,
+            trackedSymptoms: SymptomsRepo.shared.getTrackedSymptoms()
+         )
+         .onAppear {
+            todayViewModel.load() // Ensure the viewModel is loaded
+         }
+         .onDisappear {
+            loadTrackedSymptoms() // Refresh symptoms list when sheet closes
+         }
       }
    }
 }
