@@ -9,6 +9,8 @@ struct EditSymptomsSheet: View {
    @State private var isLoading = false
    
    @State var trackedSymptoms: [TrackedSymptom]
+   var hideCancel: Bool = false
+   var onDone: () -> Void = {}
    var refresh: () -> Void = {}
    
    var body: some View {
@@ -54,11 +56,13 @@ struct EditSymptomsSheet: View {
          }
          .navigationBarTitleDisplayMode(.inline)
          .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-               Button("Cancel") {
-                  dismiss()
+            if (!hideCancel) {
+               ToolbarItem(placement: .navigationBarLeading) {
+                  Button("Cancel") {
+                     dismiss()
+                  }
+                  .foregroundStyle(CloveColors.secondaryText)
                }
-               .foregroundStyle(CloveColors.secondaryText)
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -66,6 +70,7 @@ struct EditSymptomsSheet: View {
                   withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                      dismiss()
                   }
+                  onDone()
                } label: {
                   Text("Done")
                      .font(CloveFonts.body())
