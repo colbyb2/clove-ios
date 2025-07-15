@@ -61,7 +61,7 @@ struct FeatureSelectionView: View {
          Image(systemName: selected.wrappedValue ? "checkmark.circle.fill" : "circle")
             .resizable()
             .scaledToFit()
-            .frame(width: selected.wrappedValue ? 25 : 20)
+            .frame(width: 20)
             .foregroundStyle(selected.wrappedValue ? CloveColors.success : .secondaryText)
       }
       .padding()
