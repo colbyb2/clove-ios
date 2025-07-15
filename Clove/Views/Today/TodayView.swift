@@ -324,8 +324,8 @@ struct TodayView: View {
       }
       .sheet(isPresented: $showEditSymptoms) {
          EditSymptomsSheet(
-            viewModel: viewModel,
-            trackedSymptoms: SymptomsRepo.shared.getTrackedSymptoms()
+            trackedSymptoms: SymptomsRepo.shared.getTrackedSymptoms(),
+            refresh: viewModel.loadTrackedSymptoms
          )
       }
       .sheet(isPresented: $showWeatherSelection) {

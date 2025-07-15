@@ -186,14 +186,10 @@ struct SettingsView: View {
          MedicationTimelineView()
       }
       .sheet(isPresented: $showSymptomsSheet) {
-         let todayViewModel = TodayViewModel()
          EditSymptomsSheet(
-            viewModel: todayViewModel,
-            trackedSymptoms: SymptomsRepo.shared.getTrackedSymptoms()
+            trackedSymptoms: SymptomsRepo.shared.getTrackedSymptoms(),
+            refresh: loadTrackedSymptoms
          )
-         .onAppear {
-            todayViewModel.load() // Ensure the viewModel is loaded
-         }
          .onDisappear {
             loadTrackedSymptoms() // Refresh symptoms list when sheet closes
          }
