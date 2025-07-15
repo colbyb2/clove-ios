@@ -5,7 +5,7 @@ struct CloveButton: View {
    @Environment(\.isEnabled) private var isEnabled
    
    var text = "Button"
-   var background: Color = CloveColors.primary
+   var background: Color = Theme.shared.accent
    var fontColor: Color = CloveColors.primaryText
    
    var onClick: () -> Void = {}
