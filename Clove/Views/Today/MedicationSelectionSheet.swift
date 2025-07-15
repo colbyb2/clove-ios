@@ -9,30 +9,50 @@ struct MedicationSelectionSheet: View {
     @State private var showingOneTimeMedication = false
     @FocusState private var isOneTimeFocused: Bool
     
+    // Animation states
+    @State private var headerOpacity: Double = 0
+    @State private var regularMedsOpacity: Double = 0
+    @State private var oneTimeMedsOpacity: Double = 0
+    @State private var emptyStateOpacity: Double = 0
+    @State private var headerOffset: CGFloat = -20
+    @State private var regularMedsOffset: CGFloat = 30
+    @State private var oneTimeMedsOffset: CGFloat = 30
+    @State private var emptyStateOffset: CGFloat = 30
+    @State private var medicationRowsVisible: [Bool] = []
+    
     private let medicationRepo = MedicationRepository.shared
     
     var body: some View {
         NavigationView {
             ZStack {
-                // Gradient background
+                // Subtle gradient background
                 LinearGradient(
-                    colors: [Theme.shared.accent.opacity(0.03), Color.clear],
+                    colors: [
+                        Theme.shared.accent.opacity(0.02),
+                        CloveColors.background,
+                        Theme.shared.accent.opacity(0.01)
+                    ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: CloveSpacing.large) {
+                    VStack(spacing: CloveSpacing.xlarge) {
                         // Modern Header
                         ModernMedicationTrackingHeaderView()
+                            .opacity(headerOpacity)
+                            .offset(y: headerOffset)
                         
                         // Regular medications checklist
                         if !trackedMedications.isEmpty {
                             ModernRegularMedicationsCard(
                                 trackedMedications: trackedMedications,
-                                medicationAdherence: $medicationAdherence
+                                medicationAdherence: $medicationAdherence,
+                                medicationRowsVisible: $medicationRowsVisible
                             )
+                            .opacity(regularMedsOpacity)
+                            .offset(y: regularMedsOffset)
                         }
                         
                         // One-time medication section
@@ -42,15 +62,20 @@ struct MedicationSelectionSheet: View {
                             isOneTimeFocused: $isOneTimeFocused,
                             medicationAdherence: $medicationAdherence
                         )
+                        .opacity(oneTimeMedsOpacity)
+                        .offset(y: oneTimeMedsOffset)
                         
                         // Empty state
                         if trackedMedications.isEmpty && medicationAdherence.isEmpty {
                             ModernMedicationEmptyChecklistCard()
+                                .opacity(emptyStateOpacity)
+                                .offset(y: emptyStateOffset)
                         }
                         
                         Spacer(minLength: CloveSpacing.xlarge)
                     }
                     .padding(.horizontal, CloveSpacing.large)
+                    .padding(.top, CloveSpacing.medium)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -73,20 +98,9 @@ struct MedicationSelectionSheet: View {
                         Text("Done")
                             .font(CloveFonts.body())
                             .fontWeight(.semibold)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.shared.accent)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Theme.shared.accent, Theme.shared.accent.opacity(0.8)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .shadow(color: Theme.shared.accent.opacity(0.3), radius: 4, x: 0, y: 2)
-                            )
                     }
                 }
             }
@@ -96,11 +110,48 @@ struct MedicationSelectionSheet: View {
         .onAppear {
             loadMedications()
             syncMedicationAdherence()
+            startEntranceAnimations()
+        }
+    }
+    
+    private func startEntranceAnimations() {
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+            headerOpacity = 1.0
+            headerOffset = 0
+        }
+        
+        if !trackedMedications.isEmpty {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
+                regularMedsOpacity = 1.0
+                regularMedsOffset = 0
+            }
+            
+            // Animate medication rows individually
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                for i in 0..<medicationRowsVisible.count {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(Double(i) * 0.1)) {
+                        medicationRowsVisible[i] = true
+                    }
+                }
+            }
+        }
+        
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2)) {
+            oneTimeMedsOpacity = 1.0
+            oneTimeMedsOffset = 0
+        }
+        
+        if trackedMedications.isEmpty && medicationAdherence.isEmpty {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3)) {
+                emptyStateOpacity = 1.0
+                emptyStateOffset = 0
+            }
         }
     }
     
     private func loadMedications() {
         trackedMedications = medicationRepo.getTrackedMedications()
+        medicationRowsVisible = Array(repeating: false, count: trackedMedications.count)
     }
     
     private func syncMedicationAdherence() {
@@ -128,61 +179,41 @@ struct MedicationSelectionSheet: View {
     }
 }
 
-#Preview {
-    MedicationSelectionSheet(medicationAdherence: .constant([]))
-}
-
-// MARK: - Subviews
+// MARK: - Modern Views
 
 struct ModernMedicationTrackingHeaderView: View {
     var body: some View {
         VStack(spacing: CloveSpacing.medium) {
-            HStack(spacing: CloveSpacing.small) {
-                Text("💊")
-                    .font(.system(size: 28))
-                    .scaleEffect(1.1)
-                    .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+            // Icon and title
+            HStack(spacing: CloveSpacing.medium) {
+                ZStack {
+                    Circle()
+                        .fill(Theme.shared.accent.opacity(0.1))
+                        .frame(width: 50, height: 50)
+                    
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundStyle(Theme.shared.accent)
+                }
                 
-                Text("Medication Tracking")
-                    .font(.system(.title, design: .rounded).weight(.bold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [CloveColors.primaryText, CloveColors.primaryText.opacity(0.8)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Medication Tracking")
+                        .font(.system(.title2, design: .rounded, weight: .bold))
+                        .foregroundStyle(CloveColors.primaryText)
+                    
+                    Text("Mark today's medications")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+                
+                Spacer()
             }
-            
-            Text("Mark which medications you've taken today")
-                .font(CloveFonts.body())
-                .foregroundStyle(CloveColors.secondaryText)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
         }
-        .padding(.vertical, CloveSpacing.large)
-        .padding(.horizontal, CloveSpacing.large)
+        .padding(CloveSpacing.large)
         .background(
-            RoundedRectangle(cornerRadius: CloveCorners.medium)
-                .fill(
-                    LinearGradient(
-                        colors: [Theme.shared.accent.opacity(0.08), Theme.shared.accent.opacity(0.03)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .stroke(
-                            LinearGradient(
-                                colors: [Theme.shared.accent.opacity(0.2), Theme.shared.accent.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                )
-                .shadow(color: Theme.shared.accent.opacity(0.1), radius: 8, x: 0, y: 4)
+            RoundedRectangle(cornerRadius: CloveCorners.large)
+                .fill(CloveColors.card)
+                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
         )
     }
 }
@@ -190,27 +221,71 @@ struct ModernMedicationTrackingHeaderView: View {
 struct ModernRegularMedicationsCard: View {
     let trackedMedications: [TrackedMedication]
     @Binding var medicationAdherence: [MedicationAdherence]
+    @Binding var medicationRowsVisible: [Bool]
+    
+    private var completionProgress: Double {
+        let totalMedications = trackedMedications.count
+        guard totalMedications > 0 else { return 0.0 }
+        
+        let takenMedications = medicationAdherence.filter { adherence in
+            adherence.wasTaken && trackedMedications.contains { $0.id == adherence.medicationId }
+        }.count
+        
+        return Double(takenMedications) / Double(totalMedications)
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: CloveSpacing.large) {
-            Text("Regular Medications")
-                .font(.system(.title2, design: .rounded).weight(.bold))
-                .foregroundStyle(CloveColors.primaryText)
+            // Section header with progress
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Regular Medications")
+                        .font(.system(.title3, design: .rounded, weight: .semibold))
+                        .foregroundStyle(CloveColors.primaryText)
+                    
+                    Text("\(Int(completionProgress * 100))% completed")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+                
+                Spacer()
+                
+                // Progress circle
+                ZStack {
+                    Circle()
+                        .stroke(Theme.shared.accent.opacity(0.2), lineWidth: 4)
+                        .frame(width: 40, height: 40)
+                    
+                    Circle()
+                        .trim(from: 0, to: completionProgress)
+                        .stroke(Theme.shared.accent, lineWidth: 4)
+                        .frame(width: 40, height: 40)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: completionProgress)
+                    
+                    Text("\(Int(completionProgress * 100))%")
+                        .font(.system(.caption, design: .rounded, weight: .semibold))
+                        .foregroundStyle(Theme.shared.accent)
+                }
+            }
             
             VStack(spacing: CloveSpacing.medium) {
-                ForEach(trackedMedications, id: \.id) { medication in
+                ForEach(Array(trackedMedications.enumerated()), id: \.element.id) { index, medication in
                     ModernMedicationChecklistRow(
                         medication: medication,
                         medicationAdherence: $medicationAdherence
                     )
+                    .opacity(medicationRowsVisible.indices.contains(index) ? (medicationRowsVisible[index] ? 1.0 : 0) : 0)
+                    .scaleEffect(medicationRowsVisible.indices.contains(index) ? (medicationRowsVisible[index] ? 1.0 : 0.8) : 0.8)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: medicationRowsVisible.indices.contains(index) ? medicationRowsVisible[index] : false)
                 }
             }
         }
         .padding(CloveSpacing.large)
         .background(
-            RoundedRectangle(cornerRadius: CloveCorners.medium)
+            RoundedRectangle(cornerRadius: CloveCorners.large)
                 .fill(CloveColors.card)
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
         )
     }
 }
@@ -235,50 +310,34 @@ struct ModernMedicationChecklistRow: View {
     }
     
     var body: some View {
-        HStack(spacing: CloveSpacing.large) {
-            // Medication icon with gradient background
+        HStack(spacing: CloveSpacing.medium) {
+            // Medication icon
             ZStack {
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Theme.shared.accent.opacity(0.1), Theme.shared.accent.opacity(0.05)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 44, height: 44)
+                    .fill(Theme.shared.accent.opacity(0.1))
+                    .frame(width: 40, height: 40)
                 
                 Image(systemName: medication.isAsNeeded ? "pills.circle" : "pills.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Theme.shared.accent, Theme.shared.accent.opacity(0.7)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Theme.shared.accent)
             }
             
             // Medication details
-            VStack(alignment: .leading, spacing: CloveSpacing.small) {
+            VStack(alignment: .leading, spacing: 2) {
                 HStack {
                     Text(medication.name)
-                        .font(.system(.body, design: .rounded).weight(.semibold))
+                        .font(.system(.body, design: .rounded, weight: .medium))
                         .foregroundStyle(CloveColors.primaryText)
                     
                     if medication.isAsNeeded {
                         Text("As needed")
-                            .font(CloveFonts.small())
+                            .font(.system(.caption, design: .rounded, weight: .medium))
                             .foregroundStyle(Theme.shared.accent)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
                             .background(
-                                RoundedRectangle(cornerRadius: 12)
+                                Capsule()
                                     .fill(Theme.shared.accent.opacity(0.1))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Theme.shared.accent.opacity(0.3), lineWidth: 1)
-                                    )
                             )
                     }
                     
@@ -287,13 +346,13 @@ struct ModernMedicationChecklistRow: View {
                 
                 if !medication.dosage.isEmpty {
                     Text(medication.dosage)
-                        .font(CloveFonts.body())
+                        .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(CloveColors.secondaryText)
                 }
                 
                 if !medication.instructions.isEmpty {
                     Text(medication.instructions)
-                        .font(CloveFonts.small())
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(CloveColors.secondaryText)
                         .italic()
                 }
@@ -305,26 +364,33 @@ struct ModernMedicationChecklistRow: View {
             }) {
                 ZStack {
                     Circle()
-                        .fill((adherence.wrappedValue?.wasTaken ?? false) ? CloveColors.success : Color.clear)
+                        .fill((adherence.wrappedValue?.wasTaken ?? false) ? CloveColors.success : CloveColors.background)
                         .frame(width: 32, height: 32)
                         .overlay(
                             Circle()
                                 .stroke(
-                                    (adherence.wrappedValue?.wasTaken ?? false) ? CloveColors.success : CloveColors.secondaryText.opacity(0.5),
+                                    (adherence.wrappedValue?.wasTaken ?? false) ? CloveColors.success : CloveColors.secondaryText.opacity(0.3),
                                     lineWidth: 2
                                 )
                         )
                         .scaleEffect((adherence.wrappedValue?.wasTaken ?? false) ? 1.1 : 1.0)
+                        .shadow(
+                            color: (adherence.wrappedValue?.wasTaken ?? false) ? CloveColors.success.opacity(0.3) : .clear,
+                            radius: 4,
+                            x: 0,
+                            y: 2
+                        )
                     
                     if adherence.wrappedValue?.wasTaken ?? false {
                         Image(systemName: "checkmark")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.white)
+                            .scaleEffect(1.0)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: adherence.wrappedValue?.wasTaken)
                     }
                 }
             }
             .buttonStyle(ModernCheckButtonStyle())
-            .accessibilityLabel("\(medication.name) \((adherence.wrappedValue?.wasTaken ?? false) ? "taken" : "not taken")")
         }
         .padding(CloveSpacing.medium)
         .background(
@@ -337,7 +403,7 @@ struct ModernMedicationChecklistRow: View {
                         endPoint: .bottomTrailing
                     ) :
                     LinearGradient(
-                        colors: [CloveColors.card, CloveColors.card],
+                        colors: [CloveColors.background, CloveColors.background],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -346,12 +412,17 @@ struct ModernMedicationChecklistRow: View {
                     RoundedRectangle(cornerRadius: CloveCorners.medium)
                         .stroke(
                             (adherence.wrappedValue?.wasTaken ?? false) ?
-                            CloveColors.success.opacity(0.2) :
-                            Theme.shared.accent.opacity(0.1),
+                            CloveColors.success.opacity(0.3) :
+                            CloveColors.secondaryText.opacity(0.1),
                             lineWidth: 1
                         )
                 )
-                .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
+                .shadow(
+                    color: (adherence.wrappedValue?.wasTaken ?? false) ? CloveColors.success.opacity(0.1) : .black.opacity(0.03),
+                    radius: 4,
+                    x: 0,
+                    y: 2
+                )
         )
         .contentShape(Rectangle())
         .onTapGesture {
@@ -360,7 +431,6 @@ struct ModernMedicationChecklistRow: View {
     }
     
     private func toggleMedication() {
-        // Enhanced haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
         
@@ -382,9 +452,15 @@ struct ModernOneTimeMedicationCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: CloveSpacing.large) {
             HStack {
-                Text("One-Time Medications")
-                    .font(.system(.title2, design: .rounded).weight(.bold))
-                    .foregroundStyle(CloveColors.primaryText)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("One-Time Medications")
+                        .font(.system(.title3, design: .rounded, weight: .semibold))
+                        .foregroundStyle(CloveColors.primaryText)
+                    
+                    Text("Occasional medications")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
                 
                 Spacer()
                 
@@ -395,23 +471,15 @@ struct ModernOneTimeMedicationCard: View {
                             isOneTimeFocused.wrappedValue = true
                         }
                     }
-                    .font(CloveFonts.body())
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
                     .foregroundStyle(.white)
-                    .fontWeight(.semibold)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Theme.shared.accent, Theme.shared.accent.opacity(0.8)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
+                        Capsule()
+                            .fill(Theme.shared.accent)
                             .shadow(color: Theme.shared.accent.opacity(0.3), radius: 4, x: 0, y: 2)
                     )
-                    .buttonStyle(BounceButtonStyle())
                 }
             }
             
@@ -443,17 +511,23 @@ struct ModernOneTimeMedicationCard: View {
             // Empty state for one-time medications
             if oneTimeMeds.isEmpty && !showingOneTimeMedication {
                 VStack(spacing: CloveSpacing.medium) {
-                    Image(systemName: "plus.circle")
-                        .font(.system(size: 32))
-                        .foregroundStyle(Theme.shared.accent.opacity(0.5))
+                    ZStack {
+                        Circle()
+                            .fill(Theme.shared.accent.opacity(0.1))
+                            .frame(width: 60, height: 60)
+                        
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 24, weight: .light))
+                            .foregroundStyle(Theme.shared.accent.opacity(0.6))
+                    }
                     
-                    Text("No one-time medications added")
-                        .font(CloveFonts.body())
+                    Text("No one-time medications")
+                        .font(.system(.body, design: .rounded, weight: .medium))
+                        .foregroundStyle(CloveColors.primaryText)
+                    
+                    Text("Add occasional medications not in your routine")
+                        .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(CloveColors.secondaryText)
-                    
-                    Text("Add occasional medications that aren't part of your regular routine")
-                        .font(CloveFonts.small())
-                        .foregroundStyle(CloveColors.secondaryText.opacity(0.7))
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
@@ -462,9 +536,9 @@ struct ModernOneTimeMedicationCard: View {
         }
         .padding(CloveSpacing.large)
         .background(
-            RoundedRectangle(cornerRadius: CloveCorners.medium)
+            RoundedRectangle(cornerRadius: CloveCorners.large)
                 .fill(CloveColors.card)
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
         )
     }
     
@@ -486,7 +560,6 @@ struct ModernOneTimeMedicationCard: View {
             isOneTimeFocused.wrappedValue = false
         }
         
-        // Enhanced haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
     }
@@ -504,7 +577,6 @@ struct ModernOneTimeMedicationCard: View {
             medicationAdherence.removeAll { $0.medicationId == adherence.medicationId && $0.medicationName == adherence.medicationName }
         }
         
-        // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
     }
@@ -518,52 +590,46 @@ struct ModernOneTimeMedicationInput: View {
     
     var body: some View {
         VStack(spacing: CloveSpacing.medium) {
-            HStack(spacing: CloveSpacing.small) {
-                Text("💊")
-                    .font(.system(size: 16))
-                
+            VStack(alignment: .leading, spacing: CloveSpacing.small) {
                 Text("Medication Name")
-                    .font(CloveFonts.body())
-                    .foregroundStyle(CloveColors.primaryText)
-                    .fontWeight(.medium)
+                    .font(.system(.subheadline, design: .rounded, weight: .medium))
+                    .foregroundStyle(CloveColors.secondaryText)
+                
+                TextField("e.g., Tylenol", text: $oneTimeMedication)
+                    .font(.system(.body, design: .rounded))
+                    .focused(isOneTimeFocused)
+                    .padding(CloveSpacing.medium)
+                    .background(
+                        RoundedRectangle(cornerRadius: CloveCorners.medium)
+                            .fill(CloveColors.background)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                                    .stroke(
+                                        isOneTimeFocused.wrappedValue ? Theme.shared.accent.opacity(0.5) : CloveColors.secondaryText.opacity(0.2),
+                                        lineWidth: 1.5
+                                    )
+                            )
+                    )
+                    .onSubmit {
+                        if !oneTimeMedication.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            onAdd()
+                        }
+                    }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            
-            TextField("e.g., Tylenol", text: $oneTimeMedication)
-                .focused(isOneTimeFocused)
-                .padding(CloveSpacing.medium)
-                .background(
-                    RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .fill(CloveColors.card)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: CloveCorners.medium)
-                                .stroke(Theme.shared.accent.opacity(0.2), lineWidth: 1)
-                        )
-                        .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
-                )
-                .onSubmit {
-                    onAdd()
-                }
             
             HStack(spacing: CloveSpacing.medium) {
                 Button("Add") {
                     onAdd()
                 }
-                .font(CloveFonts.body())
+                .font(.system(.subheadline, design: .rounded, weight: .semibold))
                 .foregroundStyle(.white)
-                .fontWeight(.semibold)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(
                     RoundedRectangle(cornerRadius: CloveCorners.medium)
                         .fill(
-                            LinearGradient(
-                                colors: oneTimeMedication.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?
-                                [CloveColors.secondaryText, CloveColors.secondaryText.opacity(0.8)] :
-                                [CloveColors.success, CloveColors.success.opacity(0.8)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                            oneTimeMedication.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?
+                            CloveColors.secondaryText.opacity(0.5) : CloveColors.success
                         )
                         .shadow(
                             color: oneTimeMedication.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?
@@ -574,21 +640,19 @@ struct ModernOneTimeMedicationInput: View {
                         )
                 )
                 .disabled(oneTimeMedication.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .buttonStyle(BounceButtonStyle())
+                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: oneTimeMedication.isEmpty)
                 
                 Button("Cancel") {
                     onCancel()
                 }
-                .font(CloveFonts.body())
+                .font(.system(.subheadline, design: .rounded, weight: .semibold))
                 .foregroundStyle(CloveColors.secondaryText)
-                .fontWeight(.semibold)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(
                     RoundedRectangle(cornerRadius: CloveCorners.medium)
                         .fill(CloveColors.secondaryText.opacity(0.1))
                 )
-                .buttonStyle(BounceButtonStyle())
             }
         }
         .padding(CloveSpacing.medium)
@@ -614,43 +678,33 @@ struct ModernOneTimeMedicationRow: View {
     let onRemove: () -> Void
     
     var body: some View {
-        HStack(spacing: CloveSpacing.large) {
+        HStack(spacing: CloveSpacing.medium) {
             // One-time medication icon
             ZStack {
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Theme.shared.accent.opacity(0.1), Theme.shared.accent.opacity(0.05)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 44, height: 44)
+                    .fill(Theme.shared.accent.opacity(0.1))
+                    .frame(width: 40, height: 40)
                 
                 Image(systemName: "pills.circle")
-                    .font(.system(size: 20))
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(Theme.shared.accent)
             }
             
             // Medication details
-            VStack(alignment: .leading, spacing: CloveSpacing.small) {
+            VStack(alignment: .leading, spacing: 2) {
                 HStack {
                     Text(adherence.medicationName)
-                        .font(.system(.body, design: .rounded).weight(.semibold))
+                        .font(.system(.body, design: .rounded, weight: .medium))
                         .foregroundStyle(CloveColors.primaryText)
                     
                     Text("One-time")
-                        .font(CloveFonts.small())
+                        .font(.system(.caption, design: .rounded, weight: .medium))
                         .foregroundStyle(Theme.shared.accent)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
                         .background(
-                            RoundedRectangle(cornerRadius: 12)
+                            Capsule()
                                 .fill(Theme.shared.accent.opacity(0.1))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Theme.shared.accent.opacity(0.3), lineWidth: 1)
-                                )
                         )
                     
                     Spacer()
@@ -665,16 +719,22 @@ struct ModernOneTimeMedicationRow: View {
                 }) {
                     ZStack {
                         Circle()
-                            .fill(adherence.wasTaken ? CloveColors.success : Color.clear)
+                            .fill(adherence.wasTaken ? CloveColors.success : CloveColors.background)
                             .frame(width: 28, height: 28)
                             .overlay(
                                 Circle()
                                     .stroke(
-                                        adherence.wasTaken ? CloveColors.success : CloveColors.secondaryText.opacity(0.5),
+                                        adherence.wasTaken ? CloveColors.success : CloveColors.secondaryText.opacity(0.3),
                                         lineWidth: 2
                                     )
                             )
                             .scaleEffect(adherence.wasTaken ? 1.1 : 1.0)
+                            .shadow(
+                                color: adherence.wasTaken ? CloveColors.success.opacity(0.3) : .clear,
+                                radius: 4,
+                                x: 0,
+                                y: 2
+                            )
                         
                         if adherence.wasTaken {
                             Image(systemName: "checkmark")
@@ -688,10 +748,9 @@ struct ModernOneTimeMedicationRow: View {
                 // Remove button
                 Button(action: onRemove) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(CloveColors.secondaryText)
+                        .font(.system(size: 18))
+                        .foregroundStyle(CloveColors.secondaryText.opacity(0.6))
                 }
-                .buttonStyle(BounceButtonStyle())
             }
         }
         .padding(CloveSpacing.medium)
@@ -705,7 +764,7 @@ struct ModernOneTimeMedicationRow: View {
                         endPoint: .bottomTrailing
                     ) :
                     LinearGradient(
-                        colors: [CloveColors.card, CloveColors.card],
+                        colors: [CloveColors.background, CloveColors.background],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -714,12 +773,17 @@ struct ModernOneTimeMedicationRow: View {
                     RoundedRectangle(cornerRadius: CloveCorners.medium)
                         .stroke(
                             adherence.wasTaken ?
-                            CloveColors.success.opacity(0.2) :
-                            Theme.shared.accent.opacity(0.1),
+                            CloveColors.success.opacity(0.3) :
+                            CloveColors.secondaryText.opacity(0.1),
                             lineWidth: 1
                         )
                 )
-                .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
+                .shadow(
+                    color: adherence.wasTaken ? CloveColors.success.opacity(0.1) : .black.opacity(0.03),
+                    radius: 4,
+                    x: 0,
+                    y: 2
+                )
         )
         .contentShape(Rectangle())
         .onTapGesture {
@@ -728,7 +792,6 @@ struct ModernOneTimeMedicationRow: View {
     }
     
     private func toggleMedication() {
-        // Enhanced haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
         
@@ -741,23 +804,23 @@ struct ModernOneTimeMedicationRow: View {
 struct ModernMedicationEmptyChecklistCard: View {
     var body: some View {
         VStack(spacing: CloveSpacing.large) {
-            Image(systemName: "pills")
-                .font(.system(size: 48))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [Theme.shared.accent.opacity(0.6), Theme.shared.accent.opacity(0.3)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+            ZStack {
+                Circle()
+                    .fill(Theme.shared.accent.opacity(0.1))
+                    .frame(width: 80, height: 80)
+                
+                Image(systemName: "pills")
+                    .font(.system(size: 32, weight: .light))
+                    .foregroundStyle(Theme.shared.accent.opacity(0.6))
+            }
             
             VStack(spacing: CloveSpacing.small) {
                 Text("No medications to track")
-                    .font(.system(.title3, design: .rounded).weight(.semibold))
+                    .font(.system(.title3, design: .rounded, weight: .semibold))
                     .foregroundStyle(CloveColors.primaryText)
                 
                 Text("Add regular medications in Settings, or add a one-time medication above")
-                    .font(CloveFonts.body())
+                    .font(.system(.subheadline, design: .rounded))
                     .foregroundStyle(CloveColors.secondaryText)
                     .multilineTextAlignment(.center)
             }
@@ -766,13 +829,13 @@ struct ModernMedicationEmptyChecklistCard: View {
         .padding(.vertical, CloveSpacing.xlarge)
         .padding(.horizontal, CloveSpacing.large)
         .background(
-            RoundedRectangle(cornerRadius: CloveCorners.medium)
+            RoundedRectangle(cornerRadius: CloveCorners.large)
                 .fill(CloveColors.card)
                 .overlay(
-                    RoundedRectangle(cornerRadius: CloveCorners.medium)
+                    RoundedRectangle(cornerRadius: CloveCorners.large)
                         .stroke(Theme.shared.accent.opacity(0.1), lineWidth: 1)
                 )
-                .shadow(color: .black.opacity(0.02), radius: 4, x: 0, y: 2)
+                .shadow(color: .black.opacity(0.03), radius: 6, x: 0, y: 3)
         )
     }
 }
@@ -783,4 +846,8 @@ struct ModernCheckButtonStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
             .animation(.spring(response: 0.2, dampingFraction: 0.8), value: configuration.isPressed)
     }
+}
+
+#Preview {
+    MedicationSelectionSheet(medicationAdherence: .constant([]))
 }

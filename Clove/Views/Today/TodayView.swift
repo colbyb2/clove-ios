@@ -290,7 +290,7 @@ struct TodayView: View {
                      .font(.system(size: 18, weight: .semibold))
                }
                
-               Text(viewModel.isSaving ? "Saving..." : "Save Today's Log")
+               Text(viewModel.isSaving ? "Saving..." : "Save Log")
                   .font(.system(size: 18, weight: .semibold))
             }
             .foregroundColor(.white)

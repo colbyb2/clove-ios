@@ -5,42 +5,89 @@ struct MedicationTimelineView: View {
     @State private var medicationHistory: [MedicationHistoryEntry] = []
     @State private var groupedHistory: [String: [MedicationHistoryEntry]] = [:]
     
+    // Animation states
+    @State private var headerOpacity: Double = 0
+    @State private var contentOpacity: Double = 0
+    @State private var headerOffset: CGFloat = -20
+    @State private var contentOffset: CGFloat = 30
+    @State private var daySequenceVisible: [Bool] = []
+    
     private let medicationRepo = MedicationRepository.shared
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                if medicationHistory.isEmpty {
-                    TimelineEmptyStateView()
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: CloveSpacing.medium) {
-                            ForEach(sortedDateKeys, id: \.self) { dateKey in
-                                TimelineDaySection(
-                                    dateKey: dateKey,
-                                    entries: groupedHistory[dateKey] ?? []
-                                )
+            ZStack {
+                // Subtle gradient background
+                LinearGradient(
+                    colors: [
+                        Theme.shared.accent.opacity(0.02),
+                        CloveColors.background,
+                        Theme.shared.accent.opacity(0.01)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                
+                VStack(spacing: 10) {
+                    // Custom header
+                    ModernTimelineHeaderView()
+                        .opacity(headerOpacity)
+                        .offset(y: headerOffset)
+                    
+                    if medicationHistory.isEmpty {
+                        TimelineEmptyStateView()
+                            .opacity(contentOpacity)
+                            .offset(y: contentOffset)
+                    } else {
+                        ScrollView {
+                            LazyVStack(spacing: CloveSpacing.large) {
+                                ForEach(Array(sortedDateKeys.enumerated()), id: \.element) { index, dateKey in
+                                    TimelineDaySection(
+                                        dateKey: dateKey,
+                                        entries: groupedHistory[dateKey] ?? []
+                                    )
+                                    .opacity(daySequenceVisible.indices.contains(index) ? (daySequenceVisible[index] ? 1.0 : 0) : 0)
+                                    .scaleEffect(daySequenceVisible.indices.contains(index) ? (daySequenceVisible[index] ? 1.0 : 0.95) : 0.95)
+                                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: daySequenceVisible.indices.contains(index) ? daySequenceVisible[index] : false)
+                                }
                             }
+                            .padding(.horizontal, CloveSpacing.large)
+                            .padding(.vertical, CloveSpacing.medium)
                         }
-                        .padding(.horizontal, CloveSpacing.large)
-                        .padding(.vertical, CloveSpacing.medium)
+                        .opacity(contentOpacity)
+                        .offset(y: contentOffset)
                     }
                 }
             }
-            .navigationTitle("Medication Timeline")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .foregroundStyle(Theme.shared.accent)
-                    .fontWeight(.semibold)
-                }
-            }
+            .navigationBarHidden(true)
         }
         .onAppear {
             loadMedicationHistory()
+            startEntranceAnimations()
+        }
+    }
+    
+    private func startEntranceAnimations() {
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+            headerOpacity = 1.0
+            headerOffset = 0
+        }
+        
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
+            contentOpacity = 1.0
+            contentOffset = 0
+        }
+        
+        // Animate day sections individually
+        if !medicationHistory.isEmpty {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                for i in 0..<daySequenceVisible.count {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(Double(i) * 0.1)) {
+                        daySequenceVisible[i] = true
+                    }
+                }
+            }
         }
     }
     
@@ -54,6 +101,7 @@ struct MedicationTimelineView: View {
     private func loadMedicationHistory() {
         medicationHistory = medicationRepo.getMedicationHistory()
         groupHistory()
+        daySequenceVisible = Array(repeating: false, count: sortedDateKeys.count)
     }
     
     private func groupHistory() {
@@ -72,35 +120,108 @@ struct MedicationTimelineView: View {
     }
 }
 
-// MARK: - Subviews
+// MARK: - Modern Views
+
+struct ModernTimelineHeaderView: View {
+    var body: some View {
+        VStack(spacing: CloveSpacing.medium) {
+            // Main header
+            HStack(spacing: CloveSpacing.medium) {
+                ZStack {
+                    Circle()
+                        .fill(Theme.shared.accent.opacity(0.1))
+                        .frame(width: 50, height: 50)
+                    
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundStyle(Theme.shared.accent)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Medication Timeline")
+                        .font(.system(.title2, design: .rounded, weight: .bold))
+                        .foregroundStyle(CloveColors.primaryText)
+                }
+                
+                Spacer()
+            }
+        }
+        .padding(CloveSpacing.large)
+        .background(
+            RoundedRectangle(cornerRadius: CloveCorners.large)
+                .fill(CloveColors.card)
+                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
+        )
+        .padding(.horizontal, CloveSpacing.large)
+        .padding(.top, CloveSpacing.medium)
+    }
+}
 
 struct TimelineDaySection: View {
     let dateKey: String
     let entries: [MedicationHistoryEntry]
+    @State private var entryAnimationsVisible: [Bool] = []
     
     private var sortedEntries: [MedicationHistoryEntry] {
         entries.sorted { $0.changeDate > $1.changeDate }
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: CloveSpacing.small) {
-            // Date header
+        VStack(alignment: .leading, spacing: CloveSpacing.medium) {
+            // Enhanced date header
             HStack {
-                Text(dateKey)
-                    .font(CloveFonts.sectionTitle())
-                    .foregroundStyle(CloveColors.primaryText)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(dateKey)
+                        .font(.system(.title3, design: .rounded, weight: .semibold))
+                        .foregroundStyle(CloveColors.primaryText)
+                    
+                    Text("\(entries.count) change\(entries.count == 1 ? "" : "s")")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
                 
                 Spacer()
                 
-                Text("\(entries.count) change\(entries.count == 1 ? "" : "s")")
-                    .font(CloveFonts.small())
-                    .foregroundStyle(CloveColors.secondaryText)
+                // Day summary badge
+                HStack(spacing: CloveSpacing.small) {
+                    Circle()
+                        .fill(Theme.shared.accent)
+                        .frame(width: 8, height: 8)
+                    
+                    Text("\(entries.count)")
+                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                        .foregroundStyle(Theme.shared.accent)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(Theme.shared.accent.opacity(0.1))
+                )
             }
             
-            // History entries for this day
-            VStack(spacing: CloveSpacing.small) {
-                ForEach(sortedEntries, id: \.id) { entry in
+            // Timeline entries
+            VStack(spacing: CloveSpacing.medium) {
+                ForEach(Array(sortedEntries.enumerated()), id: \.element.id) { index, entry in
                     TimelineEntryView(entry: entry)
+                        .opacity(entryAnimationsVisible.indices.contains(index) ? (entryAnimationsVisible[index] ? 1.0 : 0) : 0)
+                        .offset(x: entryAnimationsVisible.indices.contains(index) ? (entryAnimationsVisible[index] ? 0 : 20) : 20)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(Double(index) * 0.05), value: entryAnimationsVisible.indices.contains(index) ? entryAnimationsVisible[index] : false)
+                }
+            }
+        }
+        .padding(CloveSpacing.large)
+        .background(
+            RoundedRectangle(cornerRadius: CloveCorners.large)
+                .fill(CloveColors.card)
+                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
+        )
+        .onAppear {
+            entryAnimationsVisible = Array(repeating: false, count: sortedEntries.count)
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                for i in 0..<entryAnimationsVisible.count {
+                    entryAnimationsVisible[i] = true
                 }
             }
         }
@@ -118,68 +239,104 @@ struct TimelineEntryView: View {
     
     var body: some View {
         HStack(spacing: CloveSpacing.medium) {
-            // Icon based on change type
-            Image(systemName: iconForChangeType(entry.changeType))
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(colorForChangeType(entry.changeType))
-                .frame(width: 24, height: 24)
+            // Enhanced icon with gradient background
+            ZStack {
+                Circle()
+                    .fill(colorForChangeType(entry.changeType).opacity(0.1))
+                    .frame(width: 40, height: 40)
+                
+                Image(systemName: iconForChangeType(entry.changeType))
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(colorForChangeType(entry.changeType))
+            }
             
-            VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
+            VStack(alignment: .leading, spacing: CloveSpacing.small) {
                 // Main change description
                 Text(descriptionForEntry(entry))
-                    .font(CloveFonts.body())
+                    .font(.system(.body, design: .rounded, weight: .medium))
                     .foregroundStyle(CloveColors.primaryText)
                 
                 // Time and additional details
-                HStack {
-                    Text(timeFormatter.string(from: entry.changeDate))
-                        .font(CloveFonts.small())
-                        .foregroundStyle(CloveColors.secondaryText)
-                    
-                    if let notes = entry.notes, !notes.isEmpty {
-                        Text("•")
-                            .font(CloveFonts.small())
-                            .foregroundStyle(CloveColors.secondaryText)
+                HStack(spacing: CloveSpacing.small) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 12))
+                            .foregroundStyle(CloveColors.secondaryText.opacity(0.7))
                         
-                        Text(notes)
-                            .font(CloveFonts.small())
+                        Text(timeFormatter.string(from: entry.changeDate))
+                            .font(.system(.subheadline, design: .rounded))
                             .foregroundStyle(CloveColors.secondaryText)
                     }
+                    
+                    
                 }
                 
-                // Show before/after for changes
-                if let oldValue = entry.oldValue, let newValue = entry.newValue,
-                   entry.changeType != "added" && entry.changeType != "removed" {
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack {
+                // Enhanced before/after changes display
+               if let oldValue = entry.oldValue, let newValue = entry.newValue,
+                   entry.changeType != "added" && entry.changeType != "removed" && entry.changeType != "instructions_changed" {
+                    VStack(spacing: CloveSpacing.small) {
+                        HStack(spacing: CloveSpacing.small) {
                             Text("From:")
-                                .font(CloveFonts.small())
+                                .font(.system(.caption, design: .rounded, weight: .medium))
                                 .foregroundStyle(CloveColors.secondaryText)
+                            
                             Text(oldValue)
-                                .font(CloveFonts.small())
-                                .foregroundStyle(CloveColors.error)
+                                .font(.system(.caption, design: .rounded, weight: .medium))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule()
+                                        .fill(CloveColors.error.opacity(0.8))
+                                )
                         }
-                        HStack {
+                        
+                        HStack(spacing: CloveSpacing.small) {
                             Text("To:")
-                                .font(CloveFonts.small())
+                                .font(.system(.caption, design: .rounded, weight: .medium))
                                 .foregroundStyle(CloveColors.secondaryText)
+                            
                             Text(newValue)
-                                .font(CloveFonts.small())
-                                .foregroundStyle(CloveColors.success)
+                                .font(.system(.caption, design: .rounded, weight: .medium))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule()
+                                        .fill(CloveColors.success.opacity(0.8))
+                                )
                         }
                     }
-                    .padding(.top, 2)
+                    .padding(.top, CloveSpacing.small)
                 }
             }
             
             Spacer()
+            
+            // Change type badge
+            Text(changeTypeBadgeText(entry.changeType))
+                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .foregroundStyle(colorForChangeType(entry.changeType))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(colorForChangeType(entry.changeType).opacity(0.1))
+                        .overlay(
+                            Capsule()
+                                .stroke(colorForChangeType(entry.changeType).opacity(0.3), lineWidth: 1)
+                        )
+                )
         }
-        .padding(.vertical, CloveSpacing.small)
-        .padding(.horizontal, CloveSpacing.medium)
+        .padding(CloveSpacing.medium)
         .background(
             RoundedRectangle(cornerRadius: CloveCorners.medium)
-                .fill(CloveColors.card)
-                .shadow(color: .black.opacity(0.03), radius: 2, x: 0, y: 1)
+                .fill(CloveColors.background)
+                .overlay(
+                    RoundedRectangle(cornerRadius: CloveCorners.medium)
+                        .stroke(colorForChangeType(entry.changeType).opacity(0.1), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
         )
     }
     
@@ -207,6 +364,18 @@ struct TimelineEntryView: View {
         }
     }
     
+    private func changeTypeBadgeText(_ changeType: String) -> String {
+        switch changeType {
+        case "added": return "Added"
+        case "removed": return "Removed"
+        case "dosage_changed": return "Dosage"
+        case "name_changed": return "Renamed"
+        case "instructions_changed": return "Instructions"
+        case "schedule_changed": return "Schedule"
+        default: return "Modified"
+        }
+    }
+    
     private func descriptionForEntry(_ entry: MedicationHistoryEntry) -> String {
         switch entry.changeType {
         case "added":
@@ -229,28 +398,94 @@ struct TimelineEntryView: View {
 
 struct TimelineEmptyStateView: View {
     var body: some View {
-        VStack(spacing: CloveSpacing.large) {
+        VStack(spacing: CloveSpacing.xlarge) {
             Spacer()
             
-            VStack(spacing: CloveSpacing.medium) {
-                Image(systemName: "clock.badge.questionmark")
-                    .font(.system(size: 60))
-                    .foregroundStyle(CloveColors.secondaryText.opacity(0.5))
+            VStack(spacing: CloveSpacing.large) {
+                // Enhanced empty state icon
+                ZStack {
+                    Circle()
+                        .fill(Theme.shared.accent.opacity(0.1))
+                        .frame(width: 120, height: 120)
+                    
+                    Circle()
+                        .fill(Theme.shared.accent.opacity(0.05))
+                        .frame(width: 100, height: 100)
+                    
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 48, weight: .light))
+                        .foregroundStyle(Theme.shared.accent.opacity(0.6))
+                }
                 
-                Text("No Medication History")
-                    .font(CloveFonts.title())
-                    .foregroundStyle(CloveColors.primaryText)
-                
-                Text("Your medication changes will appear here as you add, edit, or remove medications from your tracking list.")
-                    .font(CloveFonts.body())
-                    .foregroundStyle(CloveColors.secondaryText)
+                VStack(spacing: CloveSpacing.medium) {
+                    Text("No Timeline History")
+                        .font(.system(.title2, design: .rounded, weight: .bold))
+                        .foregroundStyle(CloveColors.primaryText)
+                    
+                    VStack(spacing: CloveSpacing.small) {
+                        Text("Your medication changes will appear here")
+                            .font(.system(.body, design: .rounded))
+                            .foregroundStyle(CloveColors.secondaryText)
+                        
+                        Text("Add, edit, or remove medications to see your timeline")
+                            .font(.system(.subheadline, design: .rounded))
+                            .foregroundStyle(CloveColors.secondaryText.opacity(0.8))
+                    }
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, CloveSpacing.large)
+                }
+                
+                // Helpful tips
+                VStack(spacing: CloveSpacing.medium) {
+                    Text("Timeline tracks:")
+                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                        .foregroundStyle(CloveColors.primaryText)
+                    
+                    VStack(spacing: CloveSpacing.small) {
+                        TimelineFeatureRow(icon: "plus.circle", text: "Medication additions", color: CloveColors.success)
+                        TimelineFeatureRow(icon: "pencil.circle", text: "Dosage changes", color: Theme.shared.accent)
+                        TimelineFeatureRow(icon: "doc.text", text: "Instruction updates", color: .blue)
+                        TimelineFeatureRow(icon: "minus.circle", text: "Medication removals", color: CloveColors.error)
+                    }
+                }
             }
+            .padding(.horizontal, CloveSpacing.xlarge)
             
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(CloveSpacing.large)
+        .background(
+            RoundedRectangle(cornerRadius: CloveCorners.large)
+                .fill(CloveColors.card)
+                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
+        )
+        .padding(.horizontal, CloveSpacing.large)
+    }
+}
+
+struct TimelineFeatureRow: View {
+    let icon: String
+    let text: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: CloveSpacing.medium) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.1))
+                    .frame(width: 32, height: 32)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(color)
+            }
+            
+            Text(text)
+                .font(.system(.subheadline, design: .rounded))
+                .foregroundStyle(CloveColors.secondaryText)
+            
+            Spacer()
+        }
     }
 }
 
