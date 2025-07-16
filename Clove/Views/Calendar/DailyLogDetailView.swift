@@ -392,50 +392,52 @@ struct MedicationAdherenceView: View {
             ForEach(adherence.indices, id: \.self) { index in
                 let medication = adherence[index]
                 
-                HStack(spacing: CloveSpacing.medium) {
-                    // Status indicator
-                    Image(systemName: medication.wasTaken ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 20))
-                        .foregroundStyle(medication.wasTaken ? CloveColors.success : CloveColors.secondaryText)
-                    
-                    // Medication info
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(medication.medicationName)
-                            .font(CloveFonts.body())
-                            .foregroundStyle(CloveColors.primaryText)
-                            .fontWeight(.medium)
-                        
-                        if medication.isAsNeeded || medication.medicationId == -1 {
-                            Text(medication.medicationId == -1 ? "One-time" : "As needed")
-                                .font(CloveFonts.small())
-                                .foregroundStyle(CloveColors.secondaryText)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(CloveColors.secondaryText.opacity(0.1))
-                                )
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    // Status text
-                    Text(medication.wasTaken ? "Taken" : "Not taken")
-                        .font(CloveFonts.small())
-                        .foregroundStyle(medication.wasTaken ? CloveColors.success : CloveColors.secondaryText)
-                        .fontWeight(.medium)
+               if !medication.isAsNeeded {
+                   HStack(spacing: CloveSpacing.medium) {
+                       // Status indicator
+                       Image(systemName: medication.wasTaken ? "checkmark.circle.fill" : "circle")
+                           .font(.system(size: 20))
+                           .foregroundStyle(medication.wasTaken ? CloveColors.success : CloveColors.secondaryText)
+                       
+                       // Medication info
+                       VStack(alignment: .leading, spacing: 2) {
+                           Text(medication.medicationName)
+                               .font(CloveFonts.body())
+                               .foregroundStyle(CloveColors.primaryText)
+                               .fontWeight(.medium)
+                           
+                           if medication.isAsNeeded || medication.medicationId == -1 {
+                               Text(medication.medicationId == -1 ? "One-time" : "As needed")
+                                   .font(CloveFonts.small())
+                                   .foregroundStyle(CloveColors.secondaryText)
+                                   .padding(.horizontal, 6)
+                                   .padding(.vertical, 2)
+                                   .background(
+                                       RoundedRectangle(cornerRadius: 4)
+                                           .fill(CloveColors.secondaryText.opacity(0.1))
+                                   )
+                           }
+                       }
+                       
+                       Spacer()
+                       
+                       // Status text
+                       Text(medication.wasTaken ? "Taken" : "Not taken")
+                           .font(CloveFonts.small())
+                           .foregroundStyle(medication.wasTaken ? CloveColors.success : CloveColors.secondaryText)
+                           .fontWeight(.medium)
+                   }
+                   .padding(.horizontal, CloveSpacing.medium)
+                   .padding(.vertical, CloveSpacing.small)
+                   .background(
+                       RoundedRectangle(cornerRadius: CloveCorners.small)
+                           .fill(medication.wasTaken ? CloveColors.success.opacity(0.05) : CloveColors.card)
+                           .overlay(
+                               RoundedRectangle(cornerRadius: CloveCorners.small)
+                                   .stroke(medication.wasTaken ? CloveColors.success.opacity(0.2) : Color.clear, lineWidth: 1)
+                           )
+                   )
                 }
-                .padding(.horizontal, CloveSpacing.medium)
-                .padding(.vertical, CloveSpacing.small)
-                .background(
-                    RoundedRectangle(cornerRadius: CloveCorners.small)
-                        .fill(medication.wasTaken ? CloveColors.success.opacity(0.05) : CloveColors.card)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: CloveCorners.small)
-                                .stroke(medication.wasTaken ? CloveColors.success.opacity(0.2) : Color.clear, lineWidth: 1)
-                        )
-                )
             }
         }
     }

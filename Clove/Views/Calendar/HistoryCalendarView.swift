@@ -33,6 +33,7 @@ struct HistoryCalendarView: View {
          
          Spacer()
       }
+      .background(CloveColors.background)
       .navigationTitle("History")
       .onAppear {
          viewModel.loadData()

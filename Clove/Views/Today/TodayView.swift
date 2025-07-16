@@ -312,6 +312,7 @@ struct TodayView: View {
          }
          .padding()
       }
+      .background(CloveColors.background)
       .padding(.vertical)
       .onAppear {
          viewModel.load()
