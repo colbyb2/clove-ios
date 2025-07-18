@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Main Daily Reminder View
 struct DailyReminderView: View {
-    @State private var notificationStore = NotificationStore()
+    @State private var notificationStore = NotificationStore.shared
     @State private var notificationManager = NotificationManager.shared
     @State private var showingTimePicker = false
     @State private var selectedTime = Date()
@@ -19,7 +19,6 @@ struct DailyReminderView: View {
                     NotificationPermissionView()
                 } else {
                     ReminderSettingsView(
-                        notificationStore: notificationStore,
                         dailyReminder: dailyReminder,
                         showingTimePicker: $showingTimePicker,
                         selectedTime: $selectedTime
@@ -41,7 +40,6 @@ struct DailyReminderView: View {
         .sheet(isPresented: $showingTimePicker) {
             TimePickerSheet(
                 selectedTime: $selectedTime,
-                notificationStore: notificationStore,
                 existingReminder: dailyReminder
             )
         }
@@ -117,7 +115,7 @@ struct NotificationPermissionView: View {
 
 // MARK: - Reminder Settings View
 struct ReminderSettingsView: View {
-    @State var notificationStore: NotificationStore
+    @State var notificationStore = NotificationStore.shared
     let dailyReminder: ScheduledNotification?
     @Binding var showingTimePicker: Bool
     @Binding var selectedTime: Date
@@ -276,7 +274,7 @@ struct ReminderSettingsView: View {
 // MARK: - Time Picker Sheet
 struct TimePickerSheet: View {
     @Binding var selectedTime: Date
-    @State var notificationStore: NotificationStore
+    @State var notificationStore = NotificationStore.shared
     let existingReminder: ScheduledNotification?
     @Environment(\.dismiss) private var dismiss
     
@@ -339,13 +337,15 @@ struct TimePickerSheet: View {
         let minute = calendar.component(.minute, from: selectedTime)
         
         if let reminder = existingReminder {
-            // Update existing reminder
+            // Update existing reminder preserving the original ID
             let updatedReminder = ScheduledNotification(
+                id: reminder.id,
                 title: reminder.title,
                 body: reminder.body,
                 hour: hour,
                 minute: minute,
-                isEnabled: reminder.isEnabled
+                isEnabled: reminder.isEnabled,
+                createdAt: reminder.createdAt
             )
             notificationStore.updateNotification(updatedReminder)
         } else {
