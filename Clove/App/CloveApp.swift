@@ -37,6 +37,8 @@ struct CloveApp: App {
    }
    
    init() {
+      NotificationManager.shared.clearBadge()
+      
       if !selectedColor.isEmpty, let color = selectedColor.toColor() {
          Theme.shared.accent = color
       }

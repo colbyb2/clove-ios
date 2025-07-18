@@ -15,4 +15,7 @@ enum Constants {
    
    // Theme
    static let SELECTED_COLOR = "selectedColor"
+   
+   // Notifications
+   static let NOTIFICATIONS_KEY = "scheduledNotifications"
 }

@@ -45,6 +45,15 @@ struct SettingsView: View {
                      ThemeCustomizationView()
                   }
                }
+               
+               HStack {
+                  Image(systemName: "bell.fill")
+                     .font(.system(size: 16, weight: .medium))
+                     .foregroundStyle(Theme.shared.accent)
+                  NavigationLink("Reminders") {
+                     DailyReminderView()
+                  }
+               }
             }
             
             Section(header: Text("Insights")) {
