@@ -20,8 +20,19 @@ struct ThemeCustomizationView: View {
                Theme.shared.accent = newValue
                selectedColor = newValue.toString()
             }
+            
+            Section(header: Text("Accesibility")) {
+               Button("Set To Grayscale Theme") {
+                  self.selectedColor = Color.gray.toString()
+                  Theme.shared.accent = Color.gray
+               }
+            }
          }
       }
       .navigationTitle("Theme")
    }
+}
+
+#Preview {
+   ThemeCustomizationView()
 }

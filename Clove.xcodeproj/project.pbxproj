@@ -15,7 +15,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		6F240D4A2E2AA9B5004676A9 /* Exceptions for "Clove" folder in "Clove" target */ = {
+		6F9711622E2AE1140086271B /* Exceptions for "Clove" folder in "Clove" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -28,7 +28,7 @@
 		6FC7BDE62E01D9A5009F0219 /* Clove */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				6F240D4A2E2AA9B5004676A9 /* Exceptions for "Clove" folder in "Clove" target */,
+				6F9711622E2AE1140086271B /* Exceptions for "Clove" folder in "Clove" target */,
 			);
 			path = Clove;
 			sourceTree = "<group>";
@@ -277,7 +277,6 @@
 				DEVELOPMENT_TEAM = RBDRHJ69W3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Clove/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Clove;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -310,7 +309,6 @@
 				DEVELOPMENT_TEAM = RBDRHJ69W3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Clove/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Clove;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

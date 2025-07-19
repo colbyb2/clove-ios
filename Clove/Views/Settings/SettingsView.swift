@@ -169,7 +169,7 @@ struct SettingsView: View {
             Section(footer:
                      HStack {
                Spacer()
-               Text("Clove\nVersion 1.0.0")
+               Text("Clove\nVersion \(appVersion)")
                   .font(.footnote)
                   .multilineTextAlignment(.center)
                   .foregroundColor(.secondary)
