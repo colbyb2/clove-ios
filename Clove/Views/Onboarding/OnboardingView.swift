@@ -13,6 +13,8 @@ struct OnboardingView: View {
                FeatureSelectionView()
            case .symptomSelection:
                SymptomSelectionView()
+           case .insightsComplexity:
+               InsightsComplexityOnboardingView()
            case .notifications:
                OnboardingNotificationView()
            case .colorScheme:

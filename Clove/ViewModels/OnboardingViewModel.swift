@@ -15,9 +15,11 @@ class OnboardingViewModel {
          if baseSettings.trackSymptoms {
             step = .symptomSelection
          } else {
-            step = .notifications
+            step = .insightsComplexity
          }
       case .symptomSelection:
+         step = .insightsComplexity
+      case .insightsComplexity:
          step = .notifications
       case .notifications:
          step = .colorScheme
@@ -60,6 +62,7 @@ enum OnboardingStep {
    case welcome
    case moduleSelection
    case symptomSelection
+   case insightsComplexity
    case notifications
    case colorScheme
    case complete
