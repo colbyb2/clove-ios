@@ -165,6 +165,18 @@ struct SettingsView: View {
                .accessibilityHint("Export your health data as a CSV file")
             }
             
+            Section(header: Text("Tutorials")) {
+               HStack {
+                  Image(systemName: "questionmark")
+                     .font(.system(size: 16, weight: .medium))
+                     .foregroundStyle(Theme.shared.accent)
+                  NavigationLink("Tutorials") {
+                     TutorialSettingsView()
+                        .environment(TutorialManager.shared)
+                  }
+               }
+            }
+            
             // Version indicator section
             Section(footer:
                      HStack {

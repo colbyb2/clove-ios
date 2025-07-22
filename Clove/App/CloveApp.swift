@@ -30,6 +30,11 @@ struct CloveApp: App {
                MainTabView()
                   .environment(appState)
             }
+            
+            if (TutorialManager.shared.open) {
+               TutorialView()
+                  .environment(TutorialManager.shared)
+            }
          }
          .foregroundStyle(CloveColors.primaryText)
          .toastable()

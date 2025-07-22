@@ -316,6 +316,9 @@ struct TodayView: View {
       .padding(.vertical)
       .onAppear {
          viewModel.load()
+         if TutorialManager.shared.startTutorial(Tutorials.TodayView) == .Failure {
+            print("Tutorial [TodayView] Failed to Start")
+         }
       }
       .onChange(of: navigationCoordinator.targetDate) { _, newDate in
          if let targetDate = newDate {

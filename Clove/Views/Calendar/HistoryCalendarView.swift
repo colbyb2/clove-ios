@@ -37,6 +37,9 @@ struct HistoryCalendarView: View {
       .navigationTitle("History")
       .onAppear {
          viewModel.loadData()
+         if TutorialManager.shared.startTutorial(Tutorials.CalendarView) == .Failure {
+            print("Tutorial [CalendarView] Failed to Start")
+         }
       }
    }
    

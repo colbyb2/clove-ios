@@ -148,6 +148,9 @@ struct InsightsView: View {
       }
       .onAppear {
          viewModel.loadFoundationData()
+         if TutorialManager.shared.startTutorial(Tutorials.InsightsView) == .Failure {
+            print("Tutorial [InsightsView] Failed to Start")
+         }
       }
       .onChange(of: viewModel.timePeriodManager.selectedPeriod) { _, newPeriod in
          viewModel.refreshCurrentMetricData()
