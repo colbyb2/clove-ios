@@ -241,9 +241,11 @@ class MedicationRepository {
     
     func calculateOverallAdherencePercentage(days: Int = 30) -> Double {
         let trackedMedications = getTrackedMedications()
-        guard !trackedMedications.isEmpty else { return 0.0 }
+        // Filter out as-needed medications from adherence calculation
+        let regularMedications = trackedMedications.filter { !$0.isAsNeeded }
+        guard !regularMedications.isEmpty else { return 0.0 }
         
-        let adherencePercentages = trackedMedications.compactMap { medication -> Double? in
+        let adherencePercentages = regularMedications.compactMap { medication -> Double? in
             guard let id = medication.id else { return nil }
             return calculateAdherencePercentage(for: id, days: days)
         }
@@ -254,24 +256,28 @@ class MedicationRepository {
     
     func getAdherenceInsights(days: Int = 30) -> [String: Any] {
         let trackedMedications = getTrackedMedications()
+        // Filter out as-needed medications from adherence insights
+        let regularMedications = trackedMedications.filter { !$0.isAsNeeded }
         var insights: [String: Any] = [:]
         
         let overallPercentage = calculateOverallAdherencePercentage(days: days)
         insights["overallPercentage"] = overallPercentage
         
         var medicationBreakdown: [[String: Any]] = []
-        for medication in trackedMedications {
+        for medication in regularMedications {
             guard let id = medication.id else { continue }
             let percentage = calculateAdherencePercentage(for: id, days: days)
             medicationBreakdown.append([
                 "name": medication.name,
                 "percentage": percentage,
-                "id": id
+                "id": id,
+                "isAsNeeded": medication.isAsNeeded
             ])
         }
         
         insights["medicationBreakdown"] = medicationBreakdown
-        insights["totalMedications"] = trackedMedications.count
+        insights["totalMedications"] = regularMedications.count
+        insights["totalMedicationsIncludingAsNeeded"] = trackedMedications.count
         
         return insights
     }

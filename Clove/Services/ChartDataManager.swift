@@ -620,10 +620,12 @@ class ChartDataManager {
    }
    
    private func calculateMedicationAdherenceRate(_ adherence: [MedicationAdherence]) -> Double? {
-      guard !adherence.isEmpty else { return nil }
+      // Filter out as-needed medications from adherence calculation
+      let regularMedications = adherence.filter { !$0.isAsNeeded }
+      guard !regularMedications.isEmpty else { return nil }
       
-      let takenCount = adherence.filter { $0.wasTaken }.count
-      return (Double(takenCount) / Double(adherence.count)) * 100.0
+      let takenCount = regularMedications.filter { $0.wasTaken }.count
+      return (Double(takenCount) / Double(regularMedications.count)) * 100.0
    }
    
    /// Convert weather string to numerical value for correlation analysis

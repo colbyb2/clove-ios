@@ -224,11 +224,15 @@ struct ModernRegularMedicationsCard: View {
     @Binding var medicationRowsVisible: [Bool]
     
     private var completionProgress: Double {
-        let totalMedications = trackedMedications.count
+        // Filter out as-needed medications from completion progress calculation
+        let regularMedications = trackedMedications.filter { !$0.isAsNeeded }
+        let totalMedications = regularMedications.count
         guard totalMedications > 0 else { return 0.0 }
         
         let takenMedications = medicationAdherence.filter { adherence in
-            adherence.wasTaken && trackedMedications.contains { $0.id == adherence.medicationId }
+            adherence.wasTaken && 
+            !adherence.isAsNeeded && 
+            regularMedications.contains { $0.id == adherence.medicationId }
         }.count
         
         return Double(takenMedications) / Double(totalMedications)

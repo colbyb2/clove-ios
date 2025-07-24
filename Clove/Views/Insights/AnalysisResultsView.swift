@@ -319,9 +319,9 @@ struct AnalysisResultsView: View {
         if absCoeff < 0.2 {
             return "No clear pattern found between these metrics."
         } else if isPositive {
-            return "When \(primary) improves, \(secondary) tends to improve too."
+            return "When \(primary) increases, \(secondary) tends to increase too."
         } else {
-            return "When \(primary) improves, \(secondary) tends to get worse."
+            return "When \(primary) increases, \(secondary) tends to get decrease."
         }
     }
     
