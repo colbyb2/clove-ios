@@ -27,7 +27,7 @@ extension UserSettings {
       trackMeds: false,
       showFlareToggle: true,
       trackWeather: true,
-      trackNotes: false
+      trackNotes: true
    )
    
    /// Blank settings
