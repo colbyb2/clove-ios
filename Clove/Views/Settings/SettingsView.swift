@@ -24,6 +24,14 @@ struct SettingsView: View {
       trackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
    }
    
+   private func showTermsAndConditions() {
+      // Find the terms and conditions popup from the available popups
+      if let termsPopup = Popups.all.first(where: { $0.id == "termsAndConditions" }) {
+         // Force show the popup by setting it directly, bypassing the UserDefaults check
+         PopupManager.shared.currentPopup = termsPopup
+      }
+   }
+   
    var body: some View {
       ZStack {
          Form {
@@ -165,9 +173,9 @@ struct SettingsView: View {
                .accessibilityHint("Export your health data as a CSV file")
             }
             
-            Section(header: Text("Tutorials")) {
+            Section(header: Text("Help")) {
                HStack {
-                  Image(systemName: "questionmark")
+                  Image(systemName: "lightbulb.fill")
                      .font(.system(size: 16, weight: .medium))
                      .foregroundStyle(Theme.shared.accent)
                   NavigationLink("Tutorials") {
@@ -175,6 +183,30 @@ struct SettingsView: View {
                         .environment(TutorialManager.shared)
                   }
                }
+               
+               Button(action: {
+                  showTermsAndConditions()
+                  // Haptic feedback
+                  let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                  impactFeedback.impactOccurred()
+               }) {
+                  HStack {
+                     Image(systemName: "doc.text.fill")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(Theme.shared.accent)
+                     
+                     Text("View Terms and Conditions")
+                        .foregroundStyle(CloveColors.primaryText)
+                     
+                     Spacer()
+                     
+                     Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(CloveColors.secondaryText)
+                  }
+               }
+               .accessibilityLabel("View terms and conditions")
+               .accessibilityHint("Display the app's terms and conditions")
             }
             
             // Version indicator section
