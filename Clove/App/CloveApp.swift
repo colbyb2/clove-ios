@@ -35,6 +35,10 @@ struct CloveApp: App {
                TutorialView()
                   .environment(TutorialManager.shared)
             }
+            
+            if let popup = PopupManager.shared.currentPopup {
+               PopupView(popup: popup)
+            }
          }
          .foregroundStyle(CloveColors.primaryText)
          .toastable()
