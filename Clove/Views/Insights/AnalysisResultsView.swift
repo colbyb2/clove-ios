@@ -10,7 +10,6 @@ struct AnalysisResultsView: View {
             correlationSummaryCard
             dualAxisChartView
             insightsSection
-            saveButton
         }
     }
 

@@ -326,8 +326,8 @@ struct DailyLogDetailView: View {
         switch pain {
         case 8...10: return CloveColors.red
         case 5...7: return CloveColors.orange
-        case 3...4: return CloveColors.yellow
-        case 1...2: return CloveColors.blue
+        case 3...4: return CloveColors.blue
+        case 1...2: return CloveColors.green
         default: return CloveColors.green
         }
     }
