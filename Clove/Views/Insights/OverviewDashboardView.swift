@@ -317,54 +317,78 @@ struct WidgetContainer: View {
 
 struct HealthScoreWidget: View {
     @State private var dashboardManager = DashboardManager.shared
+    @State private var showingInfo = false
     
     var body: some View {
-        VStack(spacing: CloveSpacing.medium) {
-            HStack {
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(CloveColors.red)
-                
-                Text("Health Score")
-                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                    .foregroundStyle(CloveColors.primaryText)
-                
-                Spacer()
-                
-                if let healthScore = dashboardManager.healthScore {
-                    Image(systemName: getTrendIcon(healthScore.trend))
-                        .font(.system(size: 14))
-                        .foregroundStyle(getTrendColor(healthScore.trend))
-                }
-            }
-            
-            if let healthScore = dashboardManager.healthScore {
-                VStack(spacing: CloveSpacing.small) {
-                    Text("\(Int(healthScore.overallScore))")
-                        .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                        .foregroundStyle(getScoreColor(healthScore.overallScore))
-                    
-                    Text("out of 100")
-                        .font(CloveFonts.small())
-                        .foregroundStyle(CloveColors.secondaryText)
-                    
-                    ProgressView(value: healthScore.overallScore, total: 100)
-                        .progressViewStyle(LinearProgressViewStyle(tint: getScoreColor(healthScore.overallScore)))
-                        .frame(height: 6)
-                }
-            } else {
-                VStack(spacing: CloveSpacing.small) {
-                    Text("--")
-                        .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                        .foregroundStyle(CloveColors.secondaryText)
-                    
-                    Text("Calculating...")
-                        .font(CloveFonts.small())
-                        .foregroundStyle(CloveColors.secondaryText)
-                }
-            }
+        ZStack {
+           VStack(spacing: CloveSpacing.medium) {
+               HStack {
+                   Image(systemName: "heart.fill")
+                       .font(.system(size: 18))
+                       .foregroundStyle(CloveColors.red)
+                   
+                   Text("Health Score")
+                       .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                       .foregroundStyle(CloveColors.primaryText)
+                   
+                   Spacer()
+                   
+                   if let healthScore = dashboardManager.healthScore {
+                       Image(systemName: getTrendIcon(healthScore.trend))
+                           .font(.system(size: 14))
+                           .foregroundStyle(getTrendColor(healthScore.trend))
+                   }
+               }
+               
+               if let healthScore = dashboardManager.healthScore {
+                   VStack(spacing: CloveSpacing.small) {
+                       Text("\(Int(healthScore.overallScore))")
+                           .font(.system(.largeTitle, design: .rounded).weight(.bold))
+                           .foregroundStyle(getScoreColor(healthScore.overallScore))
+                       
+                       Text("out of 100")
+                           .font(CloveFonts.small())
+                           .foregroundStyle(CloveColors.secondaryText)
+                       
+                       ProgressView(value: healthScore.overallScore, total: 100)
+                           .progressViewStyle(LinearProgressViewStyle(tint: getScoreColor(healthScore.overallScore)))
+                           .frame(height: 6)
+                   }
+               } else {
+                   VStack(spacing: CloveSpacing.small) {
+                       Text("--")
+                           .font(.system(.largeTitle, design: .rounded).weight(.bold))
+                           .foregroundStyle(CloveColors.secondaryText)
+                       
+                       Text("Calculating...")
+                           .font(CloveFonts.small())
+                           .foregroundStyle(CloveColors.secondaryText)
+                   }
+               }
+           }
+           .padding(CloveSpacing.large)
+           
+           VStack {
+              HStack {
+                 Spacer()
+                 Button {
+                     showingInfo = true
+                 } label: {
+                     Image(systemName: "info.circle")
+                         .font(.system(size: 14))
+                         .foregroundStyle(CloveColors.secondaryText)
+                 }
+              }
+              Spacer()
+           }
+           .padding(CloveSpacing.small)
         }
-        .padding(CloveSpacing.large)
+        .onTapGesture {
+            showingInfo = true
+        }
+        .sheet(isPresented: $showingInfo) {
+            HealthScoreInfoView()
+        }
     }
     
     private func getTrendIcon(_ trend: HealthScoreData.TrendDirection) -> String {
@@ -389,6 +413,126 @@ struct HealthScoreWidget: View {
     }
 }
 
+// MARK: - Health Score Info View
+
+struct HealthScoreInfoView: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: CloveSpacing.large) {
+                    // Header
+                    VStack(alignment: .leading, spacing: CloveSpacing.medium) {
+                        HStack {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 24))
+                                .foregroundStyle(CloveColors.red)
+                            
+                            Text("Health Score")
+                                .font(.system(.title2, design: .rounded).weight(.bold))
+                                .foregroundStyle(CloveColors.primaryText)
+                        }
+                        
+                        Text("Your personalized health rating from 0-100")
+                            .font(CloveFonts.body())
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
+                    
+                    // What it is
+                    infoSection(
+                        title: "What is the Health Score?",
+                        content: "Your Health Score is a single number (0-100) that summarizes how you've been feeling overall. Think of it like a report card for your health - the higher the number, the better you've been doing with managing your symptoms and well-being."
+                    )
+                    
+                    // How it's calculated
+                    infoSection(
+                        title: "How is it calculated?",
+                        content: "The app looks at all the health metrics you track - like mood, pain levels, energy, and medication adherence. Each metric gets converted to a 0-100 scale, then they're combined using a weighted average. More important metrics (like severe symptoms) have a bigger impact on your overall score."
+                    )
+                    
+                    // Score ranges
+                    VStack(alignment: .leading, spacing: CloveSpacing.medium) {
+                        Text("Score Ranges")
+                            .font(.system(.headline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(CloveColors.primaryText)
+                        
+                        VStack(spacing: CloveSpacing.small) {
+                            scoreRangeRow(range: "80-100", description: "Excellent - You're managing well", color: CloveColors.green)
+                            scoreRangeRow(range: "60-79", description: "Good - On the right track", color: Theme.shared.accent)
+                            scoreRangeRow(range: "40-59", description: "Fair - Some challenges", color: .orange)
+                            scoreRangeRow(range: "0-39", description: "Needs attention - Consider reaching out for support", color: CloveColors.red)
+                        }
+                    }
+                    
+                    // Trends
+                    infoSection(
+                        title: "Understanding Trends",
+                        content: "The arrow next to your score shows whether your health has been improving ↗, declining ↘, or staying stable → compared to recent weeks. Small changes are normal - focus on the overall pattern over time."
+                    )
+                    
+                    // Important note
+                    VStack(alignment: .leading, spacing: CloveSpacing.small) {
+                        Text("Important Reminder")
+                            .font(.system(.headline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(CloveColors.primaryText)
+                        
+                        Text("This score is a helpful tool for tracking patterns, but it doesn't replace professional medical advice. Always consult with your healthcare team for medical decisions.")
+                            .font(CloveFonts.body())
+                            .foregroundStyle(CloveColors.secondaryText)
+                            .padding(CloveSpacing.medium)
+                            .background(
+                                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                                    .fill(Theme.shared.accent.opacity(0.1))
+                            )
+                    }
+                }
+                .padding(CloveSpacing.large)
+            }
+            .navigationTitle("Health Score Info")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .font(CloveFonts.body())
+                    .foregroundStyle(Theme.shared.accent)
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+    
+    private func infoSection(title: String, content: String) -> some View {
+        VStack(alignment: .leading, spacing: CloveSpacing.small) {
+            Text(title)
+                .font(.system(.headline, design: .rounded).weight(.semibold))
+                .foregroundStyle(CloveColors.primaryText)
+            
+            Text(content)
+                .font(CloveFonts.body())
+                .foregroundStyle(CloveColors.secondaryText)
+                .lineSpacing(2)
+        }
+    }
+    
+    private func scoreRangeRow(range: String, description: String, color: Color) -> some View {
+        HStack(spacing: CloveSpacing.medium) {
+            Text(range)
+                .font(.system(.callout, design: .rounded).weight(.bold))
+                .foregroundStyle(color)
+                .frame(width: 60, alignment: .leading)
+            
+            Text(description)
+                .font(CloveFonts.body())
+                .foregroundStyle(CloveColors.secondaryText)
+            
+            Spacer()
+        }
+        .padding(.vertical, CloveSpacing.xsmall)
+    }
+}
 
 // MARK: - Streak Counter Widget
 
