@@ -175,6 +175,9 @@ class InsightsEngine {
         let availableMetrics = chartDataManager.getAvailableMetrics()
         
         for metric in availableMetrics {
+            // Skip weather for standalone trend insights
+            if metric == .weather { continue }
+            
             let data = chartDataManager.getChartData(for: metric, period: period)
             guard !data.isEmpty else { continue }
             
@@ -303,6 +306,9 @@ class InsightsEngine {
         let availableMetrics = chartDataManager.getAvailableMetrics()
         
         for metric in availableMetrics {
+            // Skip weather for achievement insights (no "personal best weather")
+            if metric == .weather { continue }
+            
             let data = chartDataManager.getChartData(for: metric, period: period)
             guard !data.isEmpty else { continue }
             
@@ -394,6 +400,9 @@ class InsightsEngine {
         let availableMetrics = chartDataManager.getAvailableMetrics()
         
         for metric in availableMetrics {
+            // Skip weather for pattern insights (weather patterns aren't actionable)
+            if metric == .weather { continue }
+            
             let data = chartDataManager.getChartData(for: metric, period: .month)
             guard data.count >= 14 else { continue }
             
@@ -458,12 +467,22 @@ class InsightsEngine {
         var insights: [HealthInsight] = []
         let availableMetrics = chartDataManager.getAvailableMetrics()
         
-        // Check common correlations
-        let correlationPairs = [
+        // Check common correlations (excluding weather-only correlations but allowing weather with other metrics)
+        var correlationPairs: [(MetricType, MetricType)] = [
             (MetricType.mood, MetricType.energyLevel),
             (MetricType.painLevel, MetricType.mood),
             (MetricType.painLevel, MetricType.energyLevel)
         ]
+        
+        // Add weather correlations with health metrics
+        if availableMetrics.contains(.weather) {
+            let healthMetrics: [MetricType] = [.mood, .painLevel, .energyLevel]
+            for healthMetric in healthMetrics {
+                if availableMetrics.contains(healthMetric) {
+                    correlationPairs.append((.weather, healthMetric))
+                }
+            }
+        }
         
         for (metric1, metric2) in correlationPairs {
             guard availableMetrics.contains(metric1) && availableMetrics.contains(metric2) else { continue }
@@ -541,6 +560,9 @@ class InsightsEngine {
         let availableMetrics = chartDataManager.getAvailableMetrics()
         
         for metric in availableMetrics {
+            // Skip weather for warning insights (weather warnings aren't health-related)
+            if metric == .weather { continue }
+            
             let data = chartDataManager.getChartData(for: metric, period: .week)
             guard data.count >= 3 else { continue }
             

@@ -320,7 +320,7 @@ struct AnalysisResultsView: View {
         } else if isPositive {
             return "When \(primary) increases, \(secondary) tends to increase too."
         } else {
-            return "When \(primary) increases, \(secondary) tends to get decrease."
+            return "When \(primary) increases, \(secondary) tends to decrease."
         }
     }
     
