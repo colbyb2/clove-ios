@@ -142,8 +142,8 @@ struct InsightsView: View {
          }
       }
       .sheet(isPresented: $showingMetricSelector) {
-         MetricSelectorView { metric in
-            viewModel.selectMetricForChart(metric)
+         MetricExplorer { metric in
+//            viewModel.selectMetricForChart(metric)
          }
       }
       .onAppear {
