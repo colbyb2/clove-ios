@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct InsightsView: View {
-   @State private var viewModel = InsightsViewModel()
+   @State private var viewModel = InsightsV2ViewModel()
    @State private var showingMetricSelector = false
    
    // Insights customization settings
@@ -142,18 +142,24 @@ struct InsightsView: View {
          }
       }
       .sheet(isPresented: $showingMetricSelector) {
-         MetricExplorer { metric in
-//            viewModel.selectMetricForChart(metric)
+         MetricExplorer { metricId in
+            Task {
+               await viewModel.selectMetric(id: metricId)
+            }
          }
       }
       .onAppear {
-         viewModel.loadFoundationData()
+         Task {
+            await viewModel.refreshCurrentMetric()
+         }
          if TutorialManager.shared.startTutorial(Tutorials.InsightsView) == .Failure {
             print("Tutorial [InsightsView] Failed to Start")
          }
       }
       .onChange(of: viewModel.timePeriodManager.selectedPeriod) { _, newPeriod in
-         viewModel.refreshCurrentMetricData()
+         Task {
+            await viewModel.timePeriodChanged()
+         }
       }
    }
    
@@ -184,7 +190,9 @@ struct InsightsView: View {
                      onTap: {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                            viewModel.timePeriodManager.selectedPeriod = period
-                           viewModel.refreshCurrentMetricData()
+                           Task {
+                              await viewModel.timePeriodChanged()
+                           }
                         }
                      }
                   )
@@ -222,9 +230,9 @@ struct InsightsView: View {
          }
          .padding(.horizontal)
          
-         if let selectedMetric = viewModel.selectedMetricForChart {
+         if viewModel.hasSelectedMetric() {
             // Show selected metric chart
-            selectedMetricChartView(metric: selectedMetric)
+            selectedMetricChartView()
          } else {
             // Show metric selection prompt
             metricSelectionPromptView
@@ -239,59 +247,40 @@ struct InsightsView: View {
       )
    }
    
-   private func selectedMetricChartView(metric: SelectableMetric) -> some View {
+   private func selectedMetricChartView() -> some View {
       VStack(spacing: CloveSpacing.medium) {
          // Metric info header
-         HStack {
-            Text(metric.icon)
-               .font(.system(size: 24))
-            
-            VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
-               Text(metric.name)
-                  .font(.system(.body, design: .rounded).weight(.semibold))
-                  .foregroundStyle(CloveColors.primaryText)
+         if let selectedMetric = viewModel.selectedMetric {
+            HStack {
+               Text(selectedMetric.icon)
+                  .font(.system(size: 24))
                
-               Text(metric.description)
-                  .font(CloveFonts.small())
-                  .foregroundStyle(CloveColors.secondaryText)
-                  .lineLimit(2)
+               VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
+                  Text(selectedMetric.displayName)
+                     .font(.system(.body, design: .rounded).weight(.semibold))
+                     .foregroundStyle(CloveColors.primaryText)
+                  
+                  Text(selectedMetric.description)
+                     .font(CloveFonts.small())
+                     .foregroundStyle(CloveColors.secondaryText)
+                     .lineLimit(2)
+               }
+               
+               Spacer()
             }
             
-            Spacer()
-            
-         }
-         
-         // Chart display
-         if viewModel.isLoadingChartData {
-            InsightsLoadingChartView()
-         } else {
-            let chartData = viewModel.getCurrentChartDataForUniversalChart()
-            if !chartData.isEmpty {
-               UniversalChartView(
-                  data: chartData,
-                  metricName: viewModel.getCurrentMetricName(),
-                  timeRange: viewModel.getCurrentTimeRangeText(),
-                  configuration: getChartConfiguration(for: metric)
-               )
+            // Chart display
+            if viewModel.isLoadingMetricData {
+               InsightsLoadingChartView()
+            } else if !viewModel.metricData.isEmpty {
+               viewModel.createChartView()
             } else {
-               InsightsEmptyChartView(metricName: metric.name)
+               InsightsEmptyChartView(metricName: selectedMetric.displayName)
             }
          }
       }
    }
    
-   private func getChartConfiguration(for metric: SelectableMetric) -> ChartConfiguration {
-      if let metricType = metric.type {
-         // Regular metrics use the standard configuration
-         return ChartConfiguration.forMetricType(metricType)
-      } else if metric.medicationName != nil || metric.activityName != nil || metric.mealName != nil {
-         // Individual medications, activities, and meals use binary data configuration
-         return ChartConfiguration.forBinaryData()
-      } else {
-         // Fallback for symptoms and other cases
-         return ChartConfiguration.default
-      }
-   }
    
    private var metricSelectionPromptView: some View {
       VStack(spacing: CloveSpacing.large) {
