@@ -5,7 +5,7 @@ import SwiftUI
 
 /// Central registry that manages all available metrics and provides efficient data access
 @Observable
-class MetricRegistry: Sendable {
+class MetricRegistry {
     static let shared = MetricRegistry()
     
     // MARK: - Private Properties

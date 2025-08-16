@@ -5,6 +5,22 @@ import Charts
 
 struct UniversalChartEngine {
     
+    /// Create a chart view for any metric provider with automatic aggregation
+    static func createOptimizedChart(
+        for metric: any MetricProvider,
+        period: TimePeriod,
+        timeRange: String,
+        maxDataPoints: Int = 50
+    ) async -> some View {
+        let (data, info) = await metric.getAggregatedDataPoints(for: period, maxPoints: maxDataPoints)
+        return await UniversalMetricChart(
+            metric: metric,
+            data: data,
+            timeRange: timeRange,
+            aggregationInfo: info
+        )
+    }
+    
     /// Create a chart view for any metric provider with its data
     static func createChart(
         for metric: any MetricProvider,
@@ -32,6 +48,23 @@ struct UniversalChartEngine {
             customConfiguration: configuration
         )
     }
+    
+    /// Create a chart view with aggregation information
+    static func createChart(
+        for metric: any MetricProvider,
+        data: [MetricDataPoint],
+        timeRange: String,
+        configuration: MetricChartConfiguration? = nil,
+        aggregationInfo: AggregatedDataInfo? = nil
+    ) -> some View {
+        UniversalMetricChart(
+            metric: metric,
+            data: data,
+            timeRange: timeRange,
+            customConfiguration: configuration,
+            aggregationInfo: aggregationInfo
+        )
+    }
 }
 
 // MARK: - Universal Metric Chart View
@@ -41,6 +74,7 @@ struct UniversalMetricChart: View {
     let data: [MetricDataPoint]
     let timeRange: String
     let customConfiguration: MetricChartConfiguration?
+    let aggregationInfo: AggregatedDataInfo?
     
     @State private var selectedDataPoint: MetricDataPoint?
     @State private var showingTooltip = false
@@ -51,12 +85,14 @@ struct UniversalMetricChart: View {
         metric: any MetricProvider,
         data: [MetricDataPoint],
         timeRange: String,
-        customConfiguration: MetricChartConfiguration? = nil
+        customConfiguration: MetricChartConfiguration? = nil,
+        aggregationInfo: AggregatedDataInfo? = nil
     ) {
         self.metric = metric
         self.data = data
         self.timeRange = timeRange
         self.customConfiguration = customConfiguration
+        self.aggregationInfo = aggregationInfo
     }
     
     private var configuration: MetricChartConfiguration {
@@ -144,11 +180,10 @@ struct UniversalMetricChart: View {
     private var chartContainer: some View {
         Group {
             if data.isEmpty {
-                emptyStateView
+                emptyStateView.frame(height: 200).frame(maxWidth: .infinity)
             } else {
                 chartView
-                    .frame(height: 200)
-                    .clipped()
+                  .frame(minHeight: 240)
             }
         }
     }
@@ -223,6 +258,7 @@ struct UniversalMetricChart: View {
                     .foregroundStyle(CloveColors.secondaryText)
             }
         }
+        .chartXScale(domain: xAxisDomain)
         .chartOverlay { chart in
             Rectangle()
                 .fill(Color.clear)
@@ -250,16 +286,16 @@ struct UniversalMetricChart: View {
             y: .value(metric.displayName, dataPoint.value)
         )
         .foregroundStyle(configuration.primaryColor)
-        .interpolationMethod(.catmullRom)
-        .lineStyle(StrokeStyle(lineWidth: configuration.lineWidth))
+        .interpolationMethod(getOptimalInterpolationMethod())
+        .lineStyle(StrokeStyle(lineWidth: getOptimalLineWidth()))
         
-        if configuration.showDataPoints {
+        if shouldShowDataPoints() {
             PointMark(
                 x: .value("Date", dataPoint.date),
                 y: .value(metric.displayName, dataPoint.value)
             )
             .foregroundStyle(configuration.primaryColor)
-            .symbolSize(30)
+            .symbolSize(getOptimalPointSize())
         }
     }
     
@@ -285,8 +321,8 @@ struct UniversalMetricChart: View {
             y: .value(metric.displayName, dataPoint.value)
         )
         .foregroundStyle(configuration.primaryColor)
-        .interpolationMethod(.catmullRom)
-        .lineStyle(StrokeStyle(lineWidth: configuration.lineWidth))
+        .interpolationMethod(getOptimalInterpolationMethod())
+        .lineStyle(StrokeStyle(lineWidth: getOptimalLineWidth()))
     }
     
     @ChartContentBuilder
@@ -324,18 +360,70 @@ struct UniversalMetricChart: View {
     // MARK: - Chart Footer
     
     private var chartFooter: some View {
-        HStack {
+        VStack(spacing: CloveSpacing.xsmall) {
+            HStack {
+                dataPointsInfo
+                Spacer()
+                dateRangeInfo
+            }
+            
+            if let info = aggregationInfo, info.wasAggregated {
+                aggregationIndicator(info)
+            }
+        }
+    }
+    
+    private var dataPointsInfo: some View {
+        let sortedData = data.sorted { $0.date < $1.date }
+        let dateRange = !sortedData.isEmpty ? 
+            "\(sortedData.first!.date.formatted(.dateTime.month().day())) - \(sortedData.last!.date.formatted(.dateTime.month().day()))" : "No data"
+        
+        return VStack(alignment: .leading, spacing: 2) {
             Text("\(data.count) data points")
                 .font(CloveFonts.small())
                 .foregroundStyle(CloveColors.secondaryText)
-            
-            Spacer()
-            
+            Text(dateRange)
+                .font(.system(size: 9))
+                .foregroundStyle(CloveColors.secondaryText.opacity(0.7))
+        }
+    }
+    
+    private var dateRangeInfo: some View {
+        Group {
             if let firstPoint = data.first, let lastPoint = data.last {
                 Text("\(firstPoint.date.formatted(date: .abbreviated, time: .omitted)) - \(lastPoint.date.formatted(date: .abbreviated, time: .omitted))")
                     .font(CloveFonts.small())
                     .foregroundStyle(CloveColors.secondaryText)
             }
+        }
+    }
+    
+    private func aggregationIndicator(_ info: AggregatedDataInfo) -> some View {
+        HStack(spacing: CloveSpacing.xsmall) {
+            Image(systemName: "chart.bar.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(Theme.shared.accent.opacity(0.7))
+            
+            Text("Aggregated from \(info.originalCount) points • \(aggregationLevelText(info.aggregationLevel)) averages")
+                .font(.system(size: 10))
+                .foregroundStyle(Theme.shared.accent.opacity(0.8))
+                .fontWeight(.medium)
+            
+            Spacer()
+        }
+        .padding(.horizontal, CloveSpacing.small)
+        .padding(.vertical, CloveSpacing.xsmall)
+        .background(
+            RoundedRectangle(cornerRadius: CloveCorners.small)
+                .fill(Theme.shared.accent.opacity(0.1))
+        )
+    }
+    
+    private func aggregationLevelText(_ level: AggregationLevel) -> String {
+        switch level {
+        case .daily: return "Daily"
+        case .weekly: return "Weekly"
+        case .monthly: return "Monthly"
         }
     }
     
@@ -420,6 +508,27 @@ struct UniversalMetricChart: View {
         }
     }
     
+    private var xAxisDomain: ClosedRange<Date> {
+        guard !data.isEmpty else {
+            let now = Date()
+            return now...Calendar.current.date(byAdding: .day, value: 1, to: now)!
+        }
+        
+        let sortedData = data.sorted { $0.date < $1.date }
+        let firstDate = sortedData.first!.date
+        let lastDate = sortedData.last!.date
+        
+        // Add padding to ensure full visibility
+        let calendar = Calendar.current
+        let totalDays = calendar.dateComponents([.day], from: firstDate, to: lastDate).day ?? 1
+        let paddingDays = max(1, totalDays / 20) // 5% padding
+        
+        let startDate = calendar.date(byAdding: .day, value: -paddingDays, to: firstDate) ?? firstDate
+        let endDate = calendar.date(byAdding: .day, value: paddingDays, to: lastDate) ?? lastDate
+        
+        return startDate...endDate
+    }
+    
     private var xAxisValues: [Date] {
         guard !data.isEmpty else { return [] }
         
@@ -430,61 +539,72 @@ struct UniversalMetricChart: View {
         let calendar = Calendar.current
         let totalDays = calendar.dateComponents([.day], from: firstDate, to: lastDate).day ?? 0
         
-        // Conservative with label count to prevent overlapping
+        // More intelligent axis tick calculation
         let maxLabels: Int
+        let intervalType: Calendar.Component
+        let intervalValue: Int
+        
         switch totalDays {
-        case 0...7: maxLabels = min(4, data.count)
-        case 8...30: maxLabels = 4
-        case 31...90: maxLabels = 3
-        default: maxLabels = 3
+        case 0...7:
+            maxLabels = min(data.count, 7)
+            intervalType = .day
+            intervalValue = max(1, totalDays / maxLabels)
+        case 8...30:
+            maxLabels = 5
+            intervalType = .day
+            intervalValue = max(1, totalDays / maxLabels)
+        case 31...90:
+            maxLabels = 4
+            intervalType = .weekOfYear
+            intervalValue = max(1, (totalDays / 7) / maxLabels)
+        default:
+            maxLabels = 4
+            intervalType = .month
+            intervalValue = 1
         }
         
-        if data.count <= 2 {
-            return [firstDate, lastDate].compactMap { $0 }
-        }
-        
+        // Generate evenly spaced dates
         var dates: [Date] = []
+        var currentDate = firstDate
         
-        if maxLabels >= 1 {
-            dates.append(firstDate)
-        }
-        
-        if maxLabels >= 3 && totalDays > 1 {
-            if let middleDate = calendar.date(byAdding: .day, value: totalDays / 2, to: firstDate) {
-                dates.append(middleDate)
+        while currentDate <= lastDate && dates.count < maxLabels {
+            dates.append(currentDate)
+            if let nextDate = calendar.date(byAdding: intervalType, value: intervalValue, to: currentDate) {
+                currentDate = nextDate
+            } else {
+                break
             }
         }
         
-        if maxLabels >= 4 && totalDays > 2 {
-            dates.removeAll()
-            dates.append(firstDate)
-            
-            if let quarterDate = calendar.date(byAdding: .day, value: totalDays / 4, to: firstDate) {
-                dates.append(quarterDate)
-            }
-            
-            if let threeQuarterDate = calendar.date(byAdding: .day, value: (totalDays * 3) / 4, to: firstDate) {
-                dates.append(threeQuarterDate)
-            }
-            
-            dates.append(lastDate)
-        } else if maxLabels >= 2 && totalDays > 0 {
+        // Ensure we always include the last date if it's significantly different
+        if let lastAddedDate = dates.last,
+           calendar.dateComponents([.day], from: lastAddedDate, to: lastDate).day ?? 0 > intervalValue {
             dates.append(lastDate)
         }
         
-        let uniqueDates = Array(Set(dates)).sorted()
-        return uniqueDates
+        return dates
     }
     
     private var xAxisFormat: Date.FormatStyle {
+        guard !data.isEmpty else {
+            return .dateTime.month(.abbreviated).day()
+        }
+        
         let calendar = Calendar.current
-        let totalDays = data.isEmpty ? 0 : calendar.dateComponents([.day], from: data.first!.date, to: data.last!.date).day ?? 0
+        let sortedData = data.sorted { $0.date < $1.date }
+        let totalDays = calendar.dateComponents([.day], from: sortedData.first!.date, to: sortedData.last!.date).day ?? 0
         
         switch totalDays {
-        case 0...7: return .dateTime.month(.abbreviated).day()
-        case 8...30: return .dateTime.month(.abbreviated).day()
-        case 31...90: return .dateTime.month(.abbreviated)
-        default: return .dateTime.month(.abbreviated)
+        case 0...7: 
+            return .dateTime.month(.abbreviated).day()
+        case 8...30: 
+            return .dateTime.month(.abbreviated).day()
+        case 31...90: 
+            return .dateTime.month(.abbreviated).day()
+        case 91...365:
+            return .dateTime.month(.abbreviated)
+        default: 
+            return .dateTime.month(.abbreviated).year(.defaultDigits)
         }
     }
     
@@ -593,6 +713,59 @@ struct UniversalMetricChart: View {
         case .increasing: return CloveColors.green
         case .decreasing: return CloveColors.red
         case .stable: return CloveColors.secondaryText
+        }
+    }
+    
+    // MARK: - Chart Optimization Methods
+    
+    private func getOptimalInterpolationMethod() -> InterpolationMethod {
+        let dataCount = data.count
+        
+        // Use different interpolation methods based on data density and type
+        if isBinaryData() {
+            return .stepStart // Better for binary data
+        } else if dataCount > 100 {
+            return .linear // Prevents rendering artifacts with dense data
+        } else if dataCount > 50 {
+            return .cardinal // Smoother but more controlled than catmullRom
+        } else {
+            return .catmullRom // Smoothest for sparse data
+        }
+    }
+    
+    private func getOptimalLineWidth() -> CGFloat {
+        let baseWidth = configuration.lineWidth
+        let dataCount = data.count
+        
+        // Thinner lines for very dense data
+        if dataCount > 150 {
+            return max(1.0, baseWidth * 0.6)
+        } else if dataCount > 100 {
+            return max(1.5, baseWidth * 0.8)
+        } else {
+            return baseWidth
+        }
+    }
+    
+    private func shouldShowDataPoints() -> Bool {
+        if configuration.showDataPoints {
+            let dataCount = data.count
+            // Hide points for very dense data
+            return dataCount <= 30
+        }
+        return false
+    }
+    
+    private func getOptimalPointSize() -> CGFloat {
+        let dataCount = data.count
+        
+        // Smaller points for denser data
+        if dataCount > 20 {
+            return 20
+        } else if dataCount > 10 {
+            return 25
+        } else {
+            return 30
         }
     }
 }

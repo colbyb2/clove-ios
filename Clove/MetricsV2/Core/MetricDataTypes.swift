@@ -6,7 +6,7 @@ import SwiftUI
 /// Defines the type of data a metric represents
 enum MetricDataType: Sendable {
     case continuous(range: ClosedRange<Double>)  // 1-10 scale
-    case binary                                  // 0/1, yes/no
+    case binary                                 // 0/1, yes/no
     case categorical(values: [String])           // weather types, bowel movement types
     case count                                   // number of items
     case percentage                              // 0-100%
@@ -26,10 +26,11 @@ struct MetricDataPoint: Identifiable, Sendable, Hashable {
     let id = UUID()
     let date: Date
     let value: Double
-    let rawValue: Any?  // Store original value for complex types
+    let rawValue: (any Sendable)?  // Store original value for complex types
     let metricId: String
+   
     
-    init(date: Date, value: Double, rawValue: Any? = nil, metricId: String) {
+    init(date: Date, value: Double, rawValue: (any Sendable)? = nil, metricId: String) {
         self.date = date
         self.value = value
         self.rawValue = rawValue
@@ -49,10 +50,24 @@ struct MetricDataPoint: Identifiable, Sendable, Hashable {
     }
 }
 
+struct MetricChartStyle {
+    var primary: Color
+    var background: Color
+    var text: Color
+    
+    static let `default` = MetricChartStyle(primary: Theme.shared.accent, background: CloveColors.card, text: CloveColors.secondaryText)
+}
+
+struct MetricChartConfig {
+    let showAnnotation: Bool
+    
+    static let `default` = MetricChartConfig(showAnnotation: true)
+}
+
 /// Represents a formatted metric value
 struct MetricValue: Sendable {
     let value: Double
-    let rawValue: Any?
+    let rawValue: (any Sendable)?
     let formattedValue: String
     
     init(value: Double, rawValue: Any? = nil, formattedValue: String) {

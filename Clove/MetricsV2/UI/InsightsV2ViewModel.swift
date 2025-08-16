@@ -99,13 +99,43 @@ class InsightsV2ViewModel {
             return AnyView(EmptyChartPlaceholder())
         }
         
-        return AnyView(
-            UniversalChartEngine.createChart(
-                for: metric,
-                data: metricData,
-                timeRange: getCurrentTimeRangeText()
+        // Check if we should use aggregated data
+        let shouldAggregate = metricData.count > 50
+        
+        if shouldAggregate {
+            return AnyView(
+                AsyncChartView(
+                    metric: metric,
+                    period: timePeriodManager.selectedPeriod,
+                    timeRange: getCurrentTimeRangeText()
+                )
             )
-        )
+        } else {
+            return AnyView(
+                UniversalChartEngine.createChart(
+                    for: metric,
+                    data: metricData,
+                    timeRange: getCurrentTimeRangeText()
+                )
+            )
+        }
+    }
+    
+    @MainActor
+    func loadAggregatedMetricData(maxPoints: Int = 50) async {
+        guard let metric = selectedMetric else { return }
+        
+        isLoadingMetricData = true
+        errorMessage = nil
+        
+        do {
+            let (data, info) = await metric.getAggregatedDataPoints(for: timePeriodManager.selectedPeriod, maxPoints: maxPoints)
+            self.metricData = data.sorted { $0.date < $1.date }
+        } catch {
+            self.errorMessage = "Failed to load aggregated metric data: \(error.localizedDescription)"
+        }
+        
+        isLoadingMetricData = false
     }
     
     func getMetricStatistics() -> MetricStatistics? {
@@ -218,6 +248,61 @@ extension InsightsV2ViewModel {
     func loadFoundationData() {
         Task {
             await refreshCurrentMetric()
+        }
+    }
+}
+
+// MARK: - Async Chart View
+
+struct AsyncChartView: View {
+    let metric: any MetricProvider
+    let period: TimePeriod
+    let timeRange: String
+    let maxDataPoints: Int
+    
+    @State private var isLoading = true
+    @State private var chartData: [MetricDataPoint] = []
+    @State private var aggregationInfo: AggregatedDataInfo?
+    
+    init(metric: any MetricProvider, period: TimePeriod, timeRange: String, maxDataPoints: Int = 50) {
+        self.metric = metric
+        self.period = period
+        self.timeRange = timeRange
+        self.maxDataPoints = maxDataPoints
+    }
+    
+    var body: some View {
+        Group {
+            if isLoading {
+                VStack {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text("Optimizing chart...")
+                        .font(CloveFonts.small())
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+                .frame(height: 200)
+            } else {
+                UniversalChartEngine.createChart(
+                    for: metric,
+                    data: chartData,
+                    timeRange: timeRange,
+                    aggregationInfo: aggregationInfo
+                )
+            }
+        }
+        .task {
+            await loadData()
+        }
+    }
+    
+    private func loadData() async {
+        let (data, info) = await metric.getAggregatedDataPoints(for: period, maxPoints: maxDataPoints)
+        
+        await MainActor.run {
+            self.chartData = data
+            self.aggregationInfo = info
+            self.isLoading = false
         }
     }
 }

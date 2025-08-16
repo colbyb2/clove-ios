@@ -8,12 +8,12 @@ struct SymptomMetricProvider: MetricProvider {
     
     var id: String { "symptom_\(symptomName.lowercased().replacingOccurrences(of: " ", with: "_"))" }
     var displayName: String { symptomName }
-    var description: String { "1-10 scale tracking \(symptomName.lowercased()) severity" }
+    var description: String { "0-10 scale tracking \(symptomName.lowercased()) severity" }
     let icon = "🩹"
     let category: MetricCategory = .symptoms
-    let dataType: MetricDataType = .continuous(range: 1...10)
+    let dataType: MetricDataType = .continuous(range: 0...10)
     let chartType: MetricChartType = .line
-    let valueRange: ClosedRange<Double>? = 1...10
+    let valueRange: ClosedRange<Double>? = 0...10
     
     private let dataLoader = OptimizedDataLoader.shared
     
@@ -88,7 +88,7 @@ struct MedicationMetricProvider: MetricProvider {
     }
     
     func formatValue(_ value: Double) -> String {
-        return value == 1.0 ? "Taken" : "Not taken"
+        return value == 1.0 ? "✅" : "❌"
     }
     
     var chartConfiguration: MetricChartConfiguration {
@@ -144,7 +144,7 @@ struct ActivityMetricProvider: MetricProvider {
     }
     
     func formatValue(_ value: Double) -> String {
-        return value == 1.0 ? "Done" : "Not done"
+        return value == 1.0 ? "✅" : "❌"
     }
     
     var chartConfiguration: MetricChartConfiguration {
@@ -200,7 +200,7 @@ struct MealMetricProvider: MetricProvider {
     }
     
     func formatValue(_ value: Double) -> String {
-        return value == 1.0 ? "Eaten" : "Not eaten"
+        return value == 1.0 ? "✅" : "❌"
     }
     
     var chartConfiguration: MetricChartConfiguration {

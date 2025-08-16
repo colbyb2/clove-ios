@@ -230,9 +230,8 @@ struct InsightsView: View {
          }
          .padding(.horizontal)
          
-         if viewModel.hasSelectedMetric() {
-            // Show selected metric chart
-            selectedMetricChartView()
+          if let metric = viewModel.selectedMetric {
+              MetricChart(metric: metric)
          } else {
             // Show metric selection prompt
             metricSelectionPromptView

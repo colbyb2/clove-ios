@@ -9,9 +9,9 @@ struct MoodMetricProvider: MetricProvider {
     let description = "1-10 scale tracking daily mood"
     let icon = "😊"
     let category: MetricCategory = .coreHealth
-    let dataType: MetricDataType = .continuous(range: 1...10)
+    let dataType: MetricDataType = .continuous(range: 0...10)
     let chartType: MetricChartType = .line
-    let valueRange: ClosedRange<Double>? = 1...10
+    let valueRange: ClosedRange<Double>? = 0...10
     
     private let dataLoader = OptimizedDataLoader.shared
     
@@ -48,9 +48,9 @@ struct PainLevelMetricProvider: MetricProvider {
     let description = "1-10 scale tracking pain intensity"
     let icon = "🔥"
     let category: MetricCategory = .coreHealth
-    let dataType: MetricDataType = .continuous(range: 1...10)
+    let dataType: MetricDataType = .continuous(range: 0...10)
     let chartType: MetricChartType = .line
-    let valueRange: ClosedRange<Double>? = 1...10
+    let valueRange: ClosedRange<Double>? = 0...10
     
     private let dataLoader = OptimizedDataLoader.shared
     
@@ -87,9 +87,9 @@ struct EnergyLevelMetricProvider: MetricProvider {
     let description = "1-10 scale tracking energy levels"
     let icon = "⚡"
     let category: MetricCategory = .coreHealth
-    let dataType: MetricDataType = .continuous(range: 1...10)
+    let dataType: MetricDataType = .continuous(range: 0...10)
     let chartType: MetricChartType = .line
-    let valueRange: ClosedRange<Double>? = 1...10
+    let valueRange: ClosedRange<Double>? = 0...10
     
     private let dataLoader = OptimizedDataLoader.shared
     
@@ -152,7 +152,7 @@ struct FlareDayMetricProvider: MetricProvider {
     }
     
     func formatValue(_ value: Double) -> String {
-        return value == 1.0 ? "Yes" : "No"
+        return value == 1.0 ? "✅" : "❌"
     }
     
     var chartConfiguration: MetricChartConfiguration {
