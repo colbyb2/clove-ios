@@ -202,9 +202,9 @@ struct ChartBuilder: View {
         case .sixMonth:
             return .stride(by: .month, count: 1)
         case .year:
-            return .stride(by: .month, count: 1)
+            return .stride(by: .month, count: 2)
         case .allTime:
-            return .stride(by: .year, count: 1)
+            return .stride(by: .month, count: 6)
         }
     }
     
@@ -350,20 +350,8 @@ struct MetricChart: View {
     }
     
     func loadData() async {
-        let metricData = await metric.getDataPoints(for: timeManager.selectedPeriod)
+        let metricData = await metric.getSmoothedData(for: timeManager.selectedPeriod)
         self.data = metricData
-        // MARK: REMOVE
-//        let cal = Calendar.current
-//        let today = cal.startOfDay(for: Date())
-//        let start = cal.date(byAdding: .day, value: -14, to: today)!  // 15 days ending today
-//        
-//        self.data = (0..<15).map { i in
-//            let date = cal.date(byAdding: .day, value: i, to: start)!
-//            
-//            let value = Double(Int.random(in: 1...6))
-//            
-//            return MetricDataPoint(date: date, value: value, metricId: "mood")
-//        }
     }
     
     private func isBinaryMetric() -> Bool {

@@ -19,6 +19,7 @@ protocol MetricProvider: Identifiable, Sendable {
     
     // MARK: - Data Access (Async for performance)
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint]
+    func getSmoothedData(for period: TimePeriod) async -> [MetricDataPoint]
     func getAggregatedDataPoints(for period: TimePeriod, maxPoints: Int) async -> (data: [MetricDataPoint], info: AggregatedDataInfo)
     func getDataPointCount() async -> Int
     func getDataPointCount(for period: TimePeriod) async -> Int
@@ -99,6 +100,11 @@ extension MetricProvider {
             rawValue: lastPoint.rawValue,
             formattedValue: formatValue(lastPoint.value)
         )
+    }
+    
+    func getSmoothedData(for period: TimePeriod) async -> [MetricDataPoint] {
+        let rawData = await getDataPoints(for: period)
+        return DataAggregationEngine.shared.processMetricData(points: rawData, period: period)
     }
     
     /// Default aggregated data points implementation
