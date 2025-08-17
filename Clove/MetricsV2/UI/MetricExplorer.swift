@@ -8,6 +8,7 @@ struct MetricExplorer: View {
     
     @Environment(\.dismiss) private var dismiss
     private let timePeriodManager = TimePeriodManager.shared
+    @FocusState private var isSearchFocused: Bool
     
     var body: some View {
         NavigationView {
@@ -41,18 +42,23 @@ struct MetricExplorer: View {
             // Search bar
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(CloveColors.secondaryText)
+                    .foregroundStyle(isSearchFocused ? Theme.shared.accent : CloveColors.secondaryText)
+                    .animation(.easeInOut(duration: 0.2), value: isSearchFocused)
                 
                 TextField("Search metrics...", text: $viewModel.searchText)
                     .textFieldStyle(.plain)
+                    .focused($isSearchFocused)
                 
                 if !viewModel.searchText.isEmpty {
                     Button(action: {
                         viewModel.searchText = ""
+                        isSearchFocused = false
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(CloveColors.secondaryText)
+                            .foregroundStyle(CloveColors.red)
+                            .font(.system(size: 16, weight: .medium))
                     }
+                    .transition(.scale.combined(with: .opacity))
                 }
             }
             .padding(CloveSpacing.small)
@@ -61,7 +67,11 @@ struct MetricExplorer: View {
                     .fill(CloveColors.card)
                     .overlay(
                         RoundedRectangle(cornerRadius: CloveCorners.medium)
-                            .stroke(Theme.shared.accent.opacity(0.2), lineWidth: 1)
+                            .stroke(
+                                isSearchFocused ? Theme.shared.accent.opacity(0.6) : Theme.shared.accent.opacity(0.2), 
+                                lineWidth: isSearchFocused ? 2 : 1
+                            )
+                            .animation(.easeInOut(duration: 0.2), value: isSearchFocused)
                     )
             )
             .padding(.bottom, 5)
