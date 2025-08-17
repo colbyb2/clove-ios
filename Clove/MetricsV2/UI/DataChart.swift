@@ -282,6 +282,10 @@ struct MetricChart: View {
                 } else {
                     Text("Loading")
                 }
+                
+                if timeManager.selectedPeriod != .week && timeManager.selectedPeriod != .month {
+                    Footer()
+                }
             }
             .padding()
         }
@@ -353,6 +357,178 @@ struct MetricChart: View {
                     Spacer()
                 }
             }
+        }
+    }
+    
+    @State var totalDataCount: Int = 0
+    @State var isFooterExpanded: Bool = false
+    
+    @ViewBuilder
+    func Footer() -> some View {
+        VStack(spacing: 0) {
+            FooterHeader()
+            
+            if isFooterExpanded {
+                FooterExpandedContent()
+            }
+        }
+        .task {
+            totalDataCount = await metric.getDataPointCount(for: timeManager.selectedPeriod)
+        }
+    }
+    
+    @ViewBuilder
+    private func FooterHeader() -> some View {
+        Button(action: {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                isFooterExpanded.toggle()
+            }
+        }) {
+            HStack(spacing: CloveSpacing.small) {
+                // Smart data indicator
+                Image(systemName: "info.circle")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(CloveColors.info)
+                
+                Text("Smart Aggregation")
+                    .font(.system(.caption, design: .rounded, weight: .medium))
+                    .foregroundStyle(CloveColors.secondaryText)
+                
+                Spacer()
+                
+                // Data compression badge
+                HStack(spacing: 4) {
+                    Text("\(data?.count ?? 0)")
+                        .font(.system(.caption2, design: .rounded, weight: .bold))
+                    Text("pts")
+                        .font(.system(.caption2, design: .rounded))
+                }
+                .foregroundStyle(CloveColors.secondaryText)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule()
+                        .fill(style.primary.opacity(0.4))
+                )
+                
+                // Chevron with rotation animation
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .rotationEffect(.degrees(isFooterExpanded ? 0 : -90))
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isFooterExpanded)
+            }
+            .padding(.horizontal, CloveSpacing.medium)
+            .padding(.vertical, CloveSpacing.small)
+            .background(
+                RoundedRectangle(cornerRadius: CloveCorners.small)
+                    .fill(CloveColors.card)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CloveCorners.small)
+                            .stroke(style.primary.opacity(0.1), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    @ViewBuilder
+    private func FooterExpandedContent() -> some View {
+        VStack(alignment: .leading, spacing: CloveSpacing.medium) {
+            // Explanation text
+            VStack(alignment: .leading, spacing: CloveSpacing.small) {
+                Text("Data Optimization")
+                    .font(.system(.caption, design: .rounded, weight: .semibold))
+                    .foregroundStyle(CloveColors.primaryText)
+                
+                Text(getSmartExplanation())
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .lineLimit(nil)
+            }
+            
+            // Visual indicator
+            if totalDataCount > (data?.count ?? 0) {
+                DataOptimizationVisual()
+            }
+        }
+        .padding(.horizontal, CloveSpacing.medium)
+        .padding(.top, CloveSpacing.small)
+        .padding(.bottom, CloveSpacing.medium)
+        .transition(.asymmetric(
+            insertion: .move(edge: .top).combined(with: .opacity),
+            removal: .move(edge: .top).combined(with: .opacity)
+        ))
+    }
+    
+    @ViewBuilder
+    private func DataOptimizationVisual() -> some View {
+        HStack(spacing: CloveSpacing.medium) {
+            // Data flow visualization
+            VStack(spacing: 4) {
+                Text("\(totalDataCount)")
+                    .font(.system(.caption, design: .rounded, weight: .bold))
+                    .foregroundStyle(CloveColors.secondaryText)
+                Text("Original")
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundStyle(CloveColors.secondaryText)
+            }
+            
+            // Arrow
+            Image(systemName: "arrow.right")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(style.primary)
+            
+            VStack(spacing: 4) {
+                Text("\(data?.count ?? 0)")
+                    .font(.system(.caption, design: .rounded, weight: .bold))
+                    .foregroundStyle(style.primary)
+                Text("Optimized")
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundStyle(style.primary)
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, CloveSpacing.small)
+        .padding(.vertical, CloveSpacing.xsmall)
+        .background(
+            RoundedRectangle(cornerRadius: CloveCorners.small)
+                .fill(style.primary.opacity(0.05))
+        )
+    }
+    
+    private func getSmartExplanation() -> String {
+        guard totalDataCount > (data?.count ?? 0) else {
+            return "Showing all available data points for this time period."
+        }
+        
+        let aggregationType = getAggregationType()
+        
+        switch timeManager.selectedPeriod {
+        case .threeMonth:
+            return "Your \(totalDataCount) daily entries are grouped into \(aggregationType) averages to reveal clearer patterns over 3 months."
+        case .sixMonth:
+            return "Data is intelligently combined into \(aggregationType) summaries, making 6-month trends easier to understand."
+        case .year:
+            return "A full year of data (\(totalDataCount) entries) simplified into \(aggregationType) insights for better trend analysis."
+        case .allTime:
+            return "All your historical data is optimized into meaningful \(aggregationType) patterns, preserving important trends while reducing visual clutter."
+        default:
+            return "Data points are smartly aggregated to show clearer long-term patterns."
+        }
+    }
+    
+    private func getAggregationType() -> String {
+        switch timeManager.selectedPeriod {
+        case .threeMonth:
+            return "weekly"
+        case .sixMonth, .year:
+            return "monthly"
+        case .allTime:
+            return "monthly"
+        default:
+            return "grouped"
         }
     }
     
@@ -497,6 +673,6 @@ fileprivate struct ChartPreview: View {
 #Preview {
     ChartPreview()
         .onAppear {
-            TimePeriodManager.shared.selectedPeriod = .month
+            TimePeriodManager.shared.selectedPeriod = .threeMonth
         }
 }

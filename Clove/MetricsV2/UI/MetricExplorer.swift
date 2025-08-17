@@ -68,7 +68,7 @@ struct MetricExplorer: View {
                     }
                 }
             }
-            .padding(CloveSpacing.medium)
+            .padding(CloveSpacing.small)
             .background(
                 RoundedRectangle(cornerRadius: CloveCorners.medium)
                     .fill(CloveColors.card)
@@ -77,6 +77,7 @@ struct MetricExplorer: View {
                             .stroke(Theme.shared.accent.opacity(0.2), lineWidth: 1)
                     )
             )
+            .padding(.bottom, 5)
             
             // Category filter chips
             categoryFilterChips
@@ -106,7 +107,7 @@ struct MetricExplorer: View {
                     )
                 }
             }
-            .padding(.horizontal, CloveSpacing.large)
+            .padding(.bottom, 10)
         }
         .scrollClipDisabled()
     }
@@ -178,7 +179,7 @@ struct MetricExplorer: View {
                 .foregroundStyle(CloveColors.green)
                 .font(.caption)
             
-            Text("Optimized • \(viewModel.metricSummaries.count) metrics available")
+            Text("\(viewModel.metricSummaries.count) metrics available")
                 .font(CloveFonts.small())
                 .foregroundStyle(CloveColors.secondaryText)
             
@@ -248,12 +249,13 @@ struct MetricCategoryChip: View {
             Text(title)
                 .font(CloveFonts.small())
                 .fontWeight(.medium)
-                .foregroundStyle(isSelected ? .white : Theme.shared.accent)
+                .foregroundStyle(isSelected ? .white : CloveColors.secondaryText)
                 .padding(.horizontal, CloveSpacing.medium)
                 .padding(.vertical, CloveSpacing.small)
                 .background(
                     RoundedRectangle(cornerRadius: CloveCorners.full)
-                        .fill(isSelected ? Theme.shared.accent : Theme.shared.accent.opacity(0.1))
+                        .fill(isSelected ? Theme.shared.accent : CloveColors.card)
+                        .shadow(color: .gray.opacity(0.8), radius: 1)
                 )
         }
         .buttonStyle(PlainButtonStyle())
