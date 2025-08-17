@@ -2,25 +2,27 @@ import SwiftUI
 
 @Observable
 class CrossReferenceViewModel {
-    var primaryMetric: SelectableMetric?
-    var secondaryMetric: SelectableMetric?
+    var primaryMetric: (any MetricProvider)?
+    var secondaryMetric: (any MetricProvider)?
     var currentAnalysis: CorrelationAnalysis?
     var isCalculating: Bool = false
     var savedCorrelations: [MetricPair] = []
     var suggestedPairs: [MetricPair] = []
-    var availableMetrics: [SelectableMetric] = []
+    var availableMetrics: [any MetricProvider] = []
     var errorMessage: String?
     
-    private let chartDataManager = ChartDataManager.shared
+    private let metricRegistry = MetricRegistry.shared
     private let timePeriodManager = TimePeriodManager.shared
     
     init() {
-        loadAvailableMetrics()
+        Task {
+            await loadAvailableMetrics()
+            await loadSuggestedCorrelations()
+        }
         loadSavedCorrelations()
-        loadSuggestedCorrelations()
     }
     
-    func calculateCorrelation(primary: SelectableMetric, secondary: SelectableMetric) {
+    func calculateCorrelation(primary: any MetricProvider, secondary: any MetricProvider) {
         guard primary.id != secondary.id else {
             errorMessage = "Please select two different metrics"
             return
@@ -39,6 +41,27 @@ class CrossReferenceViewModel {
                 self.errorMessage = "Failed to calculate correlation: \(error.localizedDescription)"
             }
             self.isCalculating = false
+        }
+    }
+    
+    func selectMetric(id: String, isPrimary: Bool) async {
+        if let metric = await metricRegistry.getMetric(id: id) {
+            await MainActor.run {
+                if isPrimary {
+                    self.primaryMetric = metric
+                } else {
+                    self.secondaryMetric = metric
+                }
+                
+                // Auto-calculate if both metrics are selected
+                if let primary = self.primaryMetric, let secondary = self.secondaryMetric {
+                    self.calculateCorrelation(primary: primary, secondary: secondary)
+                }
+            }
+        } else {
+            await MainActor.run {
+                self.errorMessage = "Selected metric not found"
+            }
         }
     }
     
@@ -69,55 +92,24 @@ class CrossReferenceViewModel {
         calculateCorrelation(primary: pair.primary, secondary: pair.secondary)
     }
     
-    private func loadAvailableMetrics() {
-        let metricTypes = chartDataManager.getAvailableMetrics()
-        let symptoms = chartDataManager.getAvailableSymptoms()
-        
-        availableMetrics = metricTypes.map { metricType in
-            SelectableMetric(
-                name: metricType.displayName,
-                type: metricType,
-                symptomName: nil,
-                category: metricType.category,
-                icon: metricType.icon,
-                description: metricType.description,
-                isAvailable: true,
-                lastValue: getLastValue(for: metricType).map { String(format: "%.0f", $0) },
-                dataPointCount: chartDataManager.getDataPointCount(for: metricType)
-            )
-        }
-        
-        availableMetrics += symptoms.map { symptomName in
-            SelectableMetric(
-                name: symptomName,
-                type: nil,
-                symptomName: symptomName,
-                category: .symptoms,
-                icon: "⚕️",
-                description: "Symptom severity rating (1-10 scale)",
-                isAvailable: true,
-                lastValue: getLastSymptomValue(for: symptomName).map { String(format: "%.0f", $0) },
-                dataPointCount: chartDataManager.getSymptomDataPointCount(symptomName: symptomName)
-            )
+    private func loadAvailableMetrics() async {
+        let metrics = await metricRegistry.getAllAvailableMetrics()
+        await MainActor.run {
+            self.availableMetrics = metrics
         }
     }
     
-    private func getLastValue(for metricType: MetricType) -> Double? {
-        let data = chartDataManager.getChartData(for: metricType, period: .week)
-        return data.last?.value
-    }
     
-    private func getLastSymptomValue(for symptomName: String) -> Double? {
-        let data = chartDataManager.getSymptomChartData(symptomName: symptomName, period: .week)
-        return data.last?.value
-    }
-    
-    private func performCorrelationAnalysis(primary: SelectableMetric, secondary: SelectableMetric) async throws -> CorrelationAnalysis {
+    private func performCorrelationAnalysis(primary: any MetricProvider, secondary: any MetricProvider) async throws -> CorrelationAnalysis {
         let period = timePeriodManager.selectedPeriod
         
-        // Get data for both metrics
-        let primaryData = getPrimaryMetricData(metric: primary, period: period)
-        let secondaryData = getSecondaryMetricData(metric: secondary, period: period)
+        // Get data for both metrics using their built-in methods
+        let primaryDataPoints = await primary.getDataPoints(for: period)
+        let secondaryDataPoints = await secondary.getDataPoints(for: period)
+        
+        // Convert MetricDataPoints to (Date, Double) tuples
+        let primaryData = primaryDataPoints.map { ($0.date, $0.value) }
+        let secondaryData = secondaryDataPoints.map { ($0.date, $0.value) }
         
         // Align data points by date
         let alignedData = alignDataPoints(primary: primaryData, secondary: secondaryData)
@@ -156,33 +148,6 @@ class CrossReferenceViewModel {
         )
     }
     
-    private func getPrimaryMetricData(metric: SelectableMetric, period: TimePeriod) -> [(Date, Double)] {
-        return getMetricData(metric: metric, period: period)
-    }
-    
-    private func getSecondaryMetricData(metric: SelectableMetric, period: TimePeriod) -> [(Date, Double)] {
-        return getMetricData(metric: metric, period: period)
-    }
-    
-    private func getMetricData(metric: SelectableMetric, period: TimePeriod) -> [(Date, Double)] {
-        if let metricType = metric.type {
-            return chartDataManager.getChartData(for: metricType, period: period)
-                .map { ($0.date, $0.value) }
-        } else if let symptomName = metric.symptomName {
-            return chartDataManager.getSymptomChartData(symptomName: symptomName, period: period)
-                .map { ($0.date, $0.value) }
-        } else if let medicationName = metric.medicationName {
-            return chartDataManager.getMedicationChartData(medicationName: medicationName, period: period)
-                .map { ($0.date, $0.value) }
-        } else if let activityName = metric.activityName {
-            return chartDataManager.getActivityChartData(activityName: activityName, period: period)
-                .map { ($0.date, $0.value) }
-        } else if let mealName = metric.mealName {
-            return chartDataManager.getMealChartData(mealName: mealName, period: period)
-                .map { ($0.date, $0.value) }
-        }
-        return []
-    }
     
     private func alignDataPoints(primary: [(Date, Double)], secondary: [(Date, Double)]) -> [(Date, Double, Double)] {
         var aligned: [(Date, Double, Double)] = []
@@ -254,8 +219,8 @@ class CrossReferenceViewModel {
     }
     
     private func generateCorrelationInsights(
-        primaryMetric: SelectableMetric,
-        secondaryMetric: SelectableMetric,
+        primaryMetric: any MetricProvider,
+        secondaryMetric: any MetricProvider,
         coefficient: Double,
         dataPoints: [(Date, Double, Double)]
     ) -> [String] {
@@ -267,7 +232,7 @@ class CrossReferenceViewModel {
         
         // Primary insight
         if absCoeff > 0.3 {
-            insights.append("When \(primaryMetric.name) increases, \(secondaryMetric.name) tends to \(direction)")
+            insights.append("When \(primaryMetric.displayName) increases, \(secondaryMetric.displayName) tends to \(direction)")
         }
         
         // Strength insight
@@ -281,37 +246,42 @@ class CrossReferenceViewModel {
         // Actionable insight
         if absCoeff > 0.4 {
             if coefficient > 0 {
-                insights.append("Improving \(primaryMetric.name) may positively impact \(secondaryMetric.name)")
+                insights.append("Improving \(primaryMetric.displayName) may positively impact \(secondaryMetric.displayName)")
             } else {
-                insights.append("Changes in \(primaryMetric.name) may inversely affect \(secondaryMetric.name)")
+                insights.append("Changes in \(primaryMetric.displayName) may inversely affect \(secondaryMetric.displayName)")
             }
         }
         
         return insights
     }
     
-    private func loadSuggestedCorrelations() {
+    private func loadSuggestedCorrelations() async {
         // Generate suggested correlations based on common health patterns
         let commonPairs = [
-            ("Mood", "Pain Level"),
-            ("Energy Level", "Mood"),
-            ("Pain Level", "Energy Level"),
-            ("Medication Adherence", "Mood"),
-            ("Medication Adherence", "Pain Level")
+            ("mood", "pain_level"),
+            ("energy_level", "mood"),
+            ("pain_level", "energy_level"),
+            ("medication_adherence", "mood"),
+            ("medication_adherence", "pain_level")
         ]
         
-        suggestedPairs = commonPairs.compactMap { (primary, secondary) in
-            guard let primaryMetric = availableMetrics.first(where: { $0.name == primary }),
-                  let secondaryMetric = availableMetrics.first(where: { $0.name == secondary }) else {
-                return nil
+        var pairs: [MetricPair] = []
+        
+        for (primaryId, secondaryId) in commonPairs {
+            if let primaryMetric = await metricRegistry.getMetric(id: primaryId),
+               let secondaryMetric = await metricRegistry.getMetric(id: secondaryId) {
+                let pair = MetricPair(
+                    primary: primaryMetric,
+                    secondary: secondaryMetric,
+                    correlationStrength: 0.0,
+                    lastAnalyzed: Date()
+                )
+                pairs.append(pair)
             }
-            
-            return MetricPair(
-                primary: primaryMetric,
-                secondary: secondaryMetric,
-                correlationStrength: 0.0,
-                lastAnalyzed: Date()
-            )
+        }
+        
+        await MainActor.run {
+            self.suggestedPairs = pairs
         }
     }
     

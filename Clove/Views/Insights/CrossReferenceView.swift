@@ -5,8 +5,8 @@ import Charts
 
 struct CorrelationAnalysis: Identifiable {
    let id = UUID()
-   let primaryMetric: SelectableMetric
-   let secondaryMetric: SelectableMetric
+   let primaryMetric: any MetricProvider
+   let secondaryMetric: any MetricProvider
    let coefficient: Double
    let significance: Double
    let pValue: Double
@@ -43,8 +43,8 @@ struct CorrelationAnalysis: Identifiable {
 
 struct MetricPair: Identifiable, Hashable {
    let id = UUID()
-   let primary: SelectableMetric
-   let secondary: SelectableMetric
+   let primary: any MetricProvider
+   let secondary: any MetricProvider
    let correlationStrength: Double
    let lastAnalyzed: Date
    
@@ -117,10 +117,10 @@ struct CrossReferenceView: View {
          .navigationBarTitleDisplayMode(.large)
       }
       .sheet(isPresented: $showingMetricSelector) {
-         MetricSelectorView(
-            selectedMetric: selectingPrimaryMetric ? viewModel.primaryMetric : viewModel.secondaryMetric
-         ) { metric in
-            handleMetricSelection(metric)
+         MetricExplorer { metricId in
+            Task {
+               await viewModel.selectMetric(id: metricId, isPrimary: selectingPrimaryMetric)
+            }
          }
       }
       .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
@@ -261,18 +261,18 @@ struct CrossReferenceView: View {
       }
    }
    
-   private func handleMetricSelection(_ metric: SelectableMetric) {
-      if selectingPrimaryMetric {
-         viewModel.primaryMetric = metric
-      } else {
-         viewModel.secondaryMetric = metric
-      }
-      
-      if let primary = viewModel.primaryMetric,
-         let secondary = viewModel.secondaryMetric {
-         viewModel.calculateCorrelation(primary: primary, secondary: secondary)
-      }
-   }
+//   private func handleMetricSelection(_ metric: SelectableMetric) {
+//      if selectingPrimaryMetric {
+//         viewModel.primaryMetric = metric
+//      } else {
+//         viewModel.secondaryMetric = metric
+//      }
+//      
+//      if let primary = viewModel.primaryMetric,
+//         let secondary = viewModel.secondaryMetric {
+//         viewModel.calculateCorrelation(primary: primary, secondary: secondary)
+//      }
+//   }
 }
 
 
@@ -324,8 +324,8 @@ struct CrossReferenceHeaderView: View {
 
 
 struct MetricSelectionCardView: View {
-   @Binding var primaryMetric: SelectableMetric?
-   @Binding var secondaryMetric: SelectableMetric?
+   @Binding var primaryMetric: (any MetricProvider)?
+   @Binding var secondaryMetric: (any MetricProvider)?
    let onSelectPrimary: () -> Void
    let onSelectSecondary: () -> Void
    let onAnalyze: () -> Void
@@ -390,12 +390,12 @@ struct MetricSelectionCardView: View {
 
 struct MetricPairSelector: View {
    let title: String
-   let selectedMetric: SelectableMetric?
+   let selectedMetric: (any MetricProvider)?
    let onTap: () -> Void
    
    var body: some View {
       VStack(alignment: .leading, spacing: CloveSpacing.small) {
-         Text(selectedMetric == nil ? title : selectedMetric!.name)
+         Text(selectedMetric == nil ? title : selectedMetric!.displayName)
             .font(CloveFonts.small())
             .foregroundStyle(CloveColors.secondaryText)
             .fontWeight(.medium)
@@ -443,7 +443,7 @@ struct SavedCorrelationCard: View {
       VStack(alignment: .leading, spacing: CloveSpacing.small) {
          HStack {
             VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
-               Text(pair.primary.name)
+               Text(pair.primary.displayName)
                   .font(CloveFonts.small())
                   .foregroundStyle(CloveColors.primaryText)
                   .fontWeight(.medium)
@@ -453,7 +453,7 @@ struct SavedCorrelationCard: View {
                   .font(CloveFonts.small())
                   .foregroundStyle(CloveColors.secondaryText)
                
-               Text(pair.secondary.name)
+               Text(pair.secondary.displayName)
                   .font(CloveFonts.small())
                   .foregroundStyle(CloveColors.primaryText)
                   .fontWeight(.medium)
@@ -504,7 +504,7 @@ struct SuggestedCorrelationRow: View {
                .frame(width: 24)
             
             VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
-               Text("\(pair.primary.name) vs \(pair.secondary.name)")
+               Text("\(pair.primary.displayName) vs \(pair.secondary.displayName)")
                   .font(CloveFonts.body())
                   .foregroundStyle(CloveColors.primaryText)
                   .fontWeight(.medium)

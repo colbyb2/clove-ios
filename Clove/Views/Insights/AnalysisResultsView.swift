@@ -119,7 +119,7 @@ struct AnalysisResultsView: View {
             VStack(spacing: CloveSpacing.medium) {
                 // Primary metric chart
                 VStack(alignment: .leading, spacing: CloveSpacing.small) {
-                    Text(analysis.primaryMetric.name)
+                    Text(analysis.primaryMetric.displayName)
                         .font(CloveFonts.body())
                         .foregroundStyle(Theme.shared.accent)
                         .fontWeight(.semibold)
@@ -166,7 +166,7 @@ struct AnalysisResultsView: View {
                 
                 // Secondary metric chart
                 VStack(alignment: .leading, spacing: CloveSpacing.small) {
-                    Text(analysis.secondaryMetric.name)
+                    Text(analysis.secondaryMetric.displayName)
                         .font(CloveFonts.body())
                         .foregroundStyle(CloveColors.blue)
                         .fontWeight(.semibold)
@@ -295,8 +295,8 @@ struct AnalysisResultsView: View {
     
     private var relationshipTitle: String {
         let absCoeff = abs(analysis.coefficient)
-        let primary = analysis.primaryMetric.name
-        let secondary = analysis.secondaryMetric.name
+        let primary = analysis.primaryMetric.displayName
+        let secondary = analysis.secondaryMetric.displayName
         
         if absCoeff < 0.2 {
             return "\(primary) and \(secondary) don't seem related"
@@ -312,8 +312,8 @@ struct AnalysisResultsView: View {
     private var relationshipDescription: String {
         let absCoeff = abs(analysis.coefficient)
         let isPositive = analysis.coefficient > 0
-        let primary = analysis.primaryMetric.name.lowercased()
-        let secondary = analysis.secondaryMetric.name.lowercased()
+        let primary = analysis.primaryMetric.displayName.lowercased()
+        let secondary = analysis.secondaryMetric.displayName.lowercased()
         
         if absCoeff < 0.2 {
             return "No clear pattern found between these metrics."
@@ -379,41 +379,9 @@ struct AnalysisResultsView: View {
         return (min - padding)...(max + padding)
     }
     
-    private func formatValueForAxis(_ value: Double, for metric: SelectableMetric) -> String {
-        if let metricType = metric.type {
-            switch metricType {
-            case .mood, .painLevel, .energyLevel:
-                return String(format: "%.1f", value)
-            case .medicationAdherence:
-                return String(format: "%.0f%%", value)
-            case .weather:
-                return convertNumericToWeather(value)
-            case .flareDay:
-                return value == 1.0 ? "Yes" : "No"
-            case .activityCount, .mealCount:
-                return String(format: "%.0f", value)
-            case .medication:
-                return value == 1.0 ? "Taken" : "Not taken"
-            case .activity:
-                return value == 1.0 ? "Done" : "Not done"
-            case .meal:
-                return value == 1.0 ? "Eaten" : "Not eaten"
-            }
-        } else if metric.symptomName != nil {
-            // Symptom metric
-            return String(format: "%.1f", value)
-        } else if metric.medicationName != nil {
-            // Medication metric
-            return value == 1.0 ? "Taken" : "Not taken"
-        } else if metric.activityName != nil {
-            // Activity metric
-            return value == 1.0 ? "Done" : "Not done"
-        } else if metric.mealName != nil {
-            // Meal metric
-            return value == 1.0 ? "Eaten" : "Not eaten"
-        } else {
-            return String(format: "%.1f", value)
-        }
+    private func formatValueForAxis(_ value: Double, for metric: any MetricProvider) -> String {
+        // Use the MetricProvider's built-in formatValue method
+        return metric.formatValue(value)
     }
     
     private func convertNumericToWeather(_ numericValue: Double) -> String {
