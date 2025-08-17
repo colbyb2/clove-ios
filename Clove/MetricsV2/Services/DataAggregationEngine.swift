@@ -68,7 +68,8 @@ class DataAggregationEngine {
     
     func processMetricData(
         points: [MetricDataPoint],
-        period: TimePeriod
+        period: TimePeriod,
+        metricType: MetricDataType
     ) -> [MetricDataPoint] {
         guard !points.isEmpty else { return [] }
         
@@ -76,6 +77,10 @@ class DataAggregationEngine {
         
         guard config.shouldProcess else {
             return points.sorted { $0.date < $1.date }
+        }
+        
+        if case .binary = metricType {
+            return processBinaryMetric(points: points, config: config)
         }
                 
         let sortedPoints = points.sorted { $0.date < $1.date }
@@ -109,6 +114,44 @@ class DataAggregationEngine {
         
         return smoothedPoints
     }
+    
+    private func processBinaryMetric(points: [MetricDataPoint], config: ProcessingConfig) -> [MetricDataPoint] {
+            let sortedPoints = points.sorted { $0.date < $1.date }
+            
+            // Calculate bucket interval based on time period
+            let startDate = sortedPoints.first!.date
+            let endDate = sortedPoints.last!.date
+            let timeSpan = endDate.timeIntervalSince(startDate)
+            let bucketInterval = timeSpan / Double(config.targetDataPoints)
+            
+            // Group points into time buckets
+            var buckets: [Date: [MetricDataPoint]] = [:]
+            
+            for point in sortedPoints {
+                let bucketIndex = floor(point.date.timeIntervalSince(startDate) / bucketInterval)
+                let bucketStartTime = startDate.timeIntervalSince1970 + (bucketIndex * bucketInterval)
+                let bucketCenterTime = bucketStartTime + (bucketInterval / 2)
+                let bucketDate = Date(timeIntervalSince1970: bucketCenterTime)
+                
+                buckets[bucketDate, default: []].append(point)
+            }
+            
+            // Calculate average for each bucket and round to 0 or 1
+            let aggregatedPoints = buckets.compactMap { (bucketDate, bucketPoints) -> MetricDataPoint? in
+                guard !bucketPoints.isEmpty else { return nil }
+                
+                let average = bucketPoints.map { $0.value }.reduce(0, +) / Double(bucketPoints.count)
+                let roundedValue = average >= 0.5 ? 1.0 : 0.0
+                
+                return MetricDataPoint(
+                    date: bucketDate,
+                    value: roundedValue,
+                    metricId: bucketPoints.first!.metricId
+                )
+            }.sorted { $0.date < $1.date }
+            
+            return aggregatedPoints
+        }
     
     private func sampleAtTimeIntervals(points: [MetricDataPoint], targetCount: Int) -> [MetricDataPoint] {
         guard points.count > targetCount else { return points }

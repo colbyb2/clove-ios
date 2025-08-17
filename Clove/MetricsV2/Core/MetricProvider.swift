@@ -104,7 +104,8 @@ extension MetricProvider {
     
     func getSmoothedData(for period: TimePeriod) async -> [MetricDataPoint] {
         let rawData = await getDataPoints(for: period)
-        return DataAggregationEngine.shared.processMetricData(points: rawData, period: period)
+        let processedData = DataAggregationEngine.shared.processMetricData(points: rawData, period: period, metricType: dataType)
+        return processedData
     }
     
     /// Default aggregated data points implementation

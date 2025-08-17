@@ -107,9 +107,13 @@ struct ChartBuilder: View {
                 )
                 .foregroundStyle(Color.secondary.opacity(0.2))
                 
-                AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                    .font(.caption)
-                    .foregroundStyle(style.text)
+                if let d = value.as(Date.self) {
+                    AxisValueLabel() {
+                        Text(formatDate(date: d))
+                            .font(.caption)
+                            .foregroundStyle(style.text)
+                    }
+                }
             }
         }
         .chartPlotStyle { plotArea in
@@ -152,14 +156,19 @@ struct ChartBuilder: View {
                 )
                 .foregroundStyle(Color.secondary.opacity(0.2))
                 
-                AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                    .font(.caption)
-                    .foregroundStyle(style.text)
+                if let d = value.as(Date.self) {
+                    AxisValueLabel() {
+                        Text(formatDate(date: d))
+                            .font(.caption)
+                            .foregroundStyle(style.text)
+                    }
+                }
             }
         }
         .chartPlotStyle { plotArea in
             plotArea
                 .padding(5)
+                .padding(.bottom, 10)
         }
         .overlay(alignment: .top) {
             if let selectedPoint, config.showAnnotation {
@@ -174,7 +183,7 @@ struct ChartBuilder: View {
     
     @ViewBuilder
     func Annotation(selectedPoint: MetricDataPoint) -> some View {
-        Text("\(selectedPoint.date.formatted(.dateTime.month(.abbreviated).day(.twoDigits))): \(metric.formatValue(selectedPoint.value))")
+        Text("\(formatDate(date: selectedPoint.date)): \(metric.formatValue(selectedPoint.value))")
             .font(.caption)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
@@ -223,6 +232,23 @@ struct ChartBuilder: View {
             return .automatic(desiredCount: 5)
         case .custom:
             return .automatic()
+        }
+    }
+    
+    func formatDate(date: Date) -> String {
+        switch timePeriod {
+        case .week:
+            return date.formatted(.dateTime.month(.abbreviated).day(.twoDigits))
+        case .month:
+            return date.formatted(.dateTime.month(.abbreviated).day(.twoDigits))
+        case .threeMonth:
+            return date.formatted(.dateTime.month(.abbreviated).day(.twoDigits))
+        case .sixMonth:
+            return date.formatted(.dateTime.month(.abbreviated))
+        case .year:
+            return date.formatted(.dateTime.month(.abbreviated))
+        case .allTime:
+            return date.formatted(.dateTime.month(.abbreviated))
         }
     }
 }

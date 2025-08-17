@@ -25,7 +25,7 @@ enum MetricChartType: Sendable {
 struct MetricDataPoint: Identifiable, Sendable, Hashable {
     let id = UUID()
     let date: Date
-    let value: Double
+    var value: Double
     let rawValue: (any Sendable)?  // Store original value for complex types
     let metricId: String
    
