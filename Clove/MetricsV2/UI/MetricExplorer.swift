@@ -7,6 +7,7 @@ struct MetricExplorer: View {
     let onMetricSelected: (String) -> Void // Pass metric ID instead of SelectableMetric
     
     @Environment(\.dismiss) private var dismiss
+    private let timePeriodManager = TimePeriodManager.shared
     
     var body: some View {
         NavigationView {
@@ -27,22 +28,8 @@ struct MetricExplorer: View {
             .background(CloveColors.background.ignoresSafeArea())
             .navigationTitle("Metric Explorer")
             .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Refresh") {
-                        Task {
-                            await viewModel.refresh()
-                        }
-                    }
-                    .foregroundStyle(Theme.shared.accent)
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundStyle(CloveColors.secondaryText)
-                }
+            .task {
+                await viewModel.refresh()
             }
         }
     }
@@ -215,7 +202,7 @@ struct MetricExplorer: View {
                 .foregroundStyle(Theme.shared.accent.opacity(0.5))
             
             VStack(spacing: CloveSpacing.small) {
-                Text("No metrics found")
+                Text("No metrics found for last \(TimePeriodManager.shared.currentPeriodDisplayText)")
                     .font(.system(.title2, design: .rounded).weight(.semibold))
                     .foregroundStyle(CloveColors.primaryText)
                 
@@ -225,7 +212,7 @@ struct MetricExplorer: View {
                         .foregroundStyle(CloveColors.secondaryText)
                         .multilineTextAlignment(.center)
                 } else {
-                    Text("Start logging data to see available metrics")
+                    Text("Start logging data to see available metrics, or try expanding time range.")
                         .font(CloveFonts.body())
                         .foregroundStyle(CloveColors.secondaryText)
                         .multilineTextAlignment(.center)

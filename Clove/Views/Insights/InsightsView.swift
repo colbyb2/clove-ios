@@ -147,6 +147,7 @@ struct InsightsView: View {
                await viewModel.selectMetric(id: metricId)
             }
          }
+         .presentationDragIndicator(.visible)
       }
       .onAppear {
          Task {

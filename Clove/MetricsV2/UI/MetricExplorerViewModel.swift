@@ -23,12 +23,8 @@ class MetricExplorerViewModel {
         isLoading = true
         errorMessage = nil
         
-        do {
-            let summaries = await metricRegistry.getMetricSummaries()
-            self.metricSummaries = summaries
-        } catch {
-            self.errorMessage = "Failed to load metrics: \(error.localizedDescription)"
-        }
+        let summaries = await metricRegistry.getMetricSummaries()
+        self.metricSummaries = summaries
         
         isLoading = false
     }
