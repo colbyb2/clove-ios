@@ -122,6 +122,7 @@ struct CrossReferenceView: View {
                await viewModel.selectMetric(id: metricId, isPrimary: selectingPrimaryMetric)
             }
          }
+         .presentationDragIndicator(.visible)
       }
       .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
          Button("OK") {
