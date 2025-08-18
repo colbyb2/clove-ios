@@ -238,9 +238,19 @@ struct ModernRegularMedicationsCard: View {
         return Double(takenMedications) / Double(totalMedications)
     }
     
+    private var allMedicationsTaken: Bool {
+        // Check if all regular medications (non-as-needed) are taken
+        let regularMedications = trackedMedications.filter { !$0.isAsNeeded }
+        guard !regularMedications.isEmpty else { return false }
+        
+        return regularMedications.allSatisfy { medication in
+            medicationAdherence.first { $0.medicationId == medication.id }?.wasTaken ?? false
+        }
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: CloveSpacing.large) {
-            // Section header with progress
+            // Section header with progress and All button
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Regular Medications")
@@ -253,6 +263,33 @@ struct ModernRegularMedicationsCard: View {
                 }
                 
                 Spacer()
+                
+                // All button
+                Button(action: toggleAllMedications) {
+                    HStack(spacing: 6) {
+                        Image(systemName: allMedicationsTaken ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(allMedicationsTaken ? CloveColors.success : CloveColors.secondaryText)
+                        
+                        Text("All")
+                            .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                            .foregroundStyle(allMedicationsTaken ? CloveColors.success : CloveColors.primaryText)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: CloveCorners.medium)
+                            .fill(allMedicationsTaken ? CloveColors.success.opacity(0.1) : CloveColors.card)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                                    .stroke(
+                                        allMedicationsTaken ? CloveColors.success.opacity(0.3) : CloveColors.secondaryText.opacity(0.2),
+                                        lineWidth: 1
+                                    )
+                            )
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
                 
                 // Progress circle
                 ZStack {
@@ -291,6 +328,24 @@ struct ModernRegularMedicationsCard: View {
                 .fill(CloveColors.card)
                 .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
         )
+    }
+    
+    private func toggleAllMedications() {
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+        
+        let regularMedications = trackedMedications.filter { !$0.isAsNeeded }
+        let shouldSelectAll = !allMedicationsTaken
+        
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            for medication in regularMedications {
+                guard let medicationId = medication.id else { continue }
+                
+                if let index = medicationAdherence.firstIndex(where: { $0.medicationId == medicationId }) {
+                    medicationAdherence[index].wasTaken = shouldSelectAll
+                }
+            }
+        }
     }
 }
 
