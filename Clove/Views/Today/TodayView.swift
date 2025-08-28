@@ -238,6 +238,10 @@ struct TodayView: View {
             }
             .padding(.vertical, CloveSpacing.small)
          }
+         
+         if viewModel.settings.trackBowelMovements {
+            BowelMovementTracker(date: viewModel.selectedDate)
+         }
             
          if viewModel.settings.showFlareToggle {
             VStack(spacing: CloveSpacing.small) {
@@ -397,6 +401,6 @@ struct TodayView: View {
 
 #Preview {
    NavigationStack {
-      TodayView(viewModel: TodayViewModel(settings: UserSettings(trackMood: true, trackPain: true, trackEnergy: true, trackSymptoms: true, trackMeals: false, trackActivities: false, trackMeds: false, showFlareToggle: true, trackWeather: false, trackNotes: true)))
+       TodayView(viewModel: TodayViewModel(settings: UserSettings(trackMood: true, trackPain: true, trackEnergy: true, trackSymptoms: true, trackMeals: false, trackActivities: false, trackMeds: false, showFlareToggle: true, trackWeather: false, trackNotes: true, trackBowelMovements: true)))
    }
 }

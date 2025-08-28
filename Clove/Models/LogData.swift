@@ -12,6 +12,7 @@ class LogData {
    var activities: [String] = []
    var medicationAdherence: [MedicationAdherence] = []
    var notes: String? = nil
+   var bowelMovements: [BowelMovement] = []
    
    // Computed property to get medications that were taken
    var medicationsTaken: [String] {
@@ -21,7 +22,9 @@ class LogData {
    }
    var symptomRatings: [SymptomRatingVM] = []
    
-   init() {}
+   init() {
+      loadBowelMovements(for: Date())
+   }
    
    init(from log: DailyLog) {
       if let logMood = log.mood {
@@ -42,14 +45,10 @@ class LogData {
       self.symptomRatings = log.symptomRatings.map({ s in
          return SymptomRatingVM(symptomId: s.symptomId, symptomName: s.symptomName, ratingDouble: Double(s.rating))
       })
-//      log.symptomRatings.forEach({symptom in
-//         if var s = symptomRatings.first(where: { vm in
-//            vm.symptomId == symptom.symptomId
-//         }) {
-//            s.ratingDouble = Double(symptom.rating)
-//         } else {
-//            self.symptomRatings.append(SymptomRatingVM(symptomId: symptom.symptomId, symptomName: symptom.symptomName, ratingDouble: Double(symptom.rating)))
-//         }
-//      })
+      loadBowelMovements(for: log.date)
+   }
+   
+   private func loadBowelMovements(for date: Date) {
+      self.bowelMovements = BowelMovementRepo.shared.getBowelMovementsForDate(date)
    }
 }

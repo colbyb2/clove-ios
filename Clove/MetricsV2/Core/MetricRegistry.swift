@@ -26,7 +26,8 @@ class MetricRegistry {
         MedicationAdherenceMetricProvider(),
         WeatherMetricProvider(),
         ActivityCountMetricProvider(),
-        MealCountMetricProvider()
+        MealCountMetricProvider(),
+        BowelMovementMetricProvider()
     ]
     
     private init() {}

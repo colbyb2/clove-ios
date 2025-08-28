@@ -227,3 +227,34 @@ struct MedicationAdherenceMetricProvider: MetricProvider {
         return (Double(takenCount) / Double(regularMedications.count)) * 100.0
     }
 }
+
+struct BowelMovementMetricProvider: MetricProvider {
+    let id: String = "bowelMovements"
+    
+    let displayName: String = "Bowel Movements"
+    
+    let description: String = "Daily bowel movements."
+    
+    let icon: String = "💩"
+    
+    var category: MetricCategory = .coreHealth
+    
+    var dataType: MetricDataType = .continuous(range: 1...7)
+    
+    var chartType: MetricChartType = .bar
+    
+    var valueRange: ClosedRange<Double>? = 1...7
+    
+    func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
+        return [] // TODO: Finish
+    }
+    
+    func formatValue(_ value: Double) -> String {
+        return "Type \(Int(value.rounded()))"
+    }
+    
+    func getDataPointCount(for period: TimePeriod) async -> Int {
+        return 0 // TODO: Finish
+    }
+    
+}

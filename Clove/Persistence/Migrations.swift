@@ -11,7 +11,9 @@ enum Migrations {
         WeatherFieldMigration(),
         WeatherSettingMigration(),
         MedicationTrackingMigration(),
-        NotesTrackingMigration()
+        NotesTrackingMigration(),
+        BowelMovementSettingMigration(),
+        BowelMovementTableMigration()
     ]
 }
 
@@ -196,6 +198,35 @@ struct NotesTrackingMigration: Migration {
     func migrate(_ db: Database) throws {
         try db.alter(table: "userSettings") { t in
             t.add(column: "trackNotes", .boolean).notNull().defaults(to: false)
+        }
+    }
+}
+
+/// Migration to add bowel movement tracking setting to UserSettings table
+struct BowelMovementSettingMigration: Migration {
+    var identifier: String {
+        return "bowelMovementSetting_081925"
+    }
+    
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "userSettings") { t in
+            t.add(column: "trackBowelMovements", .boolean).notNull().defaults(to: false)
+        }
+    }
+}
+
+/// Migration to create BowelMovement table
+struct BowelMovementTableMigration: Migration {
+    var identifier: String {
+        return "bowelMovementTable_081925"
+    }
+    
+    func migrate(_ db: Database) throws {
+        try db.create(table: "bowelMovement") { t in
+            t.autoIncrementedPrimaryKey("id")
+            t.column("type", .double).notNull()
+            t.column("date", .date).notNull()
+            t.column("notes", .text)
         }
     }
 }
