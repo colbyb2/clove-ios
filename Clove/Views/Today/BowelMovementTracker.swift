@@ -118,6 +118,9 @@ struct BowelMovementTracker: View {
         .onAppear {
             loadBowelMovements()
         }
+        .onChange(of: date) { _, _ in
+            loadBowelMovements()
+        }
         .sheet(isPresented: $showBowelMovementSelection) {
             BowelMovementSelectionSheet(date: date) {
                 loadBowelMovements()

@@ -84,7 +84,7 @@ struct BowelMovementSelectionSheet: View {
     }
     
     private func addBowelMovement(type: Double) {
-        let movement = BowelMovement(type: type, date: Date(), notes: notes.isEmpty ? nil : notes)
+        let movement = BowelMovement(type: type, date: date, notes: notes.isEmpty ? nil : notes)
         
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
