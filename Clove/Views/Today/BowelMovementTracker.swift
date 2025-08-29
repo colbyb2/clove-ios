@@ -10,6 +10,7 @@ struct BowelMovementTracker: View {
     
     var body: some View {
         VStack(spacing: CloveSpacing.small) {
+            // Main Header Row
             HStack {
                 HStack(spacing: CloveSpacing.small) {
                     Text("🚽")
@@ -27,15 +28,13 @@ struct BowelMovementTracker: View {
                     impactFeedback.impactOccurred()
                 }) {
                     HStack {
-                        Text(bowelMovementSummaryText())
+                        Text(bowelMovementButtonText())
                             .foregroundStyle(bowelMovements.isEmpty ? CloveColors.secondaryText : CloveColors.primaryText)
                             .font(.system(.body, design: .rounded).weight(.medium))
                         
-                        if bowelMovements.isEmpty {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundStyle(Theme.shared.accent)
-                                .font(.system(size: 16))
-                        }
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundStyle(Theme.shared.accent)
+                            .font(.system(size: 16))
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -43,8 +42,76 @@ struct BowelMovementTracker: View {
                     .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
                     .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
                 }
-                .accessibilityLabel("Bowel movement tracking")
+                .accessibilityLabel("Add bowel movement entry")
                 .accessibilityHint("Opens bowel movement type selection")
+            }
+            
+            // Today's Entries
+            if !bowelMovements.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(bowelMovements) { movement in
+                        HStack(spacing: 12) {
+                            // Type Circle
+                            ZStack {
+                                Circle()
+                                    .fill(Theme.shared.accent.opacity(0.1))
+                                    .frame(width: 32, height: 32)
+                                
+                                Text("\(Int(movement.type))")
+                                    .font(.system(.caption, design: .rounded).weight(.bold))
+                                    .foregroundStyle(Theme.shared.accent)
+                            }
+                            
+                            // Details
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(movement.bristolStoolType.description)
+                                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+                                    .foregroundStyle(CloveColors.primaryText)
+                                
+                                HStack {
+                                    Text(movement.bristolStoolType.consistency)
+                                        .font(.system(.caption, design: .rounded))
+                                        .foregroundStyle(Theme.shared.accent)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(
+                                            Capsule()
+                                                .fill(Theme.shared.accent.opacity(0.1))
+                                        )
+                                    
+                                    Text(formatTime(movement.date))
+                                        .font(.system(.caption, design: .rounded))
+                                        .foregroundStyle(CloveColors.secondaryText)
+                                    
+                                    Spacer()
+                                }
+                                
+                                if let notes = movement.notes, !notes.isEmpty {
+                                    Text(notes)
+                                        .font(.system(.caption))
+                                        .foregroundStyle(CloveColors.secondaryText)
+                                        .italic()
+                                        .lineLimit(2)
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            // Delete Button
+                            Button(action: {
+                                deleteBowelMovement(movement)
+                            }) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.red.opacity(0.7))
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                        .padding(12)
+                        .background(CloveColors.card.opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
+                    }
+                }
             }
         }
         .padding(.vertical, CloveSpacing.small)
@@ -58,17 +125,35 @@ struct BowelMovementTracker: View {
         }
     }
     
-    private func bowelMovementSummaryText() -> String {
+    private func bowelMovementButtonText() -> String {
         if bowelMovements.isEmpty {
             return "Tap to track"
         }
         
         let count = bowelMovements.count
-        return count == 1 ? "1 entry" : "\(count) entries"
+        return "\(count)"
     }
     
     private func loadBowelMovements() {
         bowelMovements = repo.getBowelMovementsForDate(date)
+    }
+    
+    private func deleteBowelMovement(_ movement: BowelMovement) {
+        guard let id = movement.id else { return }
+        
+        if repo.delete(id: id) {
+            loadBowelMovements()
+            
+            // Haptic feedback
+            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+            impactFeedback.impactOccurred()
+        }
+    }
+    
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 

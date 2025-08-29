@@ -5,7 +5,6 @@ struct BowelMovementSelectionSheet: View {
     let date: Date
     let onUpdate: () -> Void
     
-    @State private var bowelMovements: [BowelMovement] = []
     @State private var notes: String = ""
     @State private var animateIn = false
     
@@ -19,7 +18,7 @@ struct BowelMovementSelectionSheet: View {
                     VStack(spacing: 8) {
                         Text("Bristol Stool Chart")
                             .font(.system(.title2, design: .rounded).weight(.semibold))
-                            .foregroundStyle(CloveColors.primary)
+                            .foregroundStyle(Theme.shared.accent)
                         
                         Text("Select the type that best matches")
                             .font(.system(.subheadline))
@@ -30,7 +29,25 @@ struct BowelMovementSelectionSheet: View {
                     .offset(y: animateIn ? 0 : -20)
                     
                     // Bristol Chart Types
+                    // Notes Input Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Notes (Optional)")
+                            .font(.system(.headline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(Theme.shared.accent)
+                        
+                        TextField("Add any additional notes...", text: $notes, axis: .vertical)
+                            .textFieldStyle(.roundedBorder)
+                            .lineLimit(3, reservesSpace: true)
+                    }
+                    .opacity(animateIn ? 1 : 0)
+                    .offset(y: animateIn ? 0 : 10)
+                    
+                    // Bristol Chart Types
                     VStack(spacing: 12) {
+                        Text("Select Bristol Stool Chart Type")
+                            .font(.system(.headline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(Theme.shared.accent)
+                        
                         ForEach(BristolStoolType.allCases, id: \.rawValue) { type in
                             BristolChartCard(
                                 type: type,
@@ -42,55 +59,6 @@ struct BowelMovementSelectionSheet: View {
                     }
                     .opacity(animateIn ? 1 : 0)
                     .scaleEffect(animateIn ? 1 : 0.95)
-                    
-                    // Today's Entries
-                    if !bowelMovements.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Today's Entries")
-                                .font(.system(.headline, design: .rounded).weight(.semibold))
-                                .foregroundStyle(CloveColors.primary)
-                            
-                            ForEach(bowelMovements) { movement in
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Type \(Int(movement.type))")
-                                            .font(.system(.body, design: .rounded).weight(.medium))
-                                        
-                                        Text(movement.bristolStoolType.description)
-                                            .font(.system(.caption))
-                                            .foregroundStyle(CloveColors.secondaryText)
-                                        
-                                        if let notes = movement.notes, !notes.isEmpty {
-                                            Text(notes)
-                                                .font(.system(.caption))
-                                                .foregroundStyle(CloveColors.secondaryText)
-                                                .italic()
-                                        }
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Text(formatTime(movement.date))
-                                        .font(.system(.caption, design: .rounded))
-                                        .foregroundStyle(CloveColors.secondaryText)
-                                    
-                                    Button(action: {
-                                        deleteBowelMovement(movement)
-                                    }) {
-                                        Image(systemName: "trash")
-                                            .font(.system(size: 14))
-                                            .foregroundStyle(.red)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
-                                .padding()
-                                .background(CloveColors.card)
-                                .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
-                            }
-                        }
-                        .opacity(animateIn ? 1 : 0)
-                        .offset(y: animateIn ? 0 : 20)
-                    }
                     
                     Spacer(minLength: 40)
                 }
@@ -108,15 +76,11 @@ struct BowelMovementSelectionSheet: View {
             }
         }
         .onAppear {
-            loadBowelMovements()
+            notes = "" // Reset notes for new entry
             withAnimation(.easeOut(duration: 0.5).delay(0.1)) {
                 animateIn = true
             }
         }
-    }
-    
-    private func loadBowelMovements() {
-        bowelMovements = repo.getBowelMovementsForDate(date)
     }
     
     private func addBowelMovement(type: Double) {
@@ -127,33 +91,17 @@ struct BowelMovementSelectionSheet: View {
         impactFeedback.impactOccurred()
         
         if repo.save([movement]) {
-            loadBowelMovements()
             onUpdate()
-            notes = ""
             
             // Success haptic
             let successFeedback = UINotificationFeedbackGenerator()
             successFeedback.notificationOccurred(.success)
-        }
-    }
-    
-    private func deleteBowelMovement(_ movement: BowelMovement) {
-        guard let id = movement.id else { return }
-        
-        if repo.delete(id: id) {
-            loadBowelMovements()
-            onUpdate()
             
-            // Haptic feedback
-            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-            impactFeedback.impactOccurred()
+            // Dismiss after brief delay to show selection
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                dismiss()
+            }
         }
-    }
-    
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 }
 
