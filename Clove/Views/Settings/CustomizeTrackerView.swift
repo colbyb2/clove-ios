@@ -25,6 +25,7 @@ struct CustomizeTrackerView: View {
         TrackingOption(key: "trackActivities", title: "Activities", icon: "figure.run", color: .cyan, description: "Log physical activities"),
         TrackingOption(key: "trackMeds", title: "Medications", icon: "pills.fill", color: .purple, description: "Track medication adherence"),
         TrackingOption(key: "trackWeather", title: "Weather", icon: "cloud.sun", color: .mint, description: "Record weather conditions"),
+        TrackingOption(key: "trackBowelMovements", title: "Bowel Movements", icon: "toilet", color: Color(hex: "8B4513"), description: "Track Bristol Stool Chart types"),
         TrackingOption(key: "trackNotes", title: "Notes", icon: "note.text", color: .indigo, description: "Add daily notes"),
         TrackingOption(key: "showFlareToggle", title: "Flare Toggle", icon: "exclamationmark.triangle", color: .pink, description: "Mark flare-up days")
     ]
@@ -326,6 +327,7 @@ struct CustomizeTrackerView: View {
         case "trackActivities": return viewModel.settings.trackActivities
         case "trackMeds": return viewModel.settings.trackMeds
         case "trackWeather": return viewModel.settings.trackWeather
+        case "trackBowelMovements": return viewModel.settings.trackBowelMovements
         case "trackNotes": return viewModel.settings.trackNotes
         case "showFlareToggle": return viewModel.settings.showFlareToggle
         default: return false
@@ -342,6 +344,7 @@ struct CustomizeTrackerView: View {
         case "trackActivities": viewModel.settings.trackActivities = value
         case "trackMeds": viewModel.settings.trackMeds = value
         case "trackWeather": viewModel.settings.trackWeather = value
+        case "trackBowelMovements": viewModel.settings.trackBowelMovements = value
         case "trackNotes": viewModel.settings.trackNotes = value
         case "showFlareToggle": viewModel.settings.showFlareToggle = value
         default: break

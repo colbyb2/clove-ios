@@ -28,7 +28,7 @@ struct BowelMovementTracker: View {
                 }) {
                     HStack {
                         Text(bowelMovementSummaryText())
-                            .foregroundStyle(bowelMovements.isEmpty ? CloveColors.secondaryText : CloveColors.primary)
+                            .foregroundStyle(bowelMovements.isEmpty ? CloveColors.secondaryText : CloveColors.primaryText)
                             .font(.system(.body, design: .rounded).weight(.medium))
                         
                         if bowelMovements.isEmpty {
@@ -52,31 +52,9 @@ struct BowelMovementTracker: View {
             loadBowelMovements()
         }
         .sheet(isPresented: $showBowelMovementSelection) {
-            // Placeholder sheet - will be replaced with actual selection view
-            VStack(spacing: 20) {
-                Text("Bowel Movement Selection")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Text("Bristol Stool Chart Selection")
-                    .font(.body)
-                    .foregroundStyle(CloveColors.secondaryText)
-                
-                Text("Placeholder - Selection interface will go here")
-                    .padding()
-                    .background(CloveColors.card)
-                    .clipShape(RoundedRectangle(cornerRadius: CloveCorners.medium))
-                
-                Button("Cancel") {
-                    showBowelMovementSelection = false
-                }
-                .foregroundStyle(Theme.shared.accent)
-                
-                Spacer()
+            BowelMovementSelectionSheet(date: date) {
+                loadBowelMovements()
             }
-            .padding()
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
         }
     }
     
