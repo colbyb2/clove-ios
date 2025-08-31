@@ -107,9 +107,20 @@ class CrossReferenceViewModel {
         let primaryDataPoints = await primary.getDataPoints(for: period)
         let secondaryDataPoints = await secondary.getDataPoints(for: period)
         
-        // Convert MetricDataPoints to (Date, Double) tuples
-        let primaryData = primaryDataPoints.map { ($0.date, $0.value) }
-        let secondaryData = secondaryDataPoints.map { ($0.date, $0.value) }
+        // Pre-aggregate count-based metrics (like bowel movements) by day
+        let primaryData: [(Date, Double)]
+        if case .count = primary.dataType {
+            primaryData = aggregateCountData(primaryDataPoints)
+        } else {
+            primaryData = primaryDataPoints.map { ($0.date, $0.value) }
+        }
+        
+        let secondaryData: [(Date, Double)]
+        if case .count = secondary.dataType {
+            secondaryData = aggregateCountData(secondaryDataPoints)
+        } else {
+            secondaryData = secondaryDataPoints.map { ($0.date, $0.value) }
+        }
         
         // Align data points by date
         let alignedData = alignDataPoints(primary: primaryData, secondary: secondaryData)
@@ -148,6 +159,20 @@ class CrossReferenceViewModel {
         )
     }
     
+    
+    private func aggregateCountData(_ dataPoints: [MetricDataPoint]) -> [(Date, Double)] {
+        let calendar = Calendar.current
+        
+        // Group data points by day
+        let groupedByDay = Dictionary(grouping: dataPoints) { point in
+            calendar.startOfDay(for: point.date)
+        }
+        
+        // Count entries per day
+        return groupedByDay.map { (date, points) in
+            (date, Double(points.count))
+        }.sorted { $0.0 < $1.0 }
+    }
     
     private func alignDataPoints(primary: [(Date, Double)], secondary: [(Date, Double)]) -> [(Date, Double, Double)] {
         var aligned: [(Date, Double, Double)] = []

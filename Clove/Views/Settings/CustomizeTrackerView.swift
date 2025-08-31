@@ -25,7 +25,7 @@ struct CustomizeTrackerView: View {
         TrackingOption(key: "trackActivities", title: "Activities", icon: "figure.run", color: .cyan, description: "Log physical activities"),
         TrackingOption(key: "trackMeds", title: "Medications", icon: "pills.fill", color: .purple, description: "Track medication adherence"),
         TrackingOption(key: "trackWeather", title: "Weather", icon: "cloud.sun", color: .mint, description: "Record weather conditions"),
-        TrackingOption(key: "trackBowelMovements", title: "Bowel Movements", icon: "toilet", color: Color(hex: "8B4513"), description: "Track Bristol Stool Chart types"),
+        TrackingOption(key: "trackBowelMovements", title: "Bowel Movements", icon: "toilet", color: Color(hex: "9b6230"), description: "Track Bristol Stool Chart types"),
         TrackingOption(key: "trackNotes", title: "Notes", icon: "note.text", color: .indigo, description: "Add daily notes"),
         TrackingOption(key: "showFlareToggle", title: "Flare Toggle", icon: "exclamationmark.triangle", color: .pink, description: "Mark flare-up days")
     ]

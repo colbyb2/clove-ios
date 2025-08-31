@@ -31,7 +31,7 @@ struct FeatureSelectionView: View {
                     featureButton(name: "Activities", icon: "figure.run", color: Color(hex: "e5b772"), selected: $vm.baseSettings.trackActivities, animationDelay: 0.6)
                     featureButton(name: "Medications", icon: "pills.fill", color: Color(hex: "6eb59e"), selected: $vm.baseSettings.trackMeds, animationDelay: 0.7)
                     featureButton(name: "Weather", icon: "cloud.sun.fill", color: Color(hex: "8ec5ff"), selected: $vm.baseSettings.trackWeather, animationDelay: 0.8)
-                    featureButton(name: "Bowel Movements", icon: "toilet", color: Color(hex: "8B4513"), selected: $vm.baseSettings.trackBowelMovements, animationDelay: 0.9)
+                    featureButton(name: "Bowel Movements", icon: "toilet", color: Color(hex: "9b6230"), selected: $vm.baseSettings.trackBowelMovements, animationDelay: 0.9)
                     featureButton(name: "Flare Ups", icon: "flame.fill", color: Color(hex: "ed5c40"), selected: $vm.baseSettings.showFlareToggle, animationDelay: 1.0)
                 }
                 .padding(.vertical)
