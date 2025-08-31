@@ -25,18 +25,14 @@ struct ChartBuilder: View {
         ZStack {
             style.background
             VStack {
-                switch metric.dataType {
-                case .continuous(_):
+                switch metric.chartType {
+                case .line:
                     LineChart()
-                case .binary:
+                case .bar:
                     BarChart()
-                case .categorical(_):
-                    BarChart()
-                case .count:
-                    BarChart()
-                case .percentage:
-                    BarChart()
-                case .custom:
+                case .stackedBar:
+                    StackedBarChart()
+                default:
                     LineChart()
                 }
             }
@@ -179,6 +175,76 @@ struct ChartBuilder: View {
                 .padding(.top, 10)
             }
         }
+    }
+    
+    @ViewBuilder
+    func StackedBarChart() -> some View {
+        Chart(DataGrouper.shared.getGroupedData(for: data, metric: metric)) { point in
+            BarMark(
+                x: .value("Date", point.date),
+                y: .value("Count", point.count),
+                stacking: .standard
+            )
+            .foregroundStyle(by: .value("Type", point.value))
+            .opacity((selectedPoint == nil || point.id == selectedPoint?.id) ? animationProgress : 0.3)
+            .position(by: .value("Value", point.value))
+        }
+        .chartForegroundStyleScale(range: colorScheme)
+        .chartXSelection(value: $selectedDate)
+        .chartYAxis {
+            AxisMarks(position: .leading, values: .automatic()) { value in
+                AxisGridLine(
+                    stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 3])
+                )
+                .foregroundStyle(Color.secondary.opacity(0.2))
+                
+                AxisValueLabel()
+            }
+        }
+        .chartXAxis {
+            AxisMarks(values: getXAxisMarks()) { value in
+                AxisGridLine(
+                    stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 3])
+                )
+                .foregroundStyle(Color.secondary.opacity(0.2))
+                
+                if let d = value.as(Date.self) {
+                    AxisValueLabel() {
+                        Text(formatDate(date: d))
+                            .font(.caption)
+                            .foregroundStyle(style.text)
+                    }
+                }
+            }
+        }
+        .chartPlotStyle { plotArea in
+            plotArea
+                .padding(5)
+                .padding(.bottom, 10)
+        }
+        .chartLegend(position: .bottom, spacing: 8)
+        .overlay(alignment: .top) {
+            if let selectedPoint, config.showAnnotation {
+                VStack {
+                    Annotation(selectedPoint: selectedPoint)
+                    Spacer()
+                }
+                .padding(.top, 10)
+            }
+        }
+    }
+    
+    private var colorScheme: [Color] {
+        let base = Theme.shared.accent
+
+        let range = metric.valueRange ?? 1...5
+        let count = Int(range.upperBound) - Int(range.lowerBound) + 1
+        var colors: [Color] = []
+        for i in 0..<count {
+            let factor = 0.6 + (CGFloat(i) / 4.0) * 0.8
+            colors.append(base.adjustedBrightness(factor))
+        }
+        return colors
     }
     
     @ViewBuilder

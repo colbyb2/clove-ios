@@ -61,4 +61,24 @@ class BowelMovementRepo {
             return []
         }
     }
+    
+    func getBowelMovements(for period: TimePeriod) -> [BowelMovement] {
+        do {
+            return try dbManager.read { db in
+                if period == .allTime {
+                    return try BowelMovement.fetchAll(db, sql: "SELECT * FROM bowelMovement ORDER BY date DESC")
+                } else {
+                    let calendar = Calendar.current
+                    let endDate = calendar.startOfDay(for: Date())
+                    let startDate = calendar.date(byAdding: .day, value: -period.days + 1, to: endDate)!
+                    let endOfDay = calendar.date(byAdding: .day, value: 1, to: endDate)!
+                    
+                    return try BowelMovement.fetchAll(db, sql: "SELECT * FROM bowelMovement WHERE date >= ? AND date < ? ORDER BY date DESC", arguments: [startDate, endOfDay])
+                }
+            }
+        } catch {
+            print("Error getting bowel movements for period: \(error)")
+            return []
+        }
+    }
 }

@@ -239,14 +239,18 @@ struct BowelMovementMetricProvider: MetricProvider {
     
     var category: MetricCategory = .coreHealth
     
-    var dataType: MetricDataType = .continuous(range: 1...7)
+    var dataType: MetricDataType = .count
     
-    var chartType: MetricChartType = .bar
+    var chartType: MetricChartType = .stackedBar
     
     var valueRange: ClosedRange<Double>? = 1...7
     
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
-        return [] // TODO: Finish
+        let data: [MetricDataPoint] = BowelMovementRepo.shared.getBowelMovements(for: period)
+            .map { bm in
+                return MetricDataPoint(date: bm.date, value: bm.type, metricId: self.id)
+            }
+        return data
     }
     
     func formatValue(_ value: Double) -> String {
@@ -254,7 +258,7 @@ struct BowelMovementMetricProvider: MetricProvider {
     }
     
     func getDataPointCount(for period: TimePeriod) async -> Int {
-        return 0 // TODO: Finish
+        return BowelMovementRepo.shared.getBowelMovements(for: period).count
     }
     
 }

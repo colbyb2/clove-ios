@@ -218,6 +218,8 @@ struct UniversalMetricChart: View {
                 barChart(dataPoint)
             case .scatter:
                 scatterChart(dataPoint)
+            default:
+                lineChart(dataPoint)
             }
         }
         .chartYAxis {

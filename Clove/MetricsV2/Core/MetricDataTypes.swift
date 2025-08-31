@@ -19,6 +19,7 @@ enum MetricChartType: Sendable {
     case area
     case bar
     case scatter
+    case stackedBar
 }
 
 /// Unified data point structure for all metrics
