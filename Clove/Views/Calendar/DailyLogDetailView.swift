@@ -4,6 +4,8 @@ struct DailyLogDetailView: View {
     let log: DailyLog
     @Environment(\.dismiss) private var dismiss
     @State private var trackedSymptoms: [TrackedSymptom] = []
+    @State private var bowelMovements: [BowelMovement] = []
+    @State private var userSettings = UserSettingsRepo.shared.getSettings()
 
     var body: some View {
         NavigationView {
@@ -25,6 +27,11 @@ struct DailyLogDetailView: View {
                     // Symptoms section
                     if !log.symptomRatings.isEmpty {
                         symptomsSection
+                    }
+                    
+                    // Bowel Movements section
+                    if userSettings?.trackBowelMovements ?? false {
+                        bowelMovementsSection
                     }
                     
                     // Activities & Lifestyle section
@@ -77,6 +84,7 @@ struct DailyLogDetailView: View {
         .presentationDragIndicator(.visible)
         .onAppear {
             loadTrackedSymptoms()
+            loadBowelMovements()
         }
     }
     
@@ -280,6 +288,95 @@ struct DailyLogDetailView: View {
         }
     }
     
+    // MARK: - Bowel Movements Section
+    private var bowelMovementsSection: some View {
+        VStack(spacing: CloveSpacing.medium) {
+            SectionHeaderView(title: "Bowel Movements", emoji: "🚽")
+            
+            if bowelMovements.isEmpty {
+                HStack(spacing: CloveSpacing.medium) {
+                    Image(systemName: "circle.dashed")
+                        .font(.system(size: 20))
+                        .foregroundStyle(CloveColors.secondaryText)
+                    
+                    Text("No bowel movements recorded")
+                        .font(CloveFonts.body())
+                        .foregroundStyle(CloveColors.secondaryText)
+                    
+                    Spacer()
+                }
+                .padding(CloveSpacing.medium)
+                .background(
+                    RoundedRectangle(cornerRadius: CloveCorners.medium)
+                        .fill(CloveColors.card)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: CloveCorners.medium)
+                                .stroke(CloveColors.secondaryText.opacity(0.2), lineWidth: 1)
+                        )
+                )
+            } else {
+                VStack(spacing: CloveSpacing.small) {
+                    ForEach(bowelMovements.sorted(by: { $0.date < $1.date })) { movement in
+                    HStack(spacing: CloveSpacing.medium) {
+                        // Bristol stool type indicator
+                        VStack {
+                            Text("\(Int(movement.type))")
+                                .font(.system(.title2, design: .rounded).weight(.bold))
+                                .foregroundStyle(bristolTypeColor(for: movement.bristolStoolType))
+                                .frame(width: 32, height: 32)
+                                .background(
+                                    Circle()
+                                        .fill(bristolTypeColor(for: movement.bristolStoolType).opacity(0.2))
+                                )
+                        }
+                        
+                        // Type description
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Type \(Int(movement.type))")
+                                .font(CloveFonts.body())
+                                .foregroundStyle(CloveColors.primaryText)
+                                .fontWeight(.medium)
+                            
+                            Text(movement.bristolStoolType.description)
+                                .font(CloveFonts.small())
+                                .foregroundStyle(CloveColors.secondaryText)
+                                .lineLimit(2)
+                            
+                            Text(movement.bristolStoolType.consistency)
+                                .font(CloveFonts.small())
+                                .foregroundStyle(bristolTypeColor(for: movement.bristolStoolType))
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(bristolTypeColor(for: movement.bristolStoolType).opacity(0.1))
+                                )
+                        }
+                        
+                        Spacer()
+                        
+                        // Time
+                        Text(movement.date.formatted(date: .omitted, time: .shortened))
+                            .font(CloveFonts.small())
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
+                    .padding(.horizontal, CloveSpacing.medium)
+                    .padding(.vertical, CloveSpacing.small)
+                    .background(
+                        RoundedRectangle(cornerRadius: CloveCorners.small)
+                            .fill(CloveColors.card)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: CloveCorners.small)
+                                    .stroke(bristolTypeColor(for: movement.bristolStoolType).opacity(0.2), lineWidth: 1)
+                            )
+                    )
+                }
+                }
+            }
+        }
+    }
+    
     // MARK: - Helper Properties
     private var hasPhysicalMentalData: Bool {
         log.mood != nil || log.painLevel != nil || log.energyLevel != nil
@@ -292,12 +389,16 @@ struct DailyLogDetailView: View {
     private var hasAnyData: Bool {
         hasPhysicalMentalData || !log.symptomRatings.isEmpty || hasLifestyleData || 
         (log.notes != nil && !log.notes!.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ||
-        log.isFlareDay || log.weather != nil
+        log.isFlareDay || log.weather != nil || (userSettings?.trackBowelMovements ?? false && !bowelMovements.isEmpty)
     }
     
     // MARK: - Helper Functions
     private func loadTrackedSymptoms() {
         trackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
+    }
+    
+    private func loadBowelMovements() {
+        bowelMovements = BowelMovementRepo.shared.getBowelMovementsForDate(log.date)
     }
     
     private func editThisDay() {
@@ -344,6 +445,15 @@ struct DailyLogDetailView: View {
     
     private func symptomColor(for rating: Int) -> Color {
         painColor(for: rating) // Use same color scale as pain
+    }
+    
+    private func bristolTypeColor(for type: BristolStoolType) -> Color {
+        switch type.consistency {
+        case "Hard": return CloveColors.red
+        case "Normal": return CloveColors.green
+        case "Loose": return CloveColors.orange
+        default: return CloveColors.blue
+        }
     }
     
     private func weatherEmoji(for weather: String) -> String {
