@@ -2,6 +2,21 @@ import SwiftUI
 
 struct PopupView: View {
     let popup: Popup
+    
+    var body: some View {
+        Group {
+            switch popup.type {
+            case .terms:
+                LegalPopupView(popup: popup)
+            case .whatsNew:
+                WhatsNewPopupView(popup: popup)
+            }
+        }
+    }
+}
+
+struct LegalPopupView: View {
+    let popup: Popup
     @State private var isVisible = false
     
     var body: some View {
@@ -17,7 +32,7 @@ struct PopupView: View {
                 }
             
             // Popup content
-            popupContent
+            legalPopupContent
                 .scaleEffect(isVisible ? 1 : 0.9)
                 .opacity(isVisible ? 1 : 0)
                 .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isVisible)
@@ -29,24 +44,24 @@ struct PopupView: View {
         }
     }
     
-    private var popupContent: some View {
+    private var legalPopupContent: some View {
         VStack(spacing: 0) {
             // Header with title
-            popupHeader
+            legalPopupHeader
             
             // Scrollable content area
-            scrollableContent
+            legalScrollableContent
             
             // Bottom button
-            doneButton
+            legalDoneButton
         }
         .frame(maxWidth: .infinity)
         .frame(maxHeight: min(UIScreen.main.bounds.height * 0.8, 600))
-        .background(popupBackground)
+        .background(legalPopupBackground)
         .padding(.horizontal, 24)
     }
     
-    private var popupHeader: some View {
+    private var legalPopupHeader: some View {
         VStack(spacing: 16) {
             // Title
             Text(popup.title)
@@ -61,7 +76,7 @@ struct PopupView: View {
         }
     }
     
-    private var scrollableContent: some View {
+    private var legalScrollableContent: some View {
         ScrollView(.vertical, showsIndicators: true) {
             VStack(alignment: .leading, spacing: 16) {
                 Text(popup.message)
@@ -78,7 +93,7 @@ struct PopupView: View {
         .background(Color(.systemBackground))
     }
     
-    private var doneButton: some View {
+    private var legalDoneButton: some View {
         VStack(spacing: 0) {
             // Top divider
             Divider()
@@ -86,7 +101,7 @@ struct PopupView: View {
             
             // Button
             Button(action: {
-                dismissPopup()
+                dismissLegalPopup()
             }) {
                 Text("Done")
                     .font(.system(size: 18, weight: .semibold))
@@ -104,7 +119,7 @@ struct PopupView: View {
         }
     }
     
-    private var popupBackground: some View {
+    private var legalPopupBackground: some View {
         RoundedRectangle(cornerRadius: 16)
             .fill(Color(.systemBackground))
             .shadow(
@@ -115,7 +130,7 @@ struct PopupView: View {
             )
     }
     
-    private func dismissPopup() {
+    private func dismissLegalPopup() {
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.impactOccurred()
         

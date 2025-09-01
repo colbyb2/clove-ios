@@ -18,13 +18,16 @@ class PopupManager {
       stack.removeAll()
       
       Popups.all.forEach { popup in
-         if !defaults.bool(forKey: popup.id) {
+         let isDismissed = defaults.bool(forKey: popup.id)
+         
+         if !isDismissed {
             // Only add if not already in stack and not currently displayed
             if !stack.contains(where: { $0.id == popup.id }) && currentPopup?.id != popup.id {
                self.stack.append(popup)
             }
          }
       }
+      
       
       // Only set currentPopup if we don't already have one displayed
       if currentPopup == nil && !stack.isEmpty {
@@ -62,21 +65,40 @@ class PopupManager {
    }
 }
 
+enum PopupType {
+    case terms
+    case whatsNew
+}
+
 struct Popup: Identifiable, Equatable {
-   let id: String
-   var icon: String? = nil
-   let title: String
-   let message: String
-   
-   static func == (lhs: Popup, rhs: Popup) -> Bool {
-      return lhs.id == rhs.id
-   }
+    let id: String
+    let type: PopupType
+    var icon: String? = nil
+    let title: String
+    let message: String
+    let features: [WhatsNewFeature]?
+    let version: String?
+    
+    init(id: String, type: PopupType = .terms, icon: String? = nil, title: String, message: String, features: [WhatsNewFeature]? = nil, version: String? = nil) {
+        self.id = id
+        self.type = type
+        self.icon = icon
+        self.title = title
+        self.message = message
+        self.features = features
+        self.version = version
+    }
+    
+    static func == (lhs: Popup, rhs: Popup) -> Bool {
+        return lhs.id == rhs.id
+    }
 }
 
 enum Popups {
    static let all: [Popup] = [
       Popup(
               id: "termsAndConditions",
+              type: .terms,
               title: "Terms and Conditions",
               message: """
               Terms and Conditions of Use
@@ -213,6 +235,6 @@ enum Popups {
               
               By clicking "Done" below, you acknowledge that you have read, understood, and agree to all terms outlined above.
               """
-          )
-   ]
+          ),
+   ] + WhatsNewContent.allWhatsNewPopups
 }
