@@ -171,6 +171,17 @@ struct SettingsView: View {
                }
                .accessibilityLabel("Export data")
                .accessibilityHint("Export your health data as a CSV file")
+               
+               HStack {
+                  Image(systemName: "square.and.arrow.down")
+                     .font(.system(size: 16, weight: .medium))
+                     .foregroundStyle(Theme.shared.accent)
+                  NavigationLink("Import Data") {
+                     DataImportView()
+                  }
+               }
+               .accessibilityLabel("Import data")
+               .accessibilityHint("Import your health data from a CSV file")
             }
             
             Section(header: Text("Help")) {
