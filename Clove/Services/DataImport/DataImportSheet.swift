@@ -2,6 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct DataImportView: View {
+    @Environment(\.dismiss) private var dismiss
     @State private var showFilePicker = false
     @State private var selectedFileURL: URL?
     @State private var selectedFileName: String = ""
@@ -11,6 +12,7 @@ struct DataImportView: View {
     @State private var importResult: ImportResult?
     @State private var importError: ImportError?
     @State private var importCompleted = false
+    @State private var showExportSheet = false
     
     private let importManager = DataImportManager.shared
     
@@ -68,6 +70,9 @@ struct DataImportView: View {
             allowsMultipleSelection: false
         ) { result in
             handleFileSelection(result)
+        }
+        .sheet(isPresented: $showExportSheet) {
+            DataExportSheet()
         }
     }
     
@@ -203,7 +208,6 @@ struct DataImportView: View {
             VStack(spacing: CloveSpacing.medium) {
                 ProgressView(value: importProgress)
                     .progressViewStyle(LinearProgressViewStyle(tint: Theme.shared.accent))
-                    .scaleEffect(1.2)
                 
                 Text("\(Int(importProgress * 100))% Complete")
                     .font(.system(size: 16, weight: .medium))
@@ -344,7 +348,7 @@ struct DataImportView: View {
                 .fixedSize(horizontal: false, vertical: true)
             
             Button("Done") {
-                // Navigation back will be handled by the back button
+                dismiss()
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
@@ -371,7 +375,7 @@ struct DataImportView: View {
             
             HStack(spacing: CloveSpacing.medium) {
                 Button("Export Backup First") {
-                    // User can use back button to return to settings and export
+                    showExportSheet = true
                 }
                 .foregroundStyle(CloveColors.secondaryText)
                 .frame(maxWidth: .infinity)
