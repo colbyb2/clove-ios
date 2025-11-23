@@ -322,7 +322,7 @@ struct ChartBuilder: View {
 struct MetricChart: View {
     var metric: any MetricProvider
     var style: MetricChartStyle = .default
-    var config: MetricChartConfig = MetricChartConfig(showAnnotation: true)
+    var config: MetricChartConfig = .default
     
     let timeManager = TimePeriodManager.shared
     
@@ -333,8 +333,10 @@ struct MetricChart: View {
             style.background
             
             VStack {
-                Header()
-                    .padding(.bottom, 10)
+                if (config.showHeader){
+                    Header()
+                        .padding(.bottom, 10)
+                }
                 
                 if let data {
                     if data.count > 1 {
@@ -349,7 +351,7 @@ struct MetricChart: View {
                     Text("Loading")
                 }
                 
-                if timeManager.selectedPeriod != .week && timeManager.selectedPeriod != .month {
+                if timeManager.selectedPeriod != .week && timeManager.selectedPeriod != .month && config.showFooter {
                     Footer()
                 }
             }
