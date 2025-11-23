@@ -13,7 +13,7 @@ struct CustomizeTrackerView: View {
     @State private var trackingOffset: CGFloat = 30
     @State private var inputOffset: CGFloat = 30
     @State private var buttonOffset: CGFloat = 30
-    @State private var trackingAnimations: [Bool] = Array(repeating: false, count: 10)
+    @State private var trackingAnimations: [Bool] = Array(repeating: false, count: 11)
     
     // Tracking options with icons and colors
     private let trackingOptions = [
