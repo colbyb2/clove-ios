@@ -53,7 +53,7 @@ struct ChartBuilder: View {
                 x: .value("Date", point.date),
                 y: .value("Value", point.value)
             )
-            .interpolationMethod(.linear)
+            .interpolationMethod(timePeriod == .week ? .catmullRom : .linear)
             .foregroundStyle(style.primary)
             .lineStyle(StrokeStyle(lineWidth: 3))
             .opacity(animationProgress)
