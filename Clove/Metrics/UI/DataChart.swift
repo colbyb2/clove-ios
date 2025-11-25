@@ -738,6 +738,27 @@ fileprivate struct ChartPreview: View {
     }
 }
 
+// MARK: - Supporting Views
+
+struct StatisticView: View {
+    let title: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(CloveFonts.small())
+                .foregroundStyle(CloveColors.secondaryText)
+
+            Text(value)
+                .font(CloveFonts.body())
+                .foregroundStyle(color)
+                .fontWeight(.semibold)
+        }
+    }
+}
+
 #Preview {
     ChartPreview()
         .onAppear {
