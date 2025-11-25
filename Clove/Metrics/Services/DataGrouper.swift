@@ -5,22 +5,26 @@ class DataGrouper {
     static let shared = DataGrouper()
     
     func getGroupedData(for data: [MetricDataPoint], metric: any MetricProvider, calendar: Calendar = .current) -> [GroupedDataPoint] {
-        var counts: [ GroupKey : Int ] = [:]
-        
+        var counts: [ GroupKey : (count: Int, numericValue: Double) ] = [:]
+
         for point in data {
             let day = calendar.startOfDay(for: point.date)
             let key = GroupKey(date: day, value: metric.formatValue(point.value))
-            counts[key, default: 0] += 1
+            if counts[key] == nil {
+                counts[key] = (count: 1, numericValue: point.value)
+            } else {
+                counts[key]?.count += 1
+            }
         }
-        
-        let finalData = counts.map { key, c in
-            GroupedDataPoint(date: key.date, count: c, value: key.value)
+
+        let finalData = counts.map { key, data in
+            GroupedDataPoint(date: key.date, count: data.count, value: key.value, numericValue: data.numericValue)
         }
         .sorted { a, b in
             if a.date != b.date { return a.date < b.date }
             return a.value < b.value
         }
-        
+
         return finalData
     }
 }
@@ -35,4 +39,5 @@ struct GroupedDataPoint: Identifiable {
     let date: Date
     let count: Int
     let value: String
+    let numericValue: Double // Store the raw numeric value for color mapping
 }

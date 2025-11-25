@@ -7,13 +7,14 @@ struct ChartBuilder: View {
     var range: ClosedRange<Double>? = 1...10
     var style: MetricChartStyle = .default
     var timePeriod: TimePeriod = .month
-    
+
     var config: MetricChartConfig = .default
-    
+
     var onSelection: (MetricDataPoint?) -> Void = {_ in }
-    
+
     @State private var selectedDate: Date?
     @State private var animationProgress: CGFloat = 0
+    @State private var highlightedType: Double? = nil
     
     var selectedPoint: MetricDataPoint? {
         guard let selectedDate else { return nil }
@@ -179,71 +180,100 @@ struct ChartBuilder: View {
     
     @ViewBuilder
     func StackedBarChart() -> some View {
-        Chart(DataGrouper.shared.getGroupedData(for: data, metric: metric)) { point in
-            BarMark(
-                x: .value("Date", point.date),
-                y: .value("Count", point.count),
-                stacking: .standard
-            )
-            .foregroundStyle(by: .value("Type", point.value))
-            .opacity((selectedPoint == nil || point.id == selectedPoint?.id) ? animationProgress : 0.3)
-            .position(by: .value("Value", point.value))
-        }
-        .chartForegroundStyleScale(range: colorScheme)
-        .chartXSelection(value: $selectedDate)
-        .chartYAxis {
-            AxisMarks(position: .leading, values: .automatic()) { value in
-                AxisGridLine(
-                    stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 3])
+        let groupedData = DataGrouper.shared.getGroupedData(for: data, metric: metric)
+
+        VStack(spacing: CloveSpacing.medium) {
+            // Chart
+            Chart(groupedData) { point in
+                BarMark(
+                    x: .value("Date", point.date),
+                    y: .value("Count", point.count),
+                    stacking: .standard
                 )
-                .foregroundStyle(Color.secondary.opacity(0.2))
-                
-                AxisValueLabel()
+                .foregroundStyle(getColorForValue(point.numericValue, metric: metric))
+                .opacity(getBarOpacity(for: point))
+                .position(by: .value("Value", point.value))
             }
-        }
-        .chartXAxis {
-            AxisMarks(values: getXAxisMarks()) { value in
-                AxisGridLine(
-                    stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 3])
-                )
-                .foregroundStyle(Color.secondary.opacity(0.2))
-                
-                if let d = value.as(Date.self) {
-                    AxisValueLabel() {
-                        Text(formatDate(date: d))
-                            .font(.caption)
-                            .foregroundStyle(style.text)
+            .chartXSelection(value: $selectedDate)
+            .chartYAxis {
+                AxisMarks(position: .leading, values: .automatic()) { value in
+                    AxisGridLine(
+                        stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 3])
+                    )
+                    .foregroundStyle(Color.secondary.opacity(0.2))
+
+                    AxisValueLabel()
+                }
+            }
+            .chartXAxis {
+                AxisMarks(values: getXAxisMarks()) { value in
+                    AxisGridLine(
+                        stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 3])
+                    )
+                    .foregroundStyle(Color.secondary.opacity(0.2))
+
+                    if let d = value.as(Date.self) {
+                        AxisValueLabel() {
+                            Text(formatDate(date: d))
+                                .font(.caption)
+                                .foregroundStyle(style.text)
+                        }
                     }
                 }
             }
-        }
-        .chartPlotStyle { plotArea in
-            plotArea
-                .padding(5)
-                .padding(.bottom, 10)
-        }
-        .chartLegend(position: .bottom, spacing: 8)
-        .overlay(alignment: .top) {
-            if let selectedPoint, config.showAnnotation {
-                VStack {
-                    Annotation(selectedPoint: selectedPoint)
-                    Spacer()
-                }
-                .padding(.top, 10)
+            .chartPlotStyle { plotArea in
+                plotArea
+                    .padding(5)
+                    .padding(.bottom, 10)
             }
+            .chartLegend(.hidden) // Hide default legend
+            .overlay(alignment: .top) {
+                if let selectedDate, config.showAnnotation {
+                    VStack {
+                        DetailedBarAnnotation(
+                            date: selectedDate,
+                            data: groupedData,
+                            metric: metric,
+                            colors: colorScheme,
+                            timePeriod: timePeriod
+                        )
+                        Spacer()
+                    }
+                    .padding(.top, 10)
+                }
+            }
+
+            // Custom Legend
+            CustomChartLegend(
+                metric: metric,
+                data: groupedData,
+                colors: colorScheme,
+                highlightedType: $highlightedType
+            )
+        }
+    }
+
+    private func getBarOpacity(for point: GroupedDataPoint) -> Double {
+        // Apply highlighting logic
+        if let highlightedType = highlightedType {
+            return point.numericValue == highlightedType ? animationProgress : 0.2
+        } else if let selectedDate = selectedDate {
+            let isSelected = Calendar.current.isDate(point.date, inSameDayAs: selectedDate)
+            return isSelected ? animationProgress : 0.3
+        } else {
+            return animationProgress
         }
     }
     
     private var colorScheme: [Color] {
-        let base = Theme.shared.accent
-
+        // Generate color array using the same logic as getColorForValue
         let range = metric.valueRange ?? 1...5
-        let count = Int(range.upperBound) - Int(range.lowerBound) + 1
         var colors: [Color] = []
-        for i in 0..<count {
-            let factor = 0.6 + (CGFloat(i) / 4.0) * 0.8
-            colors.append(base.adjustedBrightness(factor))
+
+        for value in stride(from: range.lowerBound, through: range.upperBound, by: 1.0) {
+            colors.append(getColorForValue(value, metric: metric))
         }
+
         return colors
     }
     

@@ -233,10 +233,21 @@ struct InsightsView: View {
             .padding(.horizontal)
             
             if let metric = viewModel.selectedMetric {
-                MetricChart(metric: metric)
-                    .onTapGesture {
-                        showingFullScreenChart = true
+                VStack(spacing: 0) {
+                    MetricChart(metric: metric)
+                        .onTapGesture {
+                            showingFullScreenChart = true
+                        }
+
+                    HStack {
+                        Spacer()
+                        Text("Tap to Expand")
+                            .font(.system(size: 10, design: .rounded))
+                            .foregroundStyle(CloveColors.secondaryText.opacity(0.5))
+                            .padding(.trailing, CloveSpacing.small)
+                            .padding(.top, 4)
                     }
+                }
             } else {
                 // Show metric selection prompt
                 metricSelectionPromptView
