@@ -125,20 +125,9 @@ struct InsightsView: View {
                             .font(CloveFonts.small())
                             .fontWeight(.semibold)
                     }
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.shared.accent)
                     .padding(.horizontal, CloveSpacing.small)
                     .padding(.vertical, CloveSpacing.xsmall)
-                    .background(
-                        RoundedRectangle(cornerRadius: CloveCorners.full)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Theme.shared.accent, Theme.shared.accent.opacity(0.8)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .shadow(color: Theme.shared.accent.opacity(0.3), radius: 4, x: 0, y: 2)
-                    )
                 }
             }
         }

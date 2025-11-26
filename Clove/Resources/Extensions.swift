@@ -78,3 +78,43 @@ extension Date: @retroactive Identifiable {
     
     public var id: String { self.iso8601String }
 }
+
+/// View Extensions
+extension View {
+    
+    /// Applies a modifier conditionally based on a boolean condition
+    /// - Parameters:
+    ///   - condition: Whether to apply the transformation
+    ///   - transform: The transformation to apply if condition is true
+    /// - Returns: The transformed view if condition is true, otherwise the original view
+    @ViewBuilder
+    func `if`<Content: View>(
+        _ condition: Bool,
+        @ViewBuilder transform: (Self) -> Content
+    ) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
+    }
+    
+    /// Applies different transformations based on a boolean condition
+    /// - Parameters:
+    ///   - condition: The condition to evaluate
+    ///   - ifTransform: The transformation to apply if condition is true
+    ///   - elseTransform: The transformation to apply if condition is false
+    /// - Returns: The transformed view based on the condition
+    @ViewBuilder
+    func `if`<TrueContent: View, FalseContent: View>(
+        _ condition: Bool,
+        @ViewBuilder then ifTransform: (Self) -> TrueContent,
+        @ViewBuilder else elseTransform: (Self) -> FalseContent
+    ) -> some View {
+        if condition {
+            ifTransform(self)
+        } else {
+            elseTransform(self)
+        }
+    }
+}

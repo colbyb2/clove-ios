@@ -288,6 +288,7 @@ struct ChartBuilder: View {
                     .fill(.ultraThinMaterial)
                     .shadow(radius: 2)
             )
+            .foregroundStyle(Color.white)
     }
     
     /// Animates the graph entrance
