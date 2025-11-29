@@ -163,6 +163,11 @@ class SearchRepo {
         let movements = bowelMovementRepo.getAllBowelMovements()
 
         return movements.compactMap { movement in
+            let typeNumber = Int(movement.type)
+            let typeDescription = movement.bristolStoolType.description
+            let consistency = movement.bristolStoolType.consistency
+            let contextSnippet = "Type \(typeNumber) - \(typeDescription)"
+
             // Create searchable text from notes and type description
             var searchableTexts: [(String, String)] = [] // (text, context)
 
@@ -170,14 +175,19 @@ class SearchRepo {
                 searchableTexts.append((notes, notes))
             }
 
-            let typeDescription = movement.bristolStoolType.description
-            searchableTexts.append((typeDescription, "Type \(Int(movement.type)) - \(typeDescription)"))
+            // Add type number searches (e.g., "2" or "Type 2")
+            let typeString = "\(typeNumber)"
+            searchableTexts.append((typeString, contextSnippet))
 
-            let consistency = movement.bristolStoolType.consistency
-            searchableTexts.append((consistency, "Type \(Int(movement.type)) - \(consistency)"))
+            let typeWithLabel = "Type \(typeNumber)"
+            searchableTexts.append((typeWithLabel, contextSnippet))
+
+            // Add description and consistency
+            searchableTexts.append((typeDescription, contextSnippet))
+            searchableTexts.append((consistency, contextSnippet))
 
             // Search in all texts
-            for (searchText, contextText) in searchableTexts {
+            for (searchText, context) in searchableTexts {
                 if let range = searchText.range(of: query, options: .caseInsensitive) {
                     // Get corresponding DailyLog for this date
                     let log = logsRepo.getLogForDate(movement.date) ?? DailyLog(date: movement.date)
@@ -186,7 +196,7 @@ class SearchRepo {
                         log: log,
                         matchedCategory: .bowelMovements,
                         matchedText: String(searchText[range]),
-                        contextSnippet: contextText,
+                        contextSnippet: context,
                         matchRange: range,
                         bowelMovement: movement
                     )
