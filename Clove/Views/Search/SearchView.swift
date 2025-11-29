@@ -3,6 +3,7 @@ import SwiftUI
 struct SearchView: View {
     @State private var viewModel = SearchViewModel()
     @State private var selectedLog: DailyLog?
+    @State private var userSettings: UserSettings?
 
     var body: some View {
         NavigationStack {
@@ -48,6 +49,38 @@ struct SearchView: View {
             .sheet(item: $selectedLog) { log in
                 DailyLogDetailView(log: log)
             }
+            .onAppear {
+                loadUserSettings()
+            }
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    private func loadUserSettings() {
+        userSettings = UserSettingsRepo.shared.getSettings() ?? .default
+    }
+
+    private var availableCategories: [SearchCategory] {
+        guard let settings = userSettings else {
+            return SearchCategory.allCases
+        }
+
+        return SearchCategory.allCases.filter { category in
+            switch category {
+            case .notes:
+                return settings.trackNotes
+            case .symptoms:
+                return settings.trackSymptoms
+            case .meals:
+                return settings.trackMeals
+            case .activities:
+                return settings.trackActivities
+            case .medications:
+                return settings.trackMeds
+            case .bowelMovements:
+                return settings.trackBowelMovements
+            }
         }
     }
 
@@ -56,7 +89,7 @@ struct SearchView: View {
     private var categoryFiltersSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: CloveSpacing.small) {
-                ForEach(SearchCategory.allCases) { category in
+                ForEach(availableCategories) { category in
                     CategoryFilterChip(
                         category: category,
                         isActive: viewModel.categoryFilters.isActive(category),
