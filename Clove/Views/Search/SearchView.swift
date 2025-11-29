@@ -51,6 +51,10 @@ struct SearchView: View {
             }
             .onAppear {
                 loadUserSettings()
+                // Trigger tutorial on first visit
+                if TutorialManager.shared.startTutorial(Tutorials.SearchView) == .Failure {
+                    print("Tutorial [SearchView] Failed to Start")
+                }
             }
         }
     }

@@ -67,30 +67,49 @@ enum Tutorials {
                    subtitle: "Make insights work for you, not against you")
    ])
    
-   // MARK: - Calendar View Tutorial  
+   // MARK: - Calendar View Tutorial
    static let CalendarView: Tutorial = Tutorial(id: "calendarViewTutorial", steps: [
       TutorialStep(id: 0, icon: "calendar", title: "Your Health History",
                    description: "Welcome to your health calendar! This is where you can explore your past logs, spot patterns, and track your progress over time.",
                    subtitle: "Every day tells part of your health story"),
-      
+
       TutorialStep(id: 1, icon: "circle.fill", title: "Daily Indicators",
                    description: "Each day shows a colored dot indicating your overall well-being. Colors help you quickly spot good days, challenging days, and patterns.",
                    subtitle: "See your health at a glance"),
-      
+
       TutorialStep(id: 2, icon: "hand.tap", title: "Tap to Explore",
                    description: "Tap any day to see your detailed log from that date. View your mood, energy, symptoms, and notes from any day in your history.",
                    subtitle: "Dive deep into any day that interests you"),
-      
+
       TutorialStep(id: 3, icon: "calendar.badge.clock", title: "Navigate Through Time",
                    description: "Tape the arrows to move between months. Go back as far as you want to explore your health journey.",
                    subtitle: nil),
-      
+
       TutorialStep(id: 4, icon: "magnifyingglass", title: "Spot the Patterns",
                    description: "Look for recurring patterns - do you have better weeks? Seasonal changes? Monthly cycles? Your calendar reveals these trends.",
                    subtitle: "Patterns often tell the most important stories"),
-      
+
       TutorialStep(id: 5, icon: "square.and.pencil", title: "Edit Past Entries",
                    description: "Forgot to log something? Want to add a note about a past day? Tap any day to edit or add to your previous entries.",
                    subtitle: "Your health history is always editable")
+   ])
+
+   // MARK: - Search View Tutorial
+   static let SearchView: Tutorial = Tutorial(id: "searchViewTutorial", steps: [
+      TutorialStep(id: 0, icon: "magnifyingglass", title: "Search Your Health History",
+                   description: "Quickly find past logs by searching for symptoms, meals, activities, medications, and more.",
+                   subtitle: "Your entire health journal at your fingertips!"),
+
+      TutorialStep(id: 1, icon: "slider.horizontal.2.rectangle.and.arrow.triangle.2.circlepath", title: "Filter by Category",
+                   description: "Tap the category chips to narrow your search. Only enabled features appear as filters.",
+                   subtitle: "Try filtering to just Notes, or expand to search everything!"),
+
+      TutorialStep(id: 2, icon: "text.magnifyingglass", title: "Smart Search Examples",
+                   description: "Search is case-insensitive and finds partial matches. Try 'headache', 'Type 2', or any medication name.",
+                   subtitle: "Results highlight your search terms and show key metrics"),
+
+      TutorialStep(id: 3, icon: "doc.text.fill", title: "View Full Details",
+                   description: "Tap any result card to view the complete daily log with all your tracked metrics and notes.",
+                   subtitle: "Results are sorted newest first - scroll to see more!")
    ])
 }

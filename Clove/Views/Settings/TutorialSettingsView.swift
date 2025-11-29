@@ -108,6 +108,14 @@ struct TutorialSettingsView: View {
                color: .green,
                tutorial: Tutorials.CalendarView
             )
+
+            TutorialButton(
+               title: "Search",
+               description: "Learn to search your health logs",
+               icon: "magnifyingglass",
+               color: .purple,
+               tutorial: Tutorials.SearchView
+            )
          }
       }
       .padding(CloveSpacing.large)
