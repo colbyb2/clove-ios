@@ -57,7 +57,7 @@ class DataAggregationEngine {
             case .allTime:
                 // Strong smoothing with smart sampling
                 return ProcessingConfig(
-                    shouldProcess: dataPointCount > 120,
+                    shouldProcess: dataPointCount > 30,
                     targetDataPoints: 80,
                     loessBandwidth: 0.3,
                     samplingStrategy: .timeBasedGrid
