@@ -6,7 +6,7 @@ struct SearchView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
                 // Category filters section
                 categoryFiltersSection
 
@@ -24,8 +24,12 @@ struct SearchView: View {
                     noResultsState
                 } else if !viewModel.searchResults.isEmpty {
                     resultsListSection
+                } else {
+                    // Temporary state while debouncing (query exists but search hasn't run yet)
+                    Spacer()
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .navigationTitle("Search")
             .navigationBarTitleDisplayMode(.large)
             .searchable(
