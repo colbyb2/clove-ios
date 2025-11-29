@@ -13,22 +13,30 @@ struct SearchView: View {
                 // Results count (if applicable)
                 if !viewModel.searchResults.isEmpty {
                     resultCountHeader
+                        .transition(.opacity)
                 }
 
                 // Main content
                 if viewModel.isSearching {
                     loadingState
+                        .transition(.opacity)
                 } else if viewModel.searchQuery.isEmpty {
                     initialEmptyState
+                        .transition(.opacity)
                 } else if viewModel.searchResults.isEmpty && viewModel.hasSearched {
                     noResultsState
+                        .transition(.opacity)
                 } else if !viewModel.searchResults.isEmpty {
                     resultsListSection
+                        .transition(.opacity)
                 } else {
                     // Temporary state while debouncing (query exists but search hasn't run yet)
                     Spacer()
                 }
             }
+            .animation(.easeInOut(duration: 0.25), value: viewModel.isSearching)
+            .animation(.easeInOut(duration: 0.25), value: viewModel.searchResults.count)
+            .animation(.easeInOut(duration: 0.25), value: viewModel.searchQuery.isEmpty)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .navigationTitle("Search")
             .navigationBarTitleDisplayMode(.large)
@@ -117,11 +125,13 @@ struct SearchView: View {
                     SearchResultCard(result: result) {
                         selectedLog = result.log
                     }
+                    .transition(.opacity)
                 }
 
                 // Load More button
                 if viewModel.hasMoreResults {
                     loadMoreButton
+                        .transition(.opacity)
                 }
             }
             .padding(.horizontal, CloveSpacing.medium)
@@ -132,7 +142,9 @@ struct SearchView: View {
 
     private var loadMoreButton: some View {
         Button(action: {
-            viewModel.loadMoreResults()
+            withAnimation(.easeInOut(duration: 0.3)) {
+                viewModel.loadMoreResults()
+            }
         }) {
             HStack {
                 Image(systemName: "arrow.down.circle")
