@@ -31,12 +31,21 @@ struct MainTabView: View {
             .tag(2)
 
             NavigationStack {
+               SearchView()
+                    .environment(navigationCoordinator)
+            }
+            .tabItem {
+                Label("Search", systemImage: "magnifyingglass")
+            }
+            .tag(3)
+
+            NavigationStack {
                SettingsView()
             }
             .tabItem {
                 Label("Settings", systemImage: "gear")
             }
-            .tag(3)
+            .tag(4)
         }
         .tint(Theme.shared.accent)
         .onAppear {
