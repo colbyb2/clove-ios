@@ -364,7 +364,7 @@ struct MetricChart: View {
             style.background
             
             VStack {
-                if (config.showHeader){
+                if (config.showHeader || config.showStatsOnly){
                     Header()
                         .padding(.bottom, 10)
                 }
@@ -373,7 +373,6 @@ struct MetricChart: View {
                     if data.count > 1 {
                         ZStack {
                             ChartBuilder(metric: metric, data: data, range: metric.valueRange, style: style, timePeriod: timeManager.selectedPeriod, config: config)
-                            .frame(minHeight: 250)
                         }
                     } else {
                         EmptyStateView
@@ -401,19 +400,21 @@ struct MetricChart: View {
     @ViewBuilder
     func Header() -> some View {
         VStack {
-            HStack {
-                Text(metric.icon)
-                    .font(.system(size: 26))
-                VStack(alignment: .leading) {
-                    Text(metric.displayName)
-                        .font(.system(.title3, design: .rounded).weight(.semibold))
-                        .foregroundStyle(CloveColors.primaryText)
-                    Text(metric.description)
-                        .foregroundStyle(CloveColors.secondaryText)
+            if (!config.showStatsOnly) {
+                HStack {
+                    Text(metric.icon)
+                        .font(.system(size: 26))
+                    VStack(alignment: .leading) {
+                        Text(metric.displayName)
+                            .font(.system(.title3, design: .rounded).weight(.semibold))
+                            .foregroundStyle(CloveColors.primaryText)
+                        Text(metric.description)
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
+                    Spacer()
                 }
-                Spacer()
+                .padding(.bottom, 30)
             }
-            .padding(.bottom, 30)
             
             HStack {
                 Text(metric.displayName)

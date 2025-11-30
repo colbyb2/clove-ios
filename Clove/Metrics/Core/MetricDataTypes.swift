@@ -62,9 +62,10 @@ struct MetricChartStyle {
 struct MetricChartConfig {
     let showAnnotation: Bool
     let showHeader: Bool
+    let showStatsOnly: Bool
     let showFooter: Bool
     
-    static let `default` = MetricChartConfig(showAnnotation: true, showHeader: true, showFooter: true)
+    static let `default` = MetricChartConfig(showAnnotation: true, showHeader: true, showStatsOnly: false, showFooter: true)
 }
 
 /// Represents a formatted metric value

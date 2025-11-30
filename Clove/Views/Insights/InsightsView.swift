@@ -227,6 +227,7 @@ struct InsightsView: View {
                         .onTapGesture {
                             showingFullScreenChart = true
                         }
+                        .frame(minHeight: 500)
 
                     HStack {
                         Spacer()
@@ -658,50 +659,43 @@ struct CrossReferencePreviewView: View {
 struct ExpandedChartView: View {
     let metric: (any MetricProvider)?
     let onClose: () -> Void
-    
+
     var body: some View {
         ZStack {
             CloveColors.background.ignoresSafeArea()
-            
+
             if let metric = metric {
                 VStack(spacing: 0) {
                     HStack {
-                        Text(metric.icon)
-                            .font(.system(size: 26))
-                        Text(metric.displayName)
-                            .font(.system(.title2, design: .rounded).weight(.semibold))
-                            .foregroundStyle(CloveColors.primaryText)
-                        
-                        Spacer()
-                    }
-                    .padding(5)
-                    
-                    MetricChart(metric: metric,
-                                style: MetricChartStyle(primary: Theme.shared.accent, background: CloveColors.background, text: CloveColors.secondaryText),
-                                config: MetricChartConfig(showAnnotation: true, showHeader: false, showFooter: false))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                .overlay(
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Button(action: onClose) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(CloveColors.primaryText)
-                                    .padding(8)
-                                    .background(
-                                        Circle()
-                                            .fill(CloveColors.card)
-                                            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-                                    )
-                            }
-                            .padding(.trailing, CloveSpacing.large)
-                            .padding(.vertical, CloveSpacing.small)
+                        Button {
+
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(CloveColors.primaryText)
                         }
                         Spacer()
+                        Button(action: onClose) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(CloveColors.primaryText)
+                                .padding(6)
+                                .background(
+                                    Circle()
+                                        .fill(CloveColors.card)
+                                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                )
+                        }
                     }
-                )
+                    .padding(.horizontal, CloveSpacing.medium)
+                    .padding(.top, CloveSpacing.small)
+                    .padding(.bottom, CloveSpacing.small)
+
+                    MetricChart(metric: metric,
+                                style: MetricChartStyle(primary: Theme.shared.accent, background: CloveColors.background, text: CloveColors.secondaryText),
+                                config: MetricChartConfig(showAnnotation: true, showHeader: false, showStatsOnly: true, showFooter: false))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
     }
