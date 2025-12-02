@@ -667,13 +667,6 @@ struct ExpandedChartView: View {
             if let metric = metric {
                 VStack(spacing: 0) {
                     HStack {
-                        Button {
-
-                        } label: {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(CloveColors.primaryText)
-                        }
                         Spacer()
                         Button(action: onClose) {
                             Image(systemName: "xmark")
