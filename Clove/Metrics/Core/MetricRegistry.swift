@@ -115,7 +115,8 @@ class MetricRegistry {
                 category: metric.category,
                 dataPointCount: dataPointCount,
                 lastValue: lastValue?.formattedValue,
-                isAvailable: dataPointCount > 0
+                isAvailable: dataPointCount > 0,
+                isActive: metric.category == .symptoms ? (metric as! SymptomMetricProvider).isActive : nil
             )
             
             summaries.append(summary)
@@ -167,10 +168,13 @@ class MetricRegistry {
     private func generateSymptomMetrics() async -> [any MetricProvider] {
         // Generate metrics for tracked symptoms
         let symptomsRepo = SymptomsRepo.shared
-        let symptoms = symptomsRepo.getTrackedSymptoms()
+        let dataLoader = OptimizedDataLoader.shared
+        let symptoms = await dataLoader.getAvailableSymptoms()
+        let trackedSymptoms = symptomsRepo.getTrackedSymptoms()
         
-        return symptoms.map { symptom in
-            SymptomMetricProvider(symptomName: symptom.name)
+        return symptoms.map { symptomName in
+            let isActive = trackedSymptoms.filter( { $0.name.lowercased() == symptomName.lowercased() }).count > 0
+            return SymptomMetricProvider(symptomName: symptomName, isActive: isActive)
         }
     }
     

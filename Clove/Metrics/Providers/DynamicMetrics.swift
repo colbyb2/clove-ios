@@ -5,6 +5,7 @@ import SwiftUI
 
 struct SymptomMetricProvider: MetricProvider {
     let symptomName: String
+    let isActive: Bool
     
     var id: String { "symptom_\(symptomName.lowercased().replacingOccurrences(of: " ", with: "_"))" }
     var displayName: String { symptomName }
@@ -17,8 +18,9 @@ struct SymptomMetricProvider: MetricProvider {
     
     private let dataLoader = OptimizedDataLoader.shared
     
-    init(symptomName: String) {
+    init(symptomName: String, isActive: Bool = true) {
         self.symptomName = symptomName
+        self.isActive = isActive
     }
     
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {

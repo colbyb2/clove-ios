@@ -127,6 +127,7 @@ struct MetricSummary: Identifiable, Sendable, Hashable {
     let dataPointCount: Int
     let lastValue: String?
     let isAvailable: Bool
+    let isActive: Bool?
     
     // MARK: - Hashable
     func hash(into hasher: inout Hasher) {

@@ -114,7 +114,7 @@ struct AccessibleSlider: View {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(CloveColors.background)
                         .frame(height: 8)
-                    
+
                     // Progress
                     RoundedRectangle(cornerRadius: 4)
                         .fill(Theme.shared.accent)
@@ -122,10 +122,10 @@ struct AccessibleSlider: View {
                             width: geometry.size.width * CGFloat((value - Double(minValue)) / Double(maxValue - minValue)),
                             height: 8
                         )
-                    
+
                     // Thumb with larger touch area
                     let thumbPosition = geometry.size.width * CGFloat((value - Double(minValue)) / Double(maxValue - minValue))
-                    
+
                     Circle()
                         .fill(Theme.shared.accent)
                         .frame(width: isDragging ? 28 : 24, height: isDragging ? 28 : 24)
@@ -137,53 +137,38 @@ struct AccessibleSlider: View {
                         .position(x: max(12, min(geometry.size.width - 12, thumbPosition)), y: geometry.size.height / 2)
                         .scaleEffect(isDragging ? 1.2 : 1.0)
                         .animation(.easeInOut(duration: 0.15), value: isDragging)
+                        .gesture(
+                            DragGesture()
+                                .onChanged { gesture in
+                                    if !isDragging {
+                                        isDragging = true
+                                        // Start haptic feedback
+                                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                        impactFeedback.prepare()
+                                    }
+
+                                    let newValue = Double(minValue) + (gesture.location.x / geometry.size.width) * Double(maxValue - minValue)
+                                    let clampedValue = max(Double(minValue), min(Double(maxValue), newValue))
+                                    let steppedValue = round(clampedValue / Double(step)) * Double(step)
+
+                                    // Provide haptic feedback when crossing integer values
+                                    if abs(steppedValue - lastFeedbackValue) >= Double(step) {
+                                        let selectionFeedback = UISelectionFeedbackGenerator()
+                                        selectionFeedback.selectionChanged()
+                                        lastFeedbackValue = steppedValue
+                                    }
+
+                                    value = steppedValue
+                                }
+                                .onEnded { _ in
+                                    isDragging = false
+                                    // End haptic feedback
+                                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                                    impactFeedback.impactOccurred()
+                                }
+                        )
                 }
                 .frame(height: 44) // Minimum touch target height
-                .contentShape(Rectangle()) // Make entire area tappable
-                .gesture(
-                    DragGesture()
-                        .onChanged { gesture in
-                            if !isDragging {
-                                isDragging = true
-                                // Start haptic feedback
-                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                impactFeedback.prepare()
-                            }
-                            
-                            let newValue = Double(minValue) + (gesture.location.x / geometry.size.width) * Double(maxValue - minValue)
-                            let clampedValue = max(Double(minValue), min(Double(maxValue), newValue))
-                            let steppedValue = round(clampedValue / Double(step)) * Double(step)
-                            
-                            // Provide haptic feedback when crossing integer values
-                            if abs(steppedValue - lastFeedbackValue) >= Double(step) {
-                                let selectionFeedback = UISelectionFeedbackGenerator()
-                                selectionFeedback.selectionChanged()
-                                lastFeedbackValue = steppedValue
-                            }
-                            
-                            value = steppedValue
-                        }
-                        .onEnded { _ in
-                            isDragging = false
-                            // End haptic feedback
-                            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                            impactFeedback.impactOccurred()
-                        }
-                )
-                .onTapGesture { location in
-                    // Allow tapping to set value
-                    let newValue = Double(minValue) + (location.x / geometry.size.width) * Double(maxValue - minValue)
-                    let clampedValue = max(Double(minValue), min(Double(maxValue), newValue))
-                    let steppedValue = round(clampedValue / Double(step)) * Double(step)
-                    
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        value = steppedValue
-                    }
-                    
-                    // Haptic feedback for tap
-                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                    impactFeedback.impactOccurred()
-                }
             }
             .frame(height: 44)
             
@@ -343,31 +328,38 @@ struct AccessibleStepperButton: View {
     }
 }
 
-#Preview {
-    VStack(spacing: 30) {
-        AccessibleRatingInput(
-            value: .constant(7),
-            label: "Pain Level",
-            emoji: "🩹",
-            maxValue: 10
-        )
-        
-        AccessibleRatingInput(
-            value: .constant(5),
-            label: "Mood",
-            emoji: "😊",
-            maxValue: 10,
-            showAlternativeControls: false
-        )
-        
-        PlusMinusControls(
-            value: .constant(3),
-            minValue: 0,
-            maxValue: 10,
-            step: 1,
-            label: "Energy"
-        )
+fileprivate struct ContentPreview: View {
+    @State var rating: Double = 5
+    var body: some View {
+        VStack(spacing: 30) {
+            AccessibleRatingInput(
+                value: $rating,
+                label: "Pain Level",
+                emoji: "🩹",
+                maxValue: 10
+            )
+            
+            AccessibleRatingInput(
+                value: $rating,
+                label: "Mood",
+                emoji: "😊",
+                maxValue: 10,
+                showAlternativeControls: false
+            )
+            
+            PlusMinusControls(
+                value: $rating,
+                minValue: 0,
+                maxValue: 10,
+                step: 1,
+                label: "Energy"
+            )
+        }
+        .padding()
+        .background(CloveColors.background)
     }
-    .padding()
-    .background(CloveColors.background)
+}
+
+#Preview {
+    ContentPreview()
 }

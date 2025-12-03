@@ -10,6 +10,8 @@ struct MetricExplorer: View {
     private let timePeriodManager = TimePeriodManager.shared
     @FocusState private var isSearchFocused: Bool
     
+    @AppStorage(Constants.HIDE_INACTIVE_METRICS) var hideInactiveMetrics: Bool = false
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -181,6 +183,33 @@ struct MetricExplorer: View {
                 .foregroundStyle(CloveColors.secondaryText)
             
             Spacer()
+            
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    hideInactiveMetrics.toggle()
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    // The eye icon communicates "visibility"
+                    Image(systemName: hideInactiveMetrics ? "eye" : "eye.slash.fill")
+                        .contentTransition(.symbolEffect(.replace))
+
+                    Text(hideInactiveMetrics ? "Show Inactive" : "Hide Inactive")
+                        .contentTransition(.numericText())
+                }
+                .font(CloveFonts.small())
+                // Use accent color when active to show a filter is applied
+                .foregroundStyle(hideInactiveMetrics ? CloveColors.secondaryText : Theme.shared.accent)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 8)
+                .background(
+                    // subtle background when filter is applied
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(!hideInactiveMetrics ? Theme.shared.accent.opacity(0.1) : Color.clear)
+                )
+                .animation(.easeInOut(duration: 0.25), value: hideInactiveMetrics)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.top, CloveSpacing.medium)
     }
@@ -264,6 +293,8 @@ struct CategorySectionV2: View {
     let metrics: [MetricSummary]
     let onMetricSelected: (String) -> Void
     
+    @AppStorage(Constants.HIDE_INACTIVE_METRICS) var hideInactiveMetrics: Bool = false
+    
     var body: some View {
         VStack(alignment: .leading, spacing: CloveSpacing.medium) {
             Text(category.displayName)
@@ -275,8 +306,10 @@ struct CategorySectionV2: View {
                 GridItem(.flexible())
             ], spacing: CloveSpacing.medium) {
                 ForEach(metrics, id: \.id) { metric in
-                    MetricCardV2(metric: metric) {
-                        onMetricSelected(metric.id)
+                    if (metric.isActive ?? true) || !hideInactiveMetrics {
+                        MetricCardV2(metric: metric) {
+                            onMetricSelected(metric.id)
+                        }
                     }
                 }
             }
@@ -297,14 +330,19 @@ struct MetricCardV2: View {
                     
                     Spacer()
                     
-                    if metric.isAvailable {
+                    if metric.isActive ?? true {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 16))
                             .foregroundStyle(CloveColors.success)
                     } else {
-                        Image(systemName: "circle")
-                            .font(.system(size: 16))
-                            .foregroundStyle(CloveColors.secondaryText.opacity(0.5))
+                        Text("Inactive")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(Color.white)
+                            .padding(5)
+                            .background(
+                                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                                    .fill(Color.red.opacity(0.5))
+                            )
                     }
                 }
                 
@@ -368,6 +406,11 @@ struct MetricCardV2: View {
 }
 
 // MARK: - Preview
+
+#Preview {
+    MetricCardV2(metric: MetricSummary(id: "mockMetricId", displayName: "Mock Metric", description: "This is a fake metric.", icon: "🎄", category: .symptoms, dataPointCount: 70, lastValue: "5", isAvailable: true, isActive: false)) {}
+        .frame(maxWidth: 200)
+}
 
 #Preview {
     MetricExplorer { metricId in

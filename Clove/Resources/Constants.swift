@@ -18,4 +18,6 @@ enum Constants {
    
    // Notifications
    static let NOTIFICATIONS_KEY = "scheduledNotifications"
+    
+    static let HIDE_INACTIVE_METRICS = "hideInactiveMetrics"
 }

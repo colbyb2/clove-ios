@@ -75,8 +75,9 @@ class TodayViewModel {
    
    private func syncSymptomRatingsWithTrackedSymptoms() {
       let currentTrackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
+      let trackedSymptomIds = Set(currentTrackedSymptoms.compactMap { $0.id })
       var updatedRatings: [SymptomRatingVM] = []
-      
+
       // For each currently tracked symptom, find existing rating or create default
       for symptom in currentTrackedSymptoms {
          if let existingRating = logData.symptomRatings.first(where: { $0.symptomId == symptom.id }) {
@@ -93,7 +94,11 @@ class TodayViewModel {
             ))
          }
       }
-      
+
+      // Keep any one-time symptoms (symptoms not in the tracked symptoms list)
+      let oneTimeSymptoms = logData.symptomRatings.filter { !trackedSymptomIds.contains($0.symptomId) }
+      updatedRatings.append(contentsOf: oneTimeSymptoms)
+
       self.logData.symptomRatings = updatedRatings
    }
    
