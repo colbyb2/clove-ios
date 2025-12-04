@@ -328,8 +328,88 @@ struct AccessibleStepperButton: View {
     }
 }
 
+// MARK: - Binary Yes/No Input
+
+struct BinarySymptomInput: View {
+    @Binding var value: Double
+    let label: String
+    let emoji: String?
+
+    private var isPresent: Bool { value > 0 }
+
+    var body: some View {
+        VStack(spacing: CloveSpacing.medium) {
+            // Header
+            HStack(spacing: CloveSpacing.small) {
+                if let emoji = emoji {
+                    Text(emoji)
+                        .font(.system(size: 20))
+                }
+                Text(label)
+                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                
+                Spacer()
+            }
+
+            // Buttons - Horizontal Layout Internal
+            HStack(spacing: CloveSpacing.medium) {
+                // No
+                SelectionCard(
+                    title: "No",
+                    icon: "xmark",
+                    isSelected: !isPresent,
+                    color: Color.gray
+                ) { value = 0 }
+
+                // Yes
+                SelectionCard(
+                    title: "Yes",
+                    icon: "checkmark",
+                    isSelected: isPresent,
+                    color: Theme.shared.accent
+                ) { value = 10 }
+            }
+            .frame(height: 45) // Fixed comfortable height
+        }
+    }
+
+    // Helper View for consistency
+    struct SelectionCard: View {
+        let title: String
+        let icon: String
+        let isSelected: Bool
+        let color: Color
+        let action: () -> Void
+
+        var body: some View {
+            Button(action: {
+                withAnimation(.spring(response: 0.3)) { action() }
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: isSelected ? "\(icon).circle.fill" : "\(icon).circle")
+                        .font(.system(size: 18))
+                    Text(title)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .foregroundStyle(isSelected ? color : CloveColors.secondaryText)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(isSelected ? color.opacity(0.1) : CloveColors.card)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(isSelected ? color : CloveColors.secondaryText.opacity(0.1), lineWidth: isSelected ? 1.5 : 1)
+                        )
+                )
+            }
+        }
+    }
+}
+
 fileprivate struct ContentPreview: View {
     @State var rating: Double = 5
+    @State var binaryValue: Double = 0
     var body: some View {
         VStack(spacing: 30) {
             AccessibleRatingInput(
@@ -338,15 +418,13 @@ fileprivate struct ContentPreview: View {
                 emoji: "🩹",
                 maxValue: 10
             )
-            
-            AccessibleRatingInput(
-                value: $rating,
-                label: "Mood",
-                emoji: "😊",
-                maxValue: 10,
-                showAlternativeControls: false
+
+            BinarySymptomInput(
+                value: $binaryValue,
+                label: "Headache",
+                emoji: "🩹"
             )
-            
+
             PlusMinusControls(
                 value: $rating,
                 minValue: 0,

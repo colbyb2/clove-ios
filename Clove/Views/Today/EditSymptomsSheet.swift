@@ -3,8 +3,10 @@ import SwiftUI
 struct EditSymptomsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var newSymptomName = ""
+    @State private var newSymptomIsBinary = false
     @State private var editingSymptom: TrackedSymptom? = nil
     @State private var editingName = ""
+    @State private var editingIsBinary = false
     @FocusState private var isTextFieldFocused: Bool
     @State private var isLoading = false
     
@@ -46,6 +48,7 @@ struct EditSymptomsSheet: View {
                         // Add symptom form
                         ModernAddSymptomFormView(
                             newSymptomName: $newSymptomName,
+                            newSymptomIsBinary: $newSymptomIsBinary,
                             isTextFieldFocused: $isTextFieldFocused,
                             isLoading: $isLoading,
                             isAddButtonEnabled: isAddButtonEnabled,
@@ -59,6 +62,7 @@ struct EditSymptomsSheet: View {
                             trackedSymptoms: trackedSymptoms,
                             editingSymptom: editingSymptom,
                             editingName: $editingName,
+                            editingIsBinary: $editingIsBinary,
                             onEdit: startEditing,
                             onSave: saveEdit,
                             onCancel: cancelEdit,
@@ -132,23 +136,24 @@ struct EditSymptomsSheet: View {
     private func addSymptom() {
         let trimmedName = newSymptomName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
-        
+
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             isLoading = true
         }
-        
-        SymptomManager.shared.addSymptom(name: trimmedName) {
+
+        SymptomManager.shared.addSymptom(name: trimmedName, isBinary: newSymptomIsBinary) {
             self.refresh()
             self.trackedSymptoms = SymptomManager.shared.fetchSymptoms()
         }
-        
+
         // Enhanced haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
-        
+
         withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) {
             // Clear form
             newSymptomName = ""
+            newSymptomIsBinary = false
             isTextFieldFocused = false
             isLoading = false
         }
@@ -158,31 +163,33 @@ struct EditSymptomsSheet: View {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             editingSymptom = symptom
             editingName = symptom.name
+            editingIsBinary = symptom.isBinary
         }
     }
     
     private func saveEdit() {
         guard let symptom = editingSymptom, let id = symptom.id else { return }
-        
+
         let trimmedName = editingName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
-        
-        SymptomManager.shared.updateSymptom(id: id, newName: trimmedName) {
+
+        SymptomManager.shared.updateSymptom(id: id, newName: trimmedName, isBinary: editingIsBinary) {
             self.refresh()
             self.trackedSymptoms = SymptomManager.shared.fetchSymptoms()
         }
-        
+
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.impactOccurred()
-        
+
         cancelEdit()
     }
-    
+
     private func cancelEdit() {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             editingSymptom = nil
             editingName = ""
+            editingIsBinary = false
         }
     }
     
@@ -246,11 +253,12 @@ struct ModernSymptomHeaderView: View {
 
 struct ModernAddSymptomFormView: View {
     @Binding var newSymptomName: String
+    @Binding var newSymptomIsBinary: Bool
     var isTextFieldFocused: FocusState<Bool>.Binding
     @Binding var isLoading: Bool
     let isAddButtonEnabled: Bool
     let onAddSymptom: () -> Void
-    
+
     private let quickSymptoms = ["Headache", "Fatigue", "Nausea", "Bloating"]
     @State private var quickButtonsVisible = false
     
@@ -271,7 +279,7 @@ struct ModernAddSymptomFormView: View {
                     Text("Symptom Name")
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
                         .foregroundStyle(CloveColors.secondaryText)
-                    
+
                     TextField("e.g., Headache, Fatigue", text: $newSymptomName)
                         .font(.system(.body, design: .rounded))
                         .padding(CloveSpacing.medium)
@@ -292,6 +300,59 @@ struct ModernAddSymptomFormView: View {
                                 onAddSymptom()
                             }
                         }
+                }
+
+                // Symptom type toggle
+                VStack(alignment: .leading, spacing: CloveSpacing.small) {
+                    Text("Rating Scale")
+                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        .foregroundStyle(CloveColors.secondaryText)
+
+                    HStack(spacing: CloveSpacing.small) {
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                newSymptomIsBinary = false
+                            }
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                            impactFeedback.impactOccurred()
+                        }) {
+                            HStack(spacing: CloveSpacing.small) {
+                                Text("0-10")
+                                    .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .foregroundStyle(!newSymptomIsBinary ? .white : CloveColors.primaryText)
+                            .background(
+                                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                                    .fill(!newSymptomIsBinary ? Theme.shared.accent : CloveColors.background)
+                            )
+                        }
+
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                newSymptomIsBinary = true
+                            }
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                            impactFeedback.impactOccurred()
+                        }) {
+                            HStack(spacing: CloveSpacing.small) {
+                                Text("Yes/No")
+                                    .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .foregroundStyle(newSymptomIsBinary ? .white : CloveColors.primaryText)
+                            .background(
+                                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                                    .fill(newSymptomIsBinary ? Theme.shared.accent : CloveColors.background)
+                            )
+                        }
+                    }
+                    
+                    Text(newSymptomIsBinary ? "Log a 'Yes' or 'No' response each day" : "Symptom will be rated on a 0-10 scale each day")
+                        .font(.caption)
+                        .foregroundStyle(CloveColors.secondaryText)
                 }
                 
                 // Quick select buttons
@@ -388,6 +449,7 @@ struct ModernSymptomListView: View {
     let trackedSymptoms: [TrackedSymptom]
     let editingSymptom: TrackedSymptom?
     @Binding var editingName: String
+    @Binding var editingIsBinary: Bool
     let onEdit: (TrackedSymptom) -> Void
     let onSave: () -> Void
     let onCancel: () -> Void
@@ -425,6 +487,7 @@ struct ModernSymptomListView: View {
                             symptom: symptom,
                             isEditing: editingSymptom?.id == symptom.id,
                             editingName: $editingName,
+                            editingIsBinary: $editingIsBinary,
                             onEdit: { onEdit(symptom) },
                             onSave: onSave,
                             onCancel: onCancel,
@@ -445,6 +508,7 @@ struct ModernSymptomCard: View {
     let symptom: TrackedSymptom
     let isEditing: Bool
     @Binding var editingName: String
+    @Binding var editingIsBinary: Bool
     let onEdit: () -> Void
     let onSave: () -> Void
     let onCancel: () -> Void
@@ -473,7 +537,46 @@ struct ModernSymptomCard: View {
                                         .stroke(Theme.shared.accent.opacity(0.3), lineWidth: 1)
                                 )
                         )
-                    
+
+                    // Symptom type toggle
+                    HStack(spacing: CloveSpacing.small) {
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                editingIsBinary = false
+                            }
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                            impactFeedback.impactOccurred()
+                        }) {
+                            Text("0-10")
+                                .font(.system(.caption, design: .rounded, weight: .medium))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .foregroundStyle(!editingIsBinary ? .white : CloveColors.primaryText)
+                                .background(
+                                    RoundedRectangle(cornerRadius: CloveCorners.small)
+                                        .fill(!editingIsBinary ? Theme.shared.accent : CloveColors.background)
+                                )
+                        }
+
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                editingIsBinary = true
+                            }
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                            impactFeedback.impactOccurred()
+                        }) {
+                            Text("Yes/No")
+                                .font(.system(.caption, design: .rounded, weight: .medium))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .foregroundStyle(editingIsBinary ? .white : CloveColors.primaryText)
+                                .background(
+                                    RoundedRectangle(cornerRadius: CloveCorners.small)
+                                        .fill(editingIsBinary ? Theme.shared.accent : CloveColors.background)
+                                )
+                        }
+                    }
+
                     HStack(spacing: CloveSpacing.medium) {
                         Button("Save") {
                             onSave()

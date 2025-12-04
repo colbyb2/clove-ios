@@ -43,7 +43,7 @@ class LogData {
         self.medicationAdherence = log.medicationAdherence
         self.notes = log.notes
         self.symptomRatings = log.symptomRatings.map({ s in
-            return SymptomRatingVM(symptomId: s.symptomId, symptomName: s.symptomName, ratingDouble: Double(s.rating))
+            return SymptomRatingVM(symptomId: s.symptomId, symptomName: s.symptomName, ratingDouble: Double(s.rating), isBinary: s.isBinary)
         })
         loadBowelMovements(for: log.date)
     }

@@ -5,14 +5,16 @@ struct SymptomRatingVM: Identifiable {
     var symptomId: Int64
     var symptomName: String
     var ratingDouble: Double // bound to slider
-    
-    init(symptomId: Int64, symptomName: String, ratingDouble: Double = 5) {
+    var isBinary: Bool = false
+
+    init(symptomId: Int64, symptomName: String, ratingDouble: Double = 5, isBinary: Bool = false) {
         self.symptomId = symptomId
         self.symptomName = symptomName
         self.ratingDouble = ratingDouble
+        self.isBinary = isBinary
     }
 
     func toModel() -> SymptomRating {
-        SymptomRating(symptomId: symptomId, symptomName: symptomName, rating: Int(ratingDouble))
+        SymptomRating(symptomId: symptomId, symptomName: symptomName, rating: Int(ratingDouble), isBinary: isBinary)
     }
 }

@@ -69,7 +69,7 @@ class TodayViewModel {
    func loadTrackedSymptoms() {
       let trackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
       self.logData.symptomRatings = trackedSymptoms.map {
-         return SymptomRatingVM(symptomId: $0.id ?? 0, symptomName: $0.name, ratingDouble: 5)
+         return SymptomRatingVM(symptomId: $0.id ?? 0, symptomName: $0.name, ratingDouble: 5, isBinary: $0.isBinary)
       }
    }
    
@@ -81,16 +81,18 @@ class TodayViewModel {
       // For each currently tracked symptom, find existing rating or create default
       for symptom in currentTrackedSymptoms {
          if let existingRating = logData.symptomRatings.first(where: { $0.symptomId == symptom.id }) {
-            // Keep existing rating but update name in case it changed
+            // Keep existing rating but update name and isBinary in case they changed
             var updatedRating = existingRating
             updatedRating.symptomName = symptom.name
+            updatedRating.isBinary = symptom.isBinary
             updatedRatings.append(updatedRating)
          } else {
             // Create new rating with default value
             updatedRatings.append(SymptomRatingVM(
                symptomId: symptom.id ?? 0,
                symptomName: symptom.name,
-               ratingDouble: 5
+               ratingDouble: 5,
+               isBinary: symptom.isBinary
             ))
          }
       }
@@ -196,18 +198,18 @@ class TodayViewModel {
       }
    }
    
-   func updateSymptom(id: Int64, newName: String) {
+   func updateSymptom(id: Int64, newName: String, isBinary: Bool) {
       let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
       guard !trimmedName.isEmpty else { return }
-      
+
       // Check if another symptom already has this name
       if SymptomsRepo.shared.getTrackedSymptoms().contains(where: { $0.name.lowercased() == trimmedName.lowercased() && $0.id != id }) {
          ToastManager.shared.showToast(message: "Symptom name already exists", color: CloveColors.error, icon: Image(systemName: "exclamationmark.triangle"))
          return
       }
-      
-      let success = SymptomsRepo.shared.updateSymptom(id: id, name: trimmedName)
-      
+
+      let success = SymptomsRepo.shared.updateSymptom(id: id, name: trimmedName, isBinary: isBinary)
+
       if success {
          loadTrackedSymptoms() // Refresh the list
          ToastManager.shared.showToast(message: "Symptom updated successfully", color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))

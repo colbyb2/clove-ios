@@ -76,12 +76,20 @@ struct TodayView: View {
                         }
                         ForEach(viewModel.logData.symptomRatings, id: \.symptomId) { symptomRating in
                             if let index = viewModel.logData.symptomRatings.firstIndex(where: { $0.symptomId == symptomRating.symptomId }) {
-                                AccessibleRatingInput(
-                                    value: $viewModel.logData.symptomRatings[index].ratingDouble,
-                                    label: symptomRating.symptomName,
-                                    emoji: "🩺",
-                                    maxValue: 10
-                                )
+                                if symptomRating.isBinary {
+                                    BinarySymptomInput(
+                                        value: $viewModel.logData.symptomRatings[index].ratingDouble,
+                                        label: symptomRating.symptomName,
+                                        emoji: "🩺"
+                                    )
+                                } else {
+                                    AccessibleRatingInput(
+                                        value: $viewModel.logData.symptomRatings[index].ratingDouble,
+                                        label: symptomRating.symptomName,
+                                        emoji: "🩺",
+                                        maxValue: 10
+                                    )
+                                }
                             }
                         }
                         if (viewModel.logData.symptomRatings.isEmpty) {
@@ -96,7 +104,6 @@ struct TodayView: View {
 
                         // Quick add button for occasional symptoms
                         Button(action: {
-                            // TODO: Add quick symptom logic
                             showQuickAddSymptomSheet = true
                             // Haptic feedback
                             let impactFeedback = UIImpactFeedbackGenerator(style: .light)

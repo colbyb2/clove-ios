@@ -13,7 +13,8 @@ enum Migrations {
         MedicationTrackingMigration(),
         NotesTrackingMigration(),
         BowelMovementSettingMigration(),
-        BowelMovementTableMigration()
+        BowelMovementTableMigration(),
+        BinarySymptomMigration()
     ]
 }
 
@@ -220,13 +221,27 @@ struct BowelMovementTableMigration: Migration {
     var identifier: String {
         return "bowelMovementTable_081925"
     }
-    
+
     func migrate(_ db: Database) throws {
         try db.create(table: "bowelMovement") { t in
             t.autoIncrementedPrimaryKey("id")
             t.column("type", .double).notNull()
             t.column("date", .date).notNull()
             t.column("notes", .text)
+        }
+    }
+}
+
+/// Migration to add isBinary field to symptoms
+struct BinarySymptomMigration: Migration {
+    var identifier: String {
+        return "binarySymptom_120325"
+    }
+
+    func migrate(_ db: Database) throws {
+        // Add isBinary column to TrackedSymptom table
+        try db.alter(table: "trackedSymptom") { t in
+            t.add(column: "isBinary", .boolean).notNull().defaults(to: false)
         }
     }
 }

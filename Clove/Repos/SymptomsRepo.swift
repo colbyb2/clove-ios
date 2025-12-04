@@ -41,10 +41,10 @@ class SymptomsRepo {
         }
     }
     
-    func updateSymptom(id: Int64, name: String) -> Bool {
+    func updateSymptom(id: Int64, name: String, isBinary: Bool) -> Bool {
         do {
             try dbManager.write { db in
-                let symptom = TrackedSymptom(id: id, name: name)
+                let symptom = TrackedSymptom(id: id, name: name, isBinary: isBinary)
                 try symptom.update(db)
             }
             return true
