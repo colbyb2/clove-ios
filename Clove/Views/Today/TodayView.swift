@@ -59,76 +59,7 @@ struct TodayView: View {
                     }
                     
                     if viewModel.settings.trackSymptoms {
-                        HStack {
-                            Text("Symptoms").font(.system(size: 22, weight: .semibold, design: .rounded))
-                            Spacer()
-                            Button("Edit") {
-                                showEditSymptoms = true
-                                // Haptic feedback
-                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                impactFeedback.impactOccurred()
-                            }
-                            .foregroundStyle(Theme.shared.accent)
-                            .fontWeight(.semibold)
-                            .frame(minWidth: 44, minHeight: 44) // Minimum touch target
-                            .accessibilityLabel("Edit symptoms")
-                            .accessibilityHint("Opens symptoms management screen")
-                        }
-                        ForEach(viewModel.logData.symptomRatings, id: \.symptomId) { symptomRating in
-                            if let index = viewModel.logData.symptomRatings.firstIndex(where: { $0.symptomId == symptomRating.symptomId }) {
-                                if symptomRating.isBinary {
-                                    BinarySymptomInput(
-                                        value: $viewModel.logData.symptomRatings[index].ratingDouble,
-                                        label: symptomRating.symptomName,
-                                        emoji: "🩺"
-                                    )
-                                } else {
-                                    AccessibleRatingInput(
-                                        value: $viewModel.logData.symptomRatings[index].ratingDouble,
-                                        label: symptomRating.symptomName,
-                                        emoji: "🩺",
-                                        maxValue: 10
-                                    )
-                                }
-                            }
-                        }
-                        if (viewModel.logData.symptomRatings.isEmpty) {
-                            HStack {
-                                Spacer()
-                                Text("No Symptoms Being Tracked")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(CloveColors.secondaryText)
-                                Spacer()
-                            }
-                        }
-
-                        // Quick add button for occasional symptoms
-                        Button(action: {
-                            showQuickAddSymptomSheet = true
-                            // Haptic feedback
-                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                            impactFeedback.impactOccurred()
-                        }) {
-                            HStack {
-                                Text("Add Symptom")
-                                    .foregroundStyle(CloveColors.secondaryText)
-                                    .font(.system(size: 14, weight: .medium, design: .rounded))
-
-                                Image(systemName: "plus.circle.fill")
-                                    .foregroundStyle(Theme.shared.accent)
-                                    .font(.system(size: 14))
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(CloveColors.card)
-                            .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
-                            .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
-                        }
-                        .padding(.top, CloveSpacing.small)
-                        .sheet(isPresented: $showQuickAddSymptomSheet) {
-                            QuickAddSymptomSheet()
-                                .environment(viewModel)
-                        }
+                        symptomsSection
                     }
                     
                     if viewModel.settings.trackMeals {
@@ -394,7 +325,85 @@ struct TodayView: View {
             )
         }
     }
-    
+
+    @ViewBuilder
+    private var symptomsSection: some View {
+        HStack {
+            Text("Symptoms").font(.system(size: 22, weight: .semibold, design: .rounded))
+            Spacer()
+            Button("Edit") {
+                showEditSymptoms = true
+                // Haptic feedback
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.impactOccurred()
+            }
+            .foregroundStyle(Theme.shared.accent)
+            .fontWeight(.semibold)
+            .frame(minWidth: 44, minHeight: 44) // Minimum touch target
+            .accessibilityLabel("Edit symptoms")
+            .accessibilityHint("Opens symptoms management screen")
+        }
+        ForEach(viewModel.logData.symptomRatings, id: \.symptomId) { symptomRating in
+            if let index = viewModel.logData.symptomRatings.firstIndex(where: { $0.symptomId == symptomRating.symptomId }) {
+                let isOneTimeSymptom = SymptomManager.shared.isOneTimeSymptom(id: symptomRating.symptomId, name: symptomRating.symptomName)
+                
+                if symptomRating.isBinary {
+                    BinarySymptomInput(
+                        value: $viewModel.logData.symptomRatings[index].ratingDouble,
+                        label: symptomRating.symptomName,
+                        emoji: "🩺",
+                        onDelete: isOneTimeSymptom ? { viewModel.logData.symptomRatings.remove(at: index) } : nil
+                    )
+                } else {
+                    AccessibleRatingInput(
+                        value: $viewModel.logData.symptomRatings[index].ratingDouble,
+                        label: symptomRating.symptomName,
+                        emoji: "🩺",
+                        maxValue: 10,
+                        onDelete: isOneTimeSymptom ? { viewModel.logData.symptomRatings.remove(at: index) } : nil
+                    )
+                }
+            }
+        }
+        if (viewModel.logData.symptomRatings.isEmpty) {
+            HStack {
+                Spacer()
+                Text("No Symptoms Being Tracked")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(CloveColors.secondaryText)
+                Spacer()
+            }
+        }
+
+        // Quick add button for occasional symptoms
+        Button(action: {
+            showQuickAddSymptomSheet = true
+            // Haptic feedback
+            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+            impactFeedback.impactOccurred()
+        }) {
+            HStack {
+                Text("Add Symptom")
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+
+                Image(systemName: "plus.circle.fill")
+                    .foregroundStyle(Theme.shared.accent)
+                    .font(.system(size: 14))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(CloveColors.card)
+            .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
+            .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+        }
+        .padding(.top, CloveSpacing.small)
+        .sheet(isPresented: $showQuickAddSymptomSheet) {
+            QuickAddSymptomSheet()
+                .environment(viewModel)
+        }
+    }
+
     private func weatherEmoji(for weather: String?) -> String {
         switch weather {
         case "Sunny": return "☀️"

@@ -1,11 +1,34 @@
 import Foundation
 import SwiftUI
+import CryptoKit
 
 class SymptomManager {
    static let shared = SymptomManager()
-   
+
    func fetchSymptoms() -> [TrackedSymptom] {
       return SymptomsRepo.shared.getTrackedSymptoms()
+   }
+
+   /// Determines if a symptom is a one-time symptom by comparing its ID with the hash of its name
+   /// One-time symptoms use hash-based IDs, while tracked symptoms use database auto-increment IDs
+   func isOneTimeSymptom(id: Int64, name: String) -> Bool {
+      let computedId = hashSymptomName(name)
+      return computedId == id
+   }
+
+   /// Generates a consistent Int64 hash from a symptom name
+   private func hashSymptomName(_ name: String) -> Int64 {
+      let hash = SHA256.hash(data: Data(name.utf8))
+      let hashBytes = Array(hash.prefix(8)) // Take first 8 bytes for Int64
+
+      // Convert bytes to Int64
+      var value: Int64 = 0
+      for byte in hashBytes {
+         value = value << 8
+         value = value | Int64(byte)
+      }
+
+      return value
    }
    
    func addSymptom(name: String, isBinary: Bool = false, onSuccess: @escaping () -> Void = {}) {

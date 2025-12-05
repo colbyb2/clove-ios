@@ -143,15 +143,22 @@ struct DailyLogDetailView: View {
     private var symptomsSection: some View {
         VStack(spacing: CloveSpacing.medium) {
             SectionHeaderView(title: "Symptoms", emoji: "🩹")
-            
+
             VStack(spacing: CloveSpacing.small) {
                 ForEach(log.symptomRatings, id: \.symptomId) { symptom in
-                    ProgressRatingView(
-                        value: symptom.rating,
-                        maxValue: 10,
-                        label: symptom.symptomName,
-                        color: symptomColor(for: symptom.rating)
-                    )
+                    if symptom.isBinary {
+                        BinarySymptomDisplayView(
+                            label: symptom.symptomName,
+                            isPresent: symptom.rating > 0
+                        )
+                    } else {
+                        ProgressRatingView(
+                            value: symptom.rating,
+                            maxValue: 10,
+                            label: symptom.symptomName,
+                            color: symptomColor(for: symptom.rating)
+                        )
+                    }
                 }
             }
         }
@@ -493,29 +500,75 @@ struct DailyLogDetailView: View {
     }
 }
 
+// MARK: - Binary Symptom Display View
+struct BinarySymptomDisplayView: View {
+    let label: String
+    let isPresent: Bool
+
+    var body: some View {
+        HStack(spacing: CloveSpacing.medium) {
+            // Symptom name
+            Text(label)
+                .font(CloveFonts.body())
+                .foregroundStyle(CloveColors.primaryText)
+                .fontWeight(.medium)
+
+            Spacer()
+
+            // Yes/No indicator
+            HStack(spacing: CloveSpacing.small) {
+                Image(systemName: isPresent ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(isPresent ? Theme.shared.accent : Color.gray)
+
+                Text(isPresent ? "Yes" : "No")
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(isPresent ? Theme.shared.accent : Color.gray)
+            }
+            .frame(minWidth: 60)
+            .padding(.horizontal, CloveSpacing.medium)
+            .padding(.vertical, CloveSpacing.small)
+            .background(
+                RoundedRectangle(cornerRadius: CloveCorners.small)
+                    .fill(isPresent ? Theme.shared.accent.opacity(0.1) : Color.gray.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CloveCorners.small)
+                            .stroke(isPresent ? Theme.shared.accent.opacity(0.3) : Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+            )
+        }
+        .padding(.horizontal, CloveSpacing.medium)
+        .padding(.vertical, CloveSpacing.small)
+        .background(
+            RoundedRectangle(cornerRadius: CloveCorners.small)
+                .fill(CloveColors.card)
+        )
+    }
+}
+
 // MARK: - Medication Adherence View
 struct MedicationAdherenceView: View {
     let adherence: [MedicationAdherence]
-    
+
     var body: some View {
         VStack(spacing: CloveSpacing.small) {
             ForEach(adherence.indices, id: \.self) { index in
                 let medication = adherence[index]
-                
+
                if !medication.isAsNeeded {
                    HStack(spacing: CloveSpacing.medium) {
                        // Status indicator
                        Image(systemName: medication.wasTaken ? "checkmark.circle.fill" : "circle")
                            .font(.system(size: 20))
                            .foregroundStyle(medication.wasTaken ? CloveColors.success : CloveColors.secondaryText)
-                       
+
                        // Medication info
                        VStack(alignment: .leading, spacing: 2) {
                            Text(medication.medicationName)
                                .font(CloveFonts.body())
                                .foregroundStyle(CloveColors.primaryText)
                                .fontWeight(.medium)
-                           
+
                            if medication.isAsNeeded || medication.medicationId == -1 {
                                Text(medication.medicationId == -1 ? "One-time" : "As needed")
                                    .font(CloveFonts.small())
@@ -528,9 +581,9 @@ struct MedicationAdherenceView: View {
                                    )
                            }
                        }
-                       
+
                        Spacer()
-                       
+
                        // Status text
                        Text(medication.wasTaken ? "Taken" : "Not taken")
                            .font(CloveFonts.small())
@@ -567,8 +620,10 @@ struct MedicationAdherenceView: View {
             isFlareDay: false,
             weather: "Sunny",
             symptomRatings: [
-                SymptomRating(symptomId: 1, symptomName: "Headache", rating: 3),
-                SymptomRating(symptomId: 2, symptomName: "Fatigue", rating: 6)
+                SymptomRating(symptomId: 1, symptomName: "Headache", rating: 3, isBinary: false),
+                SymptomRating(symptomId: 2, symptomName: "Fatigue", rating: 6, isBinary: false),
+                SymptomRating(symptomId: 3, symptomName: "Nausea", rating: 10, isBinary: true),
+                SymptomRating(symptomId: 4, symptomName: "Dizziness", rating: 0, isBinary: true)
             ]
         )
     )

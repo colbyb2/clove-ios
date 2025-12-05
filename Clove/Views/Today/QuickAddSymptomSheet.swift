@@ -13,6 +13,7 @@ struct QuickAddSymptomSheet: View {
     
     @Environment(\.dismiss) private var dismiss
     @State private var symptomName: String = ""
+    @State private var isBinary: Bool = false
     @FocusState private var isTextFieldFocused: Bool
 
     var body: some View {
@@ -71,6 +72,59 @@ struct QuickAddSymptomSheet: View {
                             }
                     }
 
+                    // Rating scale toggle
+                    VStack(alignment: .leading, spacing: CloveSpacing.small) {
+                        Text("Rating Scale")
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            .foregroundStyle(CloveColors.secondaryText)
+
+                        HStack(spacing: CloveSpacing.small) {
+                            Button(action: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    isBinary = false
+                                }
+                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                impactFeedback.impactOccurred()
+                            }) {
+                                HStack(spacing: CloveSpacing.small) {
+                                    Text("0-10")
+                                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .foregroundStyle(!isBinary ? .white : CloveColors.primaryText)
+                                .background(
+                                    RoundedRectangle(cornerRadius: CloveCorners.medium)
+                                        .fill(!isBinary ? Theme.shared.accent : CloveColors.background)
+                                )
+                            }
+
+                            Button(action: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    isBinary = true
+                                }
+                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                impactFeedback.impactOccurred()
+                            }) {
+                                HStack(spacing: CloveSpacing.small) {
+                                    Text("Yes/No")
+                                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .foregroundStyle(isBinary ? .white : CloveColors.primaryText)
+                                .background(
+                                    RoundedRectangle(cornerRadius: CloveCorners.medium)
+                                        .fill(isBinary ? Theme.shared.accent : CloveColors.background)
+                                )
+                            }
+                        }
+
+                        Text(isBinary ? "Log a 'Yes' or 'No' response for today" : "Rate the symptom on a 0-10 scale for today")
+                            .font(.caption)
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
+
                     // Save button
                     Button(action: {
                         saveSymptom()
@@ -121,7 +175,7 @@ struct QuickAddSymptomSheet: View {
                 isTextFieldFocused = true
             }
         }
-        .presentationDetents([.height(400)])
+        .presentationDetents([.height(520)])
         .presentationDragIndicator(.visible)
     }
 
@@ -135,7 +189,12 @@ struct QuickAddSymptomSheet: View {
 
         // Generate consistent hash-based ID from symptom name
         let symptomId = hashSymptomName(trimmedName)
-        viewModel.logData.symptomRatings.append(SymptomRatingVM(symptomId: symptomId, symptomName: trimmedName))
+        viewModel.logData.symptomRatings.append(SymptomRatingVM(
+            symptomId: symptomId,
+            symptomName: trimmedName,
+            ratingDouble: isBinary ? 0 : 5,
+            isBinary: isBinary
+        ))
 
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)

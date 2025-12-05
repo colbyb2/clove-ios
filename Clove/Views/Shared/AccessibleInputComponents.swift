@@ -3,32 +3,15 @@ import SwiftUI
 // MARK: - Accessible Rating Input
 struct AccessibleRatingInput: View {
     @Binding var value: Double
-    let label: String
-    let emoji: String?
-    let minValue: Int
-    let maxValue: Int
-    let step: Int
-    let showAlternativeControls: Bool
+    var label: String
+    var emoji: String? = nil
+    var minValue: Int = 0
+    var maxValue: Int = 10
+    var step: Int = 1
+    var showAlternativeControls: Bool = true
+    var onDelete: (() -> Void)? = nil
     
     @AppStorage(Constants.USE_SLIDER_INPUT) private var useSliderInput = true
-    
-    init(
-        value: Binding<Double>,
-        label: String,
-        emoji: String? = nil,
-        minValue: Int = 0,
-        maxValue: Int = 10,
-        step: Int = 1,
-        showAlternativeControls: Bool = true
-    ) {
-        self._value = value
-        self.label = label
-        self.emoji = emoji
-        self.minValue = minValue
-        self.maxValue = maxValue
-        self.step = step
-        self.showAlternativeControls = showAlternativeControls
-    }
     
     var body: some View {
         VStack(spacing: CloveSpacing.medium) {
@@ -42,6 +25,22 @@ struct AccessibleRatingInput: View {
                     }
                     Text(label)
                         .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    
+                    if let onDelete {
+                        Menu {
+                            Button {
+                                onDelete()
+                            } label: {
+                                HStack(spacing: 0) {
+                                    Image(systemName: "trash.circle")
+                                    Text("Delete")
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                                .foregroundStyle(Color.gray)
+                        }
+                    }
                 }
                 
                 Spacer()
@@ -334,6 +333,7 @@ struct BinarySymptomInput: View {
     @Binding var value: Double
     let label: String
     let emoji: String?
+    var onDelete: (() -> Void)? = nil
 
     private var isPresent: Bool { value > 0 }
 
@@ -347,6 +347,23 @@ struct BinarySymptomInput: View {
                 }
                 Text(label)
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
+                
+                if let onDelete {
+                    Menu {
+                        Button {
+                            onDelete()
+                        } label: {
+                            HStack(spacing: 0) {
+                                Image(systemName: "trash.circle")
+                                Text("Delete")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                            .foregroundStyle(Color.gray)
+                    }
+                }
+
                 
                 Spacer()
             }
@@ -416,13 +433,15 @@ fileprivate struct ContentPreview: View {
                 value: $rating,
                 label: "Pain Level",
                 emoji: "🩹",
-                maxValue: 10
+                maxValue: 10,
+                onDelete: {}
             )
 
             BinarySymptomInput(
                 value: $binaryValue,
                 label: "Headache",
-                emoji: "🩹"
+                emoji: "🩹",
+                onDelete: {}
             )
 
             PlusMinusControls(
