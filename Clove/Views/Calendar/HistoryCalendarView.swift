@@ -31,8 +31,7 @@ struct HistoryCalendarView: View {
              if let log = viewModel.log(for: date) {
                  DailyLogDetailView(log: log)
              } else {
-                 Text("No log available for this day.")
-                     .padding()
+                 EmptyLogView(date: date)
              }
          }
 
@@ -361,6 +360,74 @@ struct RoundedCorner: Shape {
          cornerRadii: CGSize(width: radius, height: radius)
       )
       return Path(path.cgPath)
+   }
+}
+
+struct EmptyLogView: View {
+   let date: Date
+   @Environment(\.dismiss) private var dismiss
+
+   var body: some View {
+      VStack(spacing: 24) {
+         Spacer()
+
+         VStack(spacing: 12) {
+            Image(systemName: "calendar.badge.exclamationmark")
+               .font(.system(size: 48))
+               .foregroundStyle(.secondary)
+
+            Text(formattedDate)
+               .font(.title2)
+               .fontWeight(.semibold)
+
+            Text("No log recorded for this day")
+               .font(.body)
+               .foregroundStyle(.secondary)
+         }
+
+         VStack(spacing: 12) {
+            Button(action: {
+               createLogForDay()
+            }) {
+               Text("Create Log")
+                  .font(.headline)
+                  .foregroundColor(.white)
+                  .frame(maxWidth: .infinity)
+                  .padding()
+                  .background(Theme.shared.accent)
+                  .cornerRadius(12)
+            }
+            .padding(.horizontal, 32)
+
+            Button("Dismiss") {
+               dismiss()
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+         }
+
+         Spacer()
+      }
+      .padding()
+      .presentationDetents([.medium])
+   }
+
+   var formattedDate: String {
+      let formatter = DateFormatter()
+      formatter.dateStyle = .long
+      return formatter.string(from: date)
+   }
+
+   private func createLogForDay() {
+      // Navigate to Today tab and set the date for editing
+      NavigationCoordinator.shared.editDayInTodayView(date: date)
+
+      // Dismiss this view
+      dismiss()
+
+      // Haptic feedback
+      let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+      impactFeedback.impactOccurred()
    }
 }
 
