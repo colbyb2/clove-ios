@@ -30,7 +30,14 @@ struct HistoryCalendarView: View {
                      .padding()
              }
          }
-         
+
+         // Color legend (only show when filtering)
+         if viewModel.selectedCategory != .allData {
+            ColorLegendView(category: viewModel.selectedCategory, trackedSymptoms: viewModel.trackedSymptoms)
+               .padding(.horizontal)
+               .padding(.bottom)
+         }
+
          Spacer()
       }
       .background(CloveColors.background)
@@ -150,6 +157,191 @@ struct HistoryCalendarView: View {
       }
       
       return .clear
+   }
+}
+
+struct ColorLegendView: View {
+   let category: TrackingCategory
+   let trackedSymptoms: [TrackedSymptom]
+
+   var body: some View {
+      VStack(spacing: 8) {
+         Text("Legend")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+         switch category {
+         case .mood:
+            GradientLegendView(
+               colors: [
+                  Color(red: 0.85, green: 0.25, blue: 0.35).opacity(0.9),
+                  Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.85),
+                  Color(red: 1.0, green: 0.75, blue: 0.3).opacity(0.8),
+                  Color(red: 0.3, green: 0.72, blue: 0.65).opacity(0.85),
+                  Color(red: 0.2, green: 0.78, blue: 0.55).opacity(0.9)
+               ],
+               labels: ["Worst", "Best"]
+            )
+
+         case .pain:
+            GradientLegendView(
+               colors: [
+                  Color(red: 0.35, green: 0.75, blue: 0.85).opacity(0.65),
+                  Color(red: 0.4, green: 0.85, blue: 0.65).opacity(0.7),
+                  Color(red: 1.0, green: 0.8, blue: 0.4).opacity(0.75),
+                  Color(red: 0.95, green: 0.52, blue: 0.2).opacity(0.88),
+                  Color(red: 0.9, green: 0.2, blue: 0.25).opacity(0.92)
+               ],
+               labels: ["None", "Severe"]
+            )
+
+         case .energy:
+            GradientLegendView(
+               colors: [
+                  Color(red: 0.35, green: 0.35, blue: 0.55).opacity(0.85),
+                  Color(red: 0.5, green: 0.5, blue: 0.7).opacity(0.7),
+                  Color(red: 0.65, green: 0.6, blue: 0.85).opacity(0.75),
+                  Color(red: 0.25, green: 0.7, blue: 0.95).opacity(0.85),
+                  Color(red: 1.0, green: 0.85, blue: 0.2).opacity(0.9)
+               ],
+               labels: ["Exhausted", "Energized"]
+            )
+
+         case .meals:
+            BinaryLegendView(
+               noColor: .clear,
+               yesColor: Theme.shared.accent.opacity(0.75),
+               noLabel: "None",
+               yesLabel: "Logged"
+            )
+
+         case .activities:
+            BinaryLegendView(
+               noColor: .clear,
+               yesColor: Theme.shared.accent.opacity(0.75),
+               noLabel: "None",
+               yesLabel: "Logged"
+            )
+
+         case .medications:
+            BinaryLegendView(
+               noColor: .clear,
+               yesColor: Theme.shared.accent.opacity(0.75),
+               noLabel: "None",
+               yesLabel: "Logged"
+            )
+
+         case .symptom(let id, _):
+            // Check if binary symptom
+            if let symptom = trackedSymptoms.first(where: { $0.id == id }), symptom.isBinary {
+               BinaryLegendView(
+                  noColor: Color(red: 0.35, green: 0.85, blue: 0.5).opacity(0.7),
+                  yesColor: Color(red: 0.92, green: 0.22, blue: 0.22).opacity(0.9),
+                  noLabel: "Absent",
+                  yesLabel: "Present"
+               )
+            } else {
+               GradientLegendView(
+                  colors: [
+                     Color(red: 0.35, green: 0.85, blue: 0.5).opacity(0.65),
+                     Color(red: 0.3, green: 0.78, blue: 0.7).opacity(0.7),
+                     Color(red: 1.0, green: 0.85, blue: 0.35).opacity(0.75),
+                     Color(red: 1.0, green: 0.6, blue: 0.25).opacity(0.88),
+                     Color(red: 0.92, green: 0.22, blue: 0.22).opacity(0.92)
+                  ],
+                  labels: ["None", "Severe"]
+               )
+            }
+
+         case .allData:
+            EmptyView()
+         }
+      }
+   }
+}
+
+struct GradientLegendView: View {
+   let colors: [Color]
+   let labels: [String]
+
+   var body: some View {
+      VStack(spacing: 6) {
+         HStack(spacing: 0) {
+            ForEach(0..<colors.count, id: \.self) { index in
+               Rectangle()
+                  .fill(colors[index])
+                  .frame(height: 20)
+                  .cornerRadius(index == 0 ? 4 : 0, corners: [.topLeft, .bottomLeft])
+                  .cornerRadius(index == colors.count - 1 ? 4 : 0, corners: [.topRight, .bottomRight])
+            }
+         }
+         .frame(maxWidth: 300)
+
+         HStack {
+            Text(labels[0])
+               .font(.caption2)
+               .foregroundStyle(.secondary)
+            Spacer()
+            Text(labels[1])
+               .font(.caption2)
+               .foregroundStyle(.secondary)
+         }
+         .frame(maxWidth: 300)
+      }
+   }
+}
+
+struct BinaryLegendView: View {
+   let noColor: Color
+   let yesColor: Color
+   let noLabel: String
+   let yesLabel: String
+
+   var body: some View {
+      HStack(spacing: 16) {
+         HStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 4)
+               .fill(noColor)
+               .overlay(
+                  RoundedRectangle(cornerRadius: 4)
+                     .stroke(Color.secondary.opacity(0.3), lineWidth: noColor == .clear ? 1 : 0)
+               )
+               .frame(width: 24, height: 20)
+            Text(noLabel)
+               .font(.caption)
+               .foregroundStyle(.secondary)
+         }
+
+         HStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 4)
+               .fill(yesColor)
+               .frame(width: 24, height: 20)
+            Text(yesLabel)
+               .font(.caption)
+               .foregroundStyle(.secondary)
+         }
+      }
+   }
+}
+
+// Helper extension for corner radius on specific corners
+extension View {
+   func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+      clipShape(RoundedCorner(radius: radius, corners: corners))
+   }
+}
+
+struct RoundedCorner: Shape {
+   var radius: CGFloat = .infinity
+   var corners: UIRectCorner = .allCorners
+
+   func path(in rect: CGRect) -> Path {
+      let path = UIBezierPath(
+         roundedRect: rect,
+         byRoundingCorners: corners,
+         cornerRadii: CGSize(width: radius, height: radius)
+      )
+      return Path(path.cgPath)
    }
 }
 
