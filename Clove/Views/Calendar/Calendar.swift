@@ -52,19 +52,28 @@ struct CalendarView: View {
                   
                   Text("\(day)")
                      .frame(maxWidth: .infinity, minHeight: 40)
+                     .foregroundColor(textColor(for: record, isSelected: isSelected))
                      .background {
-                        if let record {
-                           Circle()
-                              .fill(record.color)
-                              .frame(width: 6, height: 6)
-                              .offset(y: 13)
-                        } else if isSelected {
-                           Circle().fill(theme.primary)
-                        } else if isToday {
-                           Circle().stroke(theme.todayBorder, lineWidth: 1.5)
+                        ZStack {
+                           // Heatmap background
+                           if let record {
+                              RoundedRectangle(cornerRadius: 8)
+                                 .fill(record.color)
+                           }
+
+                           // Today border
+                           if isToday {
+                              RoundedRectangle(cornerRadius: 8)
+                                 .stroke(theme.todayBorder, lineWidth: 2)
+                           }
+
+                           // Selection indicator
+                           if isSelected {
+                              RoundedRectangle(cornerRadius: 8)
+                                 .stroke(theme.primary, lineWidth: 2.5)
+                           }
                         }
                      }
-                     .foregroundColor(isSelected ? theme.selectedTextColor : theme.textColor)
                      .onTapGesture {
                         withAnimation {
                            selectedDay = date
@@ -128,6 +137,16 @@ struct CalendarView: View {
       if let newDate = calendar.date(byAdding: .month, value: value, to: selectedDate) {
          selectedDate = newDate
       }
+   }
+
+   func textColor(for record: CalendarRecord?, isSelected: Bool) -> Color {
+      // If there's a colored heatmap background, use white text for better contrast
+      if let record = record {
+         // Check if the color is likely to be dark/saturated
+         return .white
+      }
+      // For days without data, use theme colors
+      return isSelected ? theme.selectedTextColor : theme.textColor
    }
 }
 

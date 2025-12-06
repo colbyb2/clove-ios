@@ -422,10 +422,8 @@ struct DailyLogDetailView: View {
     
     private func moodColor(for mood: Int) -> Color {
         switch mood {
-        case 8...10: return CloveColors.green
-        case 6...7: return CloveColors.blue
-        case 4...5: return CloveColors.yellow
-        case 2...3: return CloveColors.orange
+        case 7...10: return CloveColors.green
+        case 4...6: return CloveColors.blue
         default: return CloveColors.red
         }
     }
@@ -435,17 +433,14 @@ struct DailyLogDetailView: View {
         case 8...10: return CloveColors.red
         case 5...7: return CloveColors.orange
         case 3...4: return CloveColors.blue
-        case 1...2: return CloveColors.green
         default: return CloveColors.green
         }
     }
     
     private func energyColor(for energy: Int) -> Color {
         switch energy {
-        case 8...10: return CloveColors.green
-        case 5...7: return CloveColors.blue
-        case 3...4: return CloveColors.yellow
-        case 1...2: return CloveColors.orange
+        case 7...10: return CloveColors.green
+        case 4...6: return CloveColors.blue
         default: return CloveColors.red
         }
     }
