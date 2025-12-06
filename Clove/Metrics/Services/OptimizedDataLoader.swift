@@ -177,17 +177,19 @@ extension OptimizedDataLoader {
 // MARK: - Specialized Query Methods
 
 extension OptimizedDataLoader {
-    /// Get available symptoms across all logs (cached)
-    func getAvailableSymptoms() async -> Set<String> {
-        let logs = await getAllLogsForSession()
-        var symptoms = Set<String>()
-        
+    /// Get available symptoms across all logs (cached), returns [Symptom name : isBinary]
+    func getAvailableSymptoms() async -> [String: Bool] {
+        let logs = await getAllLogsForSession().sorted { $0.date > $1.date }
+        var symptoms: [String:Bool] = [:]
+
         for log in logs {
             for symptomRating in log.symptomRatings {
-                symptoms.insert(symptomRating.symptomName)
+                if symptoms[symptomRating.symptomName] == nil {
+                    symptoms[symptomRating.symptomName] = symptomRating.isBinary
+                }
             }
         }
-        
+
         return symptoms
     }
     

@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - Data Type Definitions
 
 /// Defines the type of data a metric represents
-enum MetricDataType: Sendable {
+enum MetricDataType: Sendable, Equatable {
     case continuous(range: ClosedRange<Double>)  // 1-10 scale
     case binary                                 // 0/1, yes/no
     case categorical(values: [String])           // weather types, bowel movement types

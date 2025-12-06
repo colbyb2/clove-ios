@@ -169,12 +169,12 @@ class MetricRegistry {
         // Generate metrics for tracked symptoms
         let symptomsRepo = SymptomsRepo.shared
         let dataLoader = OptimizedDataLoader.shared
-        let symptoms = await dataLoader.getAvailableSymptoms()
+        let symptoms: [String:Bool] = await dataLoader.getAvailableSymptoms()
         let trackedSymptoms = symptomsRepo.getTrackedSymptoms()
-        
-        return symptoms.map { symptomName in
+
+        return symptoms.map { (symptomName, isBinary) in
             let isActive = trackedSymptoms.filter( { $0.name.lowercased() == symptomName.lowercased() }).count > 0
-            return SymptomMetricProvider(symptomName: symptomName, isActive: isActive)
+            return SymptomMetricProvider(symptomName: symptomName, isActive: isActive, isBinary: isBinary)
         }
     }
     

@@ -33,6 +33,8 @@ struct ChartBuilder: View {
                     BarChart()
                 case .stackedBar:
                     StackedBarChart()
+                case .scatter:
+                    ScatterChart()
                 default:
                     LineChart()
                 }
@@ -48,11 +50,75 @@ struct ChartBuilder: View {
     }
     
     @ViewBuilder
+    func ScatterChart() -> some View {
+        Chart(data) { point in
+            PointMark(x: .value("Date", point.date),
+                      y: .value("Value", point.value)
+            )
+            .foregroundStyle(metric.dataType == .binary ? (point.value < 5 ? CloveColors.red : CloveColors.green) : Theme.shared.accent)
+            .symbolSize(14)
+            .opacity(animationProgress)
+            
+            if point.id == selectedPoint?.id {
+                RuleMark(x: .value("Date", selectedPoint!.date))
+                    .lineStyle(.init(lineWidth: 2, miterLimit: 2, dash: [2], dashPhase: 5))
+                    .foregroundStyle(style.primary)
+                    .annotation(position: .top) {
+                        if let selectedPoint, config.showAnnotation {
+                            Annotation(selectedPoint: selectedPoint)
+                        }
+                    }
+            }
+        }
+        .padding(10)
+        .chartYScale(domain: range ?? 0...1)
+        .chartXSelection(value: $selectedDate)
+        .chartYAxis {
+            if metric.dataType != .binary {
+                AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) { value in
+                    AxisGridLine(
+                        stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 3])
+                    )
+                    .foregroundStyle(Color.secondary.opacity(0.2))
+                    
+                    if let v = value.as(Double.self) {
+                        AxisValueLabel() {
+                            Text(metric.formatValue(v))
+                                .font(.caption)
+                                .foregroundStyle(style.text)
+                        }
+                    }
+                }
+            }
+        }
+        .chartXAxis {
+            AxisMarks(values: getXAxisMarks()) { value in
+                AxisGridLine(
+                    stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 3])
+                )
+                .foregroundStyle(Color.secondary.opacity(0.2))
+                
+                if let d = value.as(Date.self) {
+                    AxisValueLabel() {
+                        Text(formatDate(date: d))
+                            .font(.caption)
+                            .foregroundStyle(style.text)
+                    }
+                }
+            }
+        }
+        .chartPlotStyle { plotArea in
+            plotArea
+                .padding(.leading, 5)
+        }
+    }
+    
+    @ViewBuilder
     func LineChart() -> some View {
         Chart(data) { point in
             LineMark(
                 x: .value("Date", point.date),
-                y: .value("Value", point.value)
+                y: .value("Value", point.value )
             )
             .interpolationMethod(timePeriod == .week ? .catmullRom : .linear)
             .foregroundStyle(style.primary)
@@ -61,7 +127,7 @@ struct ChartBuilder: View {
             
             PointMark(
                 x: .value("Date", point.date),
-                y: .value("Value", point.value)
+                y: .value("Value", point.value )
             )
             .foregroundStyle(style.primary)
             .symbolSize(selectedPoint?.id == point.id ? 120 : 0)
@@ -124,24 +190,26 @@ struct ChartBuilder: View {
         Chart(data) { point in
             BarMark(
                 x: .value("Date", point.date),
-                y: .value("Value", point.value)
+                y: .value("", 1)
             )
-            .foregroundStyle(style.primary)
+            .foregroundStyle(point.value < 5 ? Color.gray : Theme.shared.accent)
             .opacity((selectedPoint == nil || point.id == selectedPoint?.id) ? animationProgress : 0.3)
         }
         .chartXSelection(value: $selectedDate)
         .chartYAxis {
-            AxisMarks(position: .leading, values: getYAxisMarks()) { value in
-                AxisGridLine(
-                    stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 3])
-                )
-                .foregroundStyle(Color.secondary.opacity(0.2))
-                
-                if let v = value.as(Double.self) {
-                    AxisValueLabel() {
-                        Text(metric.formatValue(v))
-                            .font(.caption)
-                            .foregroundStyle(style.text)
+            if metric.dataType != .binary {
+                AxisMarks(position: .leading, values: getYAxisMarks()) { value in
+                    AxisGridLine(
+                        stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 3])
+                    )
+                    .foregroundStyle(Color.secondary.opacity(0.2))
+                    
+                    if let v = value.as(Double.self) {
+                        AxisValueLabel() {
+                            Text(metric.formatValue(v))
+                                .font(.caption)
+                                .foregroundStyle(style.text)
+                        }
                     }
                 }
             }
@@ -545,6 +613,8 @@ struct MetricChart: View {
                     .font(.system(.caption2, design: .rounded))
                     .foregroundStyle(CloveColors.secondaryText)
                     .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
             }
             
             // Visual indicator

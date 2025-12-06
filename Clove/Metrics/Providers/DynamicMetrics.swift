@@ -9,18 +9,20 @@ struct SymptomMetricProvider: MetricProvider {
     
     var id: String { "symptom_\(symptomName.lowercased().replacingOccurrences(of: " ", with: "_"))" }
     var displayName: String { symptomName }
-    var description: String { "0-10 scale tracking \(symptomName.lowercased()) severity" }
+    var description: String { "Tracking \(symptomName.lowercased()) severity" }
     let icon = "🩹"
     let category: MetricCategory = .symptoms
-    let dataType: MetricDataType = .continuous(range: 0...10)
-    let chartType: MetricChartType = .line
+    var dataType: MetricDataType = .continuous(range: 0...10)
+    var chartType: MetricChartType = .line
     let valueRange: ClosedRange<Double>? = 0...10
     
     private let dataLoader = OptimizedDataLoader.shared
     
-    init(symptomName: String, isActive: Bool = true) {
+    init(symptomName: String, isActive: Bool = true, isBinary: Bool = false) {
         self.symptomName = symptomName
         self.isActive = isActive
+        self.dataType = isBinary ? .binary : .continuous(range: 0...10)
+        self.chartType = isBinary ? .scatter : .line
     }
     
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
@@ -45,7 +47,12 @@ struct SymptomMetricProvider: MetricProvider {
     }
     
     func formatValue(_ value: Double) -> String {
-        return String(Int(value.rounded()))
+        switch dataType {
+        case .binary:
+            return value < 5 ? "❌" : "✅"
+        default:
+            return String(Int(value.rounded()))
+        }
     }
 }
 
