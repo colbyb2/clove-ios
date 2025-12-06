@@ -5,9 +5,9 @@ struct CalendarView: View {
    var theme: CalendarTheme = .defaultTheme
    var records: [Date: CalendarRecord] = [:]
    var onDaySelected: (Date) -> Void = { _ in }
-   
+   @Binding var selectedDate: Date
+
    let calendar = Calendar.current
-   @State private var selectedDate = Date()
    @State private var selectedDay: Date? = nil
    @GestureState private var dragOffset: CGSize = .zero
    
@@ -173,5 +173,13 @@ extension CalendarTheme {
 }
 
 #Preview {
-   CalendarView()
+   struct PreviewWrapper: View {
+      @State private var selectedDate = Date()
+
+      var body: some View {
+         CalendarView(selectedDate: $selectedDate)
+      }
+   }
+
+   return PreviewWrapper()
 }

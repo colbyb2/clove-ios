@@ -2,7 +2,8 @@ import SwiftUI
 
 struct HistoryCalendarView: View {
    @State private var viewModel = HistoryCalendarViewModel()
-   
+   @State private var currentMonth = Date()
+
    var body: some View {
       VStack(spacing: 0) {
          
@@ -13,11 +14,15 @@ struct HistoryCalendarView: View {
          )
          .padding(.horizontal)
          
-         CalendarView(records: viewModel.logsByDate.mapValues({ log in
-            return CalendarRecord(color: getLogColor(log: log))
-         }), onDaySelected: { date in
-            viewModel.selectedDate = date
-         })
+         CalendarView(
+            records: viewModel.logsByDate.mapValues({ log in
+               return CalendarRecord(color: getLogColor(log: log))
+            }),
+            onDaySelected: { date in
+               viewModel.selectedDate = date
+            },
+            selectedDate: $currentMonth
+         )
          .background(.ultraThinMaterial)
          .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
          .padding()
@@ -42,6 +47,20 @@ struct HistoryCalendarView: View {
       }
       .background(CloveColors.background)
       .navigationTitle("History")
+      .toolbar {
+         ToolbarItem(placement: .navigationBarTrailing) {
+            // Only show "Today" button when not viewing current month
+            if !Calendar.current.isDate(currentMonth, equalTo: Date(), toGranularity: .month) {
+               Button("Today") {
+                  withAnimation {
+                     currentMonth = Date()
+                  }
+               }
+               .font(.subheadline)
+               .foregroundStyle(Theme.shared.accent)
+            }
+         }
+      }
       .onAppear {
          viewModel.loadData()
          if TutorialManager.shared.startTutorial(Tutorials.CalendarView) == .Failure {
