@@ -5,12 +5,13 @@ import SwiftUI
 struct MetricExplorer: View {
     @State private var viewModel = MetricExplorerViewModel()
     let onMetricSelected: (String) -> Void // Pass metric ID instead of SelectableMetric
-    
+
     @Environment(\.dismiss) private var dismiss
     private let timePeriodManager = TimePeriodManager.shared
     @FocusState private var isSearchFocused: Bool
-    
+
     @AppStorage(Constants.HIDE_INACTIVE_METRICS) var hideInactiveMetrics: Bool = false
+    @State private var recentMetrics: [String] = []
     
     var body: some View {
         NavigationView {
@@ -33,6 +34,7 @@ struct MetricExplorer: View {
             .navigationBarTitleDisplayMode(.large)
             .task {
                 await viewModel.refresh()
+                loadRecentMetrics()
             }
         }
     }
@@ -156,12 +158,17 @@ struct MetricExplorer: View {
     private var metricsContent: some View {
         ScrollView {
             VStack(spacing: CloveSpacing.large) {
+                // Recent metrics section
+                if !recentMetricsToDisplay.isEmpty {
+                    recentMetricsSection
+                }
+
                 // Performance indicator
                 performanceIndicator
-                
+
                 // Categorized metrics section
                 categorizedMetricsSection
-                
+
                 // Empty state
                 if viewModel.filteredMetrics().isEmpty {
                     emptyStateView
@@ -225,6 +232,7 @@ struct MetricExplorer: View {
                         category: category,
                         metrics: metrics,
                         onMetricSelected: { metricId in
+                            saveRecentMetric(metricId)
                             onMetricSelected(metricId)
                             dismiss()
                         }
@@ -239,12 +247,12 @@ struct MetricExplorer: View {
             Image(systemName: "chart.bar.doc.horizontal")
                 .font(.system(size: 48))
                 .foregroundStyle(Theme.shared.accent.opacity(0.5))
-            
+
             VStack(spacing: CloveSpacing.small) {
                 Text("No metrics found for last \(TimePeriodManager.shared.currentPeriodDisplayText)")
                     .font(.system(.title2, design: .rounded).weight(.semibold))
                     .foregroundStyle(CloveColors.primaryText)
-                
+
                 if !viewModel.searchText.isEmpty {
                     Text("Try adjusting your search or filter")
                         .font(CloveFonts.body())
@@ -261,6 +269,79 @@ struct MetricExplorer: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, CloveSpacing.xlarge)
     }
+
+    // MARK: - Recent Metrics Section
+
+    private var recentMetricsSection: some View {
+        VStack(alignment: .leading, spacing: CloveSpacing.medium) {
+            HStack {
+                Image(systemName: "clock.fill")
+                    .font(.caption)
+                    .foregroundStyle(Theme.shared.accent)
+                Text("Recent")
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .foregroundStyle(CloveColors.primaryText)
+
+                Spacer()
+
+                Button(action: clearRecentMetrics) {
+                    Text("Clear")
+                        .font(CloveFonts.small())
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+                .buttonStyle(.plain)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: CloveSpacing.small) {
+                    ForEach(recentMetricsToDisplay, id: \.id) { metric in
+                        RecentMetricChip(metric: metric) {
+                            saveRecentMetric(metric.id)
+                            onMetricSelected(metric.id)
+                            dismiss()
+                        }
+                    }
+                }
+            }
+            .scrollClipDisabled()
+        }
+        .padding(.top, CloveSpacing.medium)
+    }
+
+    // MARK: - Helper Properties & Functions
+
+    private var recentMetricsToDisplay: [MetricSummary] {
+        // Get up to 4 most recent metrics that are available in current summaries
+        recentMetrics.prefix(4).compactMap { metricId in
+            viewModel.metricSummaries.first { $0.id == metricId }
+        }
+    }
+
+    private func loadRecentMetrics() {
+        if let data = UserDefaults.standard.array(forKey: Constants.RECENT_METRICS) as? [String] {
+            recentMetrics = data
+        }
+    }
+
+    private func saveRecentMetric(_ metricId: String) {
+        // Remove if already exists to avoid duplicates
+        recentMetrics.removeAll { $0 == metricId }
+        // Add to front
+        recentMetrics.insert(metricId, at: 0)
+        // Keep only last 4
+        if recentMetrics.count > 4 {
+            recentMetrics = Array(recentMetrics.prefix(4))
+        }
+        // Save to UserDefaults
+        UserDefaults.standard.set(recentMetrics, forKey: Constants.RECENT_METRICS)
+    }
+
+    private func clearRecentMetrics() {
+        withAnimation {
+            recentMetrics = []
+        }
+        UserDefaults.standard.removeObject(forKey: Constants.RECENT_METRICS)
+    }
 }
 
 // MARK: - Supporting Views
@@ -269,7 +350,7 @@ struct MetricCategoryChip: View {
     let title: String
     let isSelected: Bool
     let onTap: () -> Void
-    
+
     var body: some View {
         Button(action: onTap) {
             Text(title)
@@ -283,6 +364,38 @@ struct MetricCategoryChip: View {
                         .fill(isSelected ? Theme.shared.accent : CloveColors.card)
                         .shadow(color: .gray.opacity(0.8), radius: 1)
                 )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct RecentMetricChip: View {
+    let metric: MetricSummary
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: CloveSpacing.small) {
+                Text(metric.icon)
+                    .font(.system(size: 16))
+
+                Text(metric.displayName)
+                    .font(CloveFonts.small())
+                    .fontWeight(.medium)
+                    .foregroundStyle(CloveColors.primaryText)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, CloveSpacing.medium)
+            .padding(.vertical, CloveSpacing.small)
+            .background(
+                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                    .fill(CloveColors.card)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CloveCorners.medium)
+                            .stroke(Theme.shared.accent.opacity(0.3), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+            )
         }
         .buttonStyle(PlainButtonStyle())
     }
