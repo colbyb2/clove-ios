@@ -10,6 +10,8 @@ class CrossReferenceViewModel {
     var suggestedPairs: [MetricPair] = []
     var availableMetrics: [any MetricProvider] = []
     var errorMessage: String?
+    var calculationStep: String?
+    var currentCalculationStepIndex: Int = 0
     
     private let metricRegistry = MetricRegistry.shared
     private let timePeriodManager = TimePeriodManager.shared
@@ -24,13 +26,15 @@ class CrossReferenceViewModel {
     
     func calculateCorrelation(primary: any MetricProvider, secondary: any MetricProvider) {
         guard primary.id != secondary.id else {
-            errorMessage = "Please select two different metrics"
+            errorMessage = "Cannot analyze the same metric against itself. Please choose two different metrics to compare."
             return
         }
-        
+
         isCalculating = true
         errorMessage = nil
-        
+        currentCalculationStepIndex = 0
+        calculationStep = "Starting analysis..."
+
         Task { @MainActor in
             do {
                 let analysis = try await performCorrelationAnalysis(primary: primary, secondary: secondary)
@@ -38,9 +42,17 @@ class CrossReferenceViewModel {
                 self.primaryMetric = primary
                 self.secondaryMetric = secondary
             } catch {
-                self.errorMessage = "Failed to calculate correlation: \(error.localizedDescription)"
+                // Use the localized description from the error
+                if let localizedError = error as? LocalizedError,
+                   let description = localizedError.errorDescription {
+                    self.errorMessage = description
+                } else {
+                    self.errorMessage = error.localizedDescription
+                }
             }
             self.isCalculating = false
+            self.calculationStep = nil
+            self.currentCalculationStepIndex = 0
         }
     }
     
@@ -60,7 +72,7 @@ class CrossReferenceViewModel {
             }
         } else {
             await MainActor.run {
-                self.errorMessage = "Selected metric not found"
+                self.errorMessage = "Unable to load the selected metric. Please try again or choose a different metric."
             }
         }
     }
@@ -102,11 +114,17 @@ class CrossReferenceViewModel {
     
     private func performCorrelationAnalysis(primary: any MetricProvider, secondary: any MetricProvider) async throws -> CorrelationAnalysis {
         let period = timePeriodManager.selectedPeriod
-        
-        // Get data for both metrics using their built-in methods
+
+        // Step 1: Fetching data
+        await updateCalculationStep(index: 0, message: "Fetching data for \(primary.displayName)...")
         let primaryDataPoints = await primary.getDataPoints(for: period)
+
+        await updateCalculationStep(index: 0, message: "Fetching data for \(secondary.displayName)...")
         let secondaryDataPoints = await secondary.getDataPoints(for: period)
         
+        // Step 2: Processing data
+        await updateCalculationStep(index: 1, message: "Processing and aligning data points...")
+
         // Pre-aggregate count-based metrics (like bowel movements) by day
         let primaryData: [(Date, Double)]
         if case .count = primary.dataType {
@@ -114,27 +132,31 @@ class CrossReferenceViewModel {
         } else {
             primaryData = primaryDataPoints.map { ($0.date, $0.value) }
         }
-        
+
         let secondaryData: [(Date, Double)]
         if case .count = secondary.dataType {
             secondaryData = aggregateCountData(secondaryDataPoints)
         } else {
             secondaryData = secondaryDataPoints.map { ($0.date, $0.value) }
         }
-        
+
         // Align data points by date
         let alignedData = alignDataPoints(primary: primaryData, secondary: secondaryData)
         
         guard alignedData.count >= 3 else {
             throw CorrelationError.insufficientData
         }
-        
-        // Calculate correlation coefficient
+
+        // Step 3: Calculating correlation
+        await updateCalculationStep(index: 2, message: "Calculating Pearson correlation coefficient...")
+
         let coefficient = calculatePearsonCorrelation(alignedData)
         let pValue = calculatePValue(alignedData, coefficient: coefficient)
         let significance = 1 - pValue
-        
-        // Generate insights
+
+        // Step 4: Generating insights
+        await updateCalculationStep(index: 3, message: "Generating insights and patterns...")
+
         let insights = generateCorrelationInsights(
             primaryMetric: primary,
             secondaryMetric: secondary,
@@ -317,5 +339,13 @@ class CrossReferenceViewModel {
     
     private func savePairsToUserDefaults() {
         // Save to UserDefaults in a real implementation
+    }
+
+    @MainActor
+    private func updateCalculationStep(index: Int, message: String) async {
+        self.currentCalculationStepIndex = index
+        self.calculationStep = message
+        // Small delay to ensure UI updates and user can see the step
+        try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
     }
 }
