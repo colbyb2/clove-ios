@@ -194,7 +194,18 @@ struct SettingsView: View {
                         .environment(TutorialManager.shared)
                   }
                }
-               
+
+               HStack {
+                  Image(systemName: "clock.arrow.circlepath")
+                     .font(.system(size: 16, weight: .medium))
+                     .foregroundStyle(Theme.shared.accent)
+                  NavigationLink("What's New") {
+                     ChangelogView()
+                  }
+               }
+               .accessibilityLabel("What's new")
+               .accessibilityHint("View changelog and version history")
+
                Button(action: {
                   showTermsAndConditions()
                   // Haptic feedback
@@ -205,12 +216,12 @@ struct SettingsView: View {
                      Image(systemName: "doc.text.fill")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(Theme.shared.accent)
-                     
+
                      Text("View Terms and Conditions")
                         .foregroundStyle(CloveColors.primaryText)
-                     
+
                      Spacer()
-                     
+
                      Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(CloveColors.secondaryText)
