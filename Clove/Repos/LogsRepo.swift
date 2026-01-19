@@ -2,13 +2,17 @@ import Foundation
 import GRDB
 
 class LogsRepo {
-   static let shared = LogsRepo()
-   
-   private let dbManager = DatabaseManager.shared
+   static let shared = LogsRepo(databaseManager: DatabaseManager.shared)
+
+   private let databaseManager: DatabaseManaging
+
+   init(databaseManager: DatabaseManaging) {
+      self.databaseManager = databaseManager
+   }
    
    func saveLog(_ log: DailyLog) -> Bool {
       do {
-         try dbManager.write { db in
+         try databaseManager.write { db in
             // Check if a log already exists for this date
             let calendar = Calendar.current
             let startOfDay = calendar.startOfDay(for: log.date)
@@ -34,7 +38,7 @@ class LogsRepo {
    
    func getLogs() -> [DailyLog] {
       do {
-         return try dbManager.read { db in
+         return try databaseManager.read { db in
             try DailyLog.fetchAll(db)
          }
       } catch {
@@ -45,7 +49,7 @@ class LogsRepo {
    
    func getLogForDate(_ date: Date) -> DailyLog? {
       do {
-         return try dbManager.read { db in
+         return try databaseManager.read { db in
             let calendar = Calendar.current
             let startOfDay = calendar.startOfDay(for: date)
             let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
@@ -60,7 +64,7 @@ class LogsRepo {
 
    func getLogsInRange(from startDate: Date, to endDate: Date) -> [DailyLog] {
       do {
-         return try dbManager.read { db in
+         return try databaseManager.read { db in
             try DailyLog.filter(Column("date") >= startDate && Column("date") <= endDate).fetchAll(db)
          }
       } catch {

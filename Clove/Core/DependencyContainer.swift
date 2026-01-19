@@ -33,13 +33,17 @@ final class DependencyContainer: DependencyContaining {
     // MARK: - Database (initialized first as other deps depend on it)
     lazy var databaseManager: DatabaseManaging = DatabaseManager.shared
 
-    // MARK: - Repositories (lazy-loaded)
-    lazy var logsRepository: LogsRepositoryProtocol = LogsRepo.shared
-    lazy var symptomsRepository: SymptomsRepositoryProtocol = SymptomsRepo.shared
-    lazy var settingsRepository: UserSettingsRepositoryProtocol = UserSettingsRepo.shared
-    lazy var medicationRepository: MedicationRepositoryProtocol = MedicationRepository.shared
-    lazy var bowelMovementRepository: BowelMovementRepositoryProtocol = BowelMovementRepo.shared
-    lazy var searchRepository: SearchRepositoryProtocol = SearchRepo.shared
+    // MARK: - Repositories (lazy-loaded with proper dependency injection)
+    lazy var logsRepository: LogsRepositoryProtocol = LogsRepo(databaseManager: databaseManager)
+    lazy var symptomsRepository: SymptomsRepositoryProtocol = SymptomsRepo(databaseManager: databaseManager)
+    lazy var settingsRepository: UserSettingsRepositoryProtocol = UserSettingsRepo(databaseManager: databaseManager)
+    lazy var medicationRepository: MedicationRepositoryProtocol = MedicationRepository(databaseManager: databaseManager)
+    lazy var bowelMovementRepository: BowelMovementRepositoryProtocol = BowelMovementRepo(databaseManager: databaseManager)
+    lazy var searchRepository: SearchRepositoryProtocol = SearchRepo(
+        databaseManager: databaseManager,
+        logsRepository: logsRepository,
+        bowelMovementRepository: bowelMovementRepository
+    )
 
     // MARK: - Managers (lazy-loaded)
     lazy var toastManager: ToastManaging = ToastManager.shared

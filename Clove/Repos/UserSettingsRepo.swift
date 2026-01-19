@@ -2,13 +2,17 @@ import Foundation
 import GRDB
 
 class UserSettingsRepo {
-    static let shared = UserSettingsRepo()
+    static let shared = UserSettingsRepo(databaseManager: DatabaseManager.shared)
 
-    private let dbManager = DatabaseManager.shared
+    private let databaseManager: DatabaseManaging
+
+    init(databaseManager: DatabaseManaging) {
+        self.databaseManager = databaseManager
+    }
 
     func getSettings() -> UserSettings? {
         do {
-            return try dbManager.read { db in
+            return try databaseManager.read { db in
                 try UserSettings.fetchOne(db)
             }
         } catch {
@@ -19,7 +23,7 @@ class UserSettingsRepo {
 
     func saveSettings(_ settings: UserSettings) -> Bool {
         do {
-            try dbManager.write { db in
+            try databaseManager.write { db in
                 try settings.save(db)
             }
             return true

@@ -2,13 +2,17 @@ import Foundation
 import GRDB
 
 class SymptomsRepo {
-    static let shared = SymptomsRepo()
+    static let shared = SymptomsRepo(databaseManager: DatabaseManager.shared)
 
-    private let dbManager = DatabaseManager.shared
+    private let databaseManager: DatabaseManaging
+
+    init(databaseManager: DatabaseManaging) {
+        self.databaseManager = databaseManager
+    }
 
     func getTrackedSymptoms() -> [TrackedSymptom] {
         do {
-            return try dbManager.read { db in
+            return try databaseManager.read { db in
                 try TrackedSymptom.fetchAll(db)
             }
         } catch {
@@ -19,7 +23,7 @@ class SymptomsRepo {
 
     func saveTrackedSymptoms(_ symptoms: [TrackedSymptom]) -> Bool {
         do {
-            try dbManager.write { db in
+            try databaseManager.write { db in
                 try symptoms.forEach { try $0.save(db) }
             }
             return true
@@ -31,7 +35,7 @@ class SymptomsRepo {
     
     func saveSymptom(_ symptom: TrackedSymptom) -> Bool {
         do {
-            try dbManager.write { db in
+            try databaseManager.write { db in
                 try symptom.save(db)
             }
             return true
@@ -43,7 +47,7 @@ class SymptomsRepo {
     
     func updateSymptom(id: Int64, name: String, isBinary: Bool) -> Bool {
         do {
-            try dbManager.write { db in
+            try databaseManager.write { db in
                 let symptom = TrackedSymptom(id: id, name: name, isBinary: isBinary)
                 try symptom.update(db)
             }
@@ -56,7 +60,7 @@ class SymptomsRepo {
     
     func deleteSymptom(id: Int64) -> Bool {
         do {
-            try dbManager.write { db in
+            try databaseManager.write { db in
                 try db.execute(sql: "DELETE FROM trackedSymptom WHERE id = ?", arguments: [id])
             }
             return true

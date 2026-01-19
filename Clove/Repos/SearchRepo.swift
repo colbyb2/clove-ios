@@ -2,13 +2,25 @@ import Foundation
 import GRDB
 
 class SearchRepo {
-    static let shared = SearchRepo()
+    static let shared = SearchRepo(
+        databaseManager: DatabaseManager.shared,
+        logsRepository: LogsRepo.shared,
+        bowelMovementRepository: BowelMovementRepo.shared
+    )
 
-    private let dbManager = DatabaseManager.shared
-    private let logsRepo = LogsRepo.shared
-    private let bowelMovementRepo = BowelMovementRepo.shared
+    private let databaseManager: DatabaseManaging
+    private let logsRepository: LogsRepositoryProtocol
+    private let bowelMovementRepository: BowelMovementRepositoryProtocol
 
-    private init() {}
+    init(
+        databaseManager: DatabaseManaging,
+        logsRepository: LogsRepositoryProtocol,
+        bowelMovementRepository: BowelMovementRepositoryProtocol
+    ) {
+        self.databaseManager = databaseManager
+        self.logsRepository = logsRepository
+        self.bowelMovementRepository = bowelMovementRepository
+    }
 
     // MARK: - Main Search Method
 
@@ -46,7 +58,7 @@ class SearchRepo {
     // MARK: - Category-Specific Search Methods
 
     func searchNotes(query: String) -> [SearchResult] {
-        let logs = logsRepo.getLogs()
+        let logs = logsRepository.getLogs()
 
         return logs.compactMap { log in
             guard let notes = log.notes,
@@ -67,7 +79,7 @@ class SearchRepo {
     }
 
     func searchSymptoms(query: String) -> [SearchResult] {
-        let logs = logsRepo.getLogs()
+        let logs = logsRepository.getLogs()
 
         return logs.flatMap { log -> [SearchResult] in
             log.symptomRatings.compactMap { symptom in
@@ -90,7 +102,7 @@ class SearchRepo {
     }
 
     func searchMeals(query: String) -> [SearchResult] {
-        let logs = logsRepo.getLogs()
+        let logs = logsRepository.getLogs()
 
         return logs.flatMap { log -> [SearchResult] in
             log.meals.compactMap { meal in
@@ -113,7 +125,7 @@ class SearchRepo {
     }
 
     func searchActivities(query: String) -> [SearchResult] {
-        let logs = logsRepo.getLogs()
+        let logs = logsRepository.getLogs()
 
         return logs.flatMap { log -> [SearchResult] in
             log.activities.compactMap { activity in
@@ -136,7 +148,7 @@ class SearchRepo {
     }
 
     func searchMedications(query: String) -> [SearchResult] {
-        let logs = logsRepo.getLogs()
+        let logs = logsRepository.getLogs()
 
         return logs.flatMap { log -> [SearchResult] in
             log.medicationAdherence.compactMap { medication in
@@ -160,7 +172,7 @@ class SearchRepo {
     }
 
     func searchBowelMovements(query: String) -> [SearchResult] {
-        let movements = bowelMovementRepo.getAllBowelMovements()
+        let movements = bowelMovementRepository.getAllBowelMovements()
 
         return movements.compactMap { movement in
             let typeNumber = Int(movement.type)
@@ -190,7 +202,7 @@ class SearchRepo {
             for (searchText, context) in searchableTexts {
                 if let range = searchText.range(of: query, options: .caseInsensitive) {
                     // Get corresponding DailyLog for this date
-                    let log = logsRepo.getLogForDate(movement.date) ?? DailyLog(date: movement.date)
+                    let log = logsRepository.getLogForDate(movement.date) ?? DailyLog(date: movement.date)
 
                     return SearchResult(
                         log: log,

@@ -3,17 +3,19 @@ import GRDB
 
 @Observable
 class MedicationRepository {
-    static let shared = MedicationRepository()
-    
-    private let dbManager = DatabaseManager.shared
-    
-    private init() {}
+    static let shared = MedicationRepository(databaseManager: DatabaseManager.shared)
+
+    private let databaseManager: DatabaseManaging
+
+    init(databaseManager: DatabaseManaging) {
+        self.databaseManager = databaseManager
+    }
     
     // MARK: - TrackedMedication Methods
     
     func getTrackedMedications() -> [TrackedMedication] {
         do {
-            return try dbManager.read { db in
+            return try databaseManager.read { db in
                 try TrackedMedication.fetchAll(db)
             }
         } catch {
@@ -24,7 +26,7 @@ class MedicationRepository {
     
     func saveMedication(_ medication: TrackedMedication) -> Bool {
         do {
-            try dbManager.write { db in
+            try databaseManager.write { db in
                 try medication.save(db)
             }
             return true
@@ -37,7 +39,7 @@ class MedicationRepository {
     func updateMedication(id: Int64, name: String, dosage: String, instructions: String, isAsNeeded: Bool) -> Bool {
         do {
             // Get the current medication to compare changes
-            let currentMedication = try dbManager.read { db in
+            let currentMedication = try databaseManager.read { db in
                 try TrackedMedication.fetchOne(db, key: id)
             }
             
@@ -46,7 +48,7 @@ class MedicationRepository {
                 return false
             }
             
-            try dbManager.write { db in
+            try databaseManager.write { db in
                 let medication = TrackedMedication(name: name, dosage: dosage, instructions: instructions, isAsNeeded: isAsNeeded)
                 var updatedMedication = medication
                 updatedMedication.id = id
@@ -71,7 +73,7 @@ class MedicationRepository {
     func deleteMedication(id: Int64) -> Bool {
         do {
             // Get the medication before deleting it for history
-            let medicationToDelete = try dbManager.read { db in
+            let medicationToDelete = try databaseManager.read { db in
                 try TrackedMedication.fetchOne(db, key: id)
             }
             
@@ -80,7 +82,7 @@ class MedicationRepository {
                 return false
             }
             
-            try dbManager.write { db in
+            try databaseManager.write { db in
                 // Create history entry for deletion
                 let historyEntry = MedicationHistoryEntry(
                     medicationId: id,
@@ -105,7 +107,7 @@ class MedicationRepository {
     
     func getMedicationHistory(for medicationId: Int64? = nil) -> [MedicationHistoryEntry] {
         do {
-            return try dbManager.read { db in
+            return try databaseManager.read { db in
                 if let medicationId = medicationId {
                     return try MedicationHistoryEntry.fetchAll(db, sql: "SELECT * FROM medicationHistoryEntry WHERE medicationId = ? ORDER BY changeDate DESC", arguments: [medicationId])
                 } else {
@@ -120,7 +122,7 @@ class MedicationRepository {
     
     func addHistoryEntry(_ entry: MedicationHistoryEntry) -> Bool {
         do {
-            try dbManager.write { db in
+            try databaseManager.write { db in
                 try entry.save(db)
             }
             return true
@@ -134,7 +136,7 @@ class MedicationRepository {
     
     func saveMedicationWithHistory(_ medication: TrackedMedication, changeType: String, oldValue: String? = nil, newValue: String? = nil) -> Bool {
         do {
-            try dbManager.write { db in
+            try databaseManager.write { db in
                 try medication.save(db)
                 
                 // Create history entry
@@ -213,7 +215,7 @@ class MedicationRepository {
         let endDate = Date()
         
         do {
-            let logs = try dbManager.read { db in
+            let logs = try databaseManager.read { db in
                 try DailyLog.fetchAll(db, sql: "SELECT * FROM dailyLog WHERE date >= ? AND date <= ?", arguments: [startDate, endDate])
             }
             

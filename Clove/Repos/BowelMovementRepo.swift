@@ -2,17 +2,19 @@ import Foundation
 import GRDB
 
 class BowelMovementRepo {
-    static let shared = BowelMovementRepo()
-    
-    private let dbManager = DatabaseManager.shared
-    
-    private init() {}
+    static let shared = BowelMovementRepo(databaseManager: DatabaseManager.shared)
+
+    private let databaseManager: DatabaseManaging
+
+    init(databaseManager: DatabaseManaging) {
+        self.databaseManager = databaseManager
+    }
     
     // MARK: - CRUD Operations
     
     func save(_ bowelMovements: [BowelMovement]) -> Bool {
         do {
-            try dbManager.write { db in
+            try databaseManager.write { db in
                 for movement in bowelMovements {
                     try movement.save(db)
                 }
@@ -26,7 +28,7 @@ class BowelMovementRepo {
     
     func delete(id: Int64) -> Bool {
         do {
-            try dbManager.write { db in
+            try databaseManager.write { db in
                 try db.execute(sql: "DELETE FROM bowelMovement WHERE id = ?", arguments: [id])
             }
             return true
@@ -38,7 +40,7 @@ class BowelMovementRepo {
     
     func getBowelMovementsForDate(_ date: Date) -> [BowelMovement] {
         do {
-            return try dbManager.read { db in
+            return try databaseManager.read { db in
                 let calendar = Calendar.current
                 let startOfDay = calendar.startOfDay(for: date)
                 let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
@@ -53,7 +55,7 @@ class BowelMovementRepo {
     
     func getAllBowelMovements() -> [BowelMovement] {
         do {
-            return try dbManager.read { db in
+            return try databaseManager.read { db in
                 try BowelMovement.fetchAll(db, sql: "SELECT * FROM bowelMovement ORDER BY date DESC")
             }
         } catch {
@@ -64,7 +66,7 @@ class BowelMovementRepo {
     
     func getBowelMovements(for period: TimePeriod) -> [BowelMovement] {
         do {
-            return try dbManager.read { db in
+            return try databaseManager.read { db in
                 if period == .allTime {
                     return try BowelMovement.fetchAll(db, sql: "SELECT * FROM bowelMovement ORDER BY date DESC")
                 } else {
