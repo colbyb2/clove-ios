@@ -66,3 +66,6 @@ class SymptomsRepo {
         }
     }
 }
+
+// MARK: - Protocol Conformance
+extension SymptomsRepo: SymptomsRepositoryProtocol {}

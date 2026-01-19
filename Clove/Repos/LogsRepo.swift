@@ -49,7 +49,7 @@ class LogsRepo {
             let calendar = Calendar.current
             let startOfDay = calendar.startOfDay(for: date)
             let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-            
+
             return try DailyLog.filter(Column("date") >= startOfDay && Column("date") < endOfDay).fetchOne(db)
          }
       } catch {
@@ -57,4 +57,18 @@ class LogsRepo {
          return nil
       }
    }
+
+   func getLogsInRange(from startDate: Date, to endDate: Date) -> [DailyLog] {
+      do {
+         return try dbManager.read { db in
+            try DailyLog.filter(Column("date") >= startDate && Column("date") <= endDate).fetchAll(db)
+         }
+      } catch {
+         print("Error getting logs in range: \(error)")
+         return []
+      }
+   }
 }
+
+// MARK: - Protocol Conformance
+extension LogsRepo: LogsRepositoryProtocol {}

@@ -29,3 +29,6 @@ class UserSettingsRepo {
         }
     }
 }
+
+// MARK: - Protocol Conformance
+extension UserSettingsRepo: UserSettingsRepositoryProtocol {}

@@ -82,3 +82,6 @@ class BowelMovementRepo {
         }
     }
 }
+
+// MARK: - Protocol Conformance
+extension BowelMovementRepo: BowelMovementRepositoryProtocol {}

@@ -282,3 +282,6 @@ class MedicationRepository {
         return insights
     }
 }
+
+// MARK: - Protocol Conformance
+extension MedicationRepository: MedicationRepositoryProtocol {}

@@ -226,3 +226,6 @@ class SearchRepo {
         return snippet
     }
 }
+
+// MARK: - Protocol Conformance
+extension SearchRepo: SearchRepositoryProtocol {}
