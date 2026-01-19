@@ -58,7 +58,8 @@ class HistoryCalendarViewModel {
    
    func loadLogs() {
       let logs = LogsRepo.shared.getLogs()
-      self.logsByDate = Dictionary(uniqueKeysWithValues: logs.map { ($0.date.stripTime(), $0) })
+      // Use merging initializer to handle duplicate dates - keep the most recent entry (last one)
+      self.logsByDate = Dictionary(logs.map { ($0.date.stripTime(), $0) }, uniquingKeysWith: { _, last in last })
    }
    
    func loadUserSettings() {

@@ -142,12 +142,16 @@ class TodayViewModel {
    }
    
    func saveLog() {
+      // Prevent duplicate saves
+      guard !isSaving else { return }
+      isSaving = true
+
       // Extract medication names that were marked as taken
-      let medicationsTaken = settings.trackMeds ? 
+      let medicationsTaken = settings.trackMeds ?
          logData.medicationAdherence
             .filter { $0.wasTaken }
             .map { $0.medicationName } : []
-      
+
       let log = DailyLog(
          date: selectedDate,
          mood: settings.trackMood ? Int(logData.mood) : nil,
@@ -162,17 +166,17 @@ class TodayViewModel {
          weather: settings.trackWeather ? logData.weather : nil,
          symptomRatings: logData.symptomRatings.map { $0.toModel() }
       )
-      
+
       let result = LogsRepo.shared.saveLog(log)
       isSaving = false
-      
+
       if result {
          let message = "Log saved successfully"
          ToastManager.shared.showToast(message: message, color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
       } else {
          ToastManager.shared.showToast(message: "Hmm, something went wrong.", color: CloveColors.error)
       }
-      
+
    }
    
    // MARK: - Symptom Management
