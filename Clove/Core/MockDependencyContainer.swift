@@ -17,6 +17,8 @@ final class MockDependencyContainer: DependencyContaining {
     var navigationCoordinator: NavigationCoordinating
     var themeManager: ThemeManaging
     var tutorialManager: TutorialManaging
+    var metricRegistry: MetricRegistryProtocol
+    var timePeriodManager: TimePeriodManaging
 
     // MARK: - Database
     var databaseManager: DatabaseManaging
@@ -34,6 +36,8 @@ final class MockDependencyContainer: DependencyContaining {
         navigationCoordinator: NavigationCoordinating? = nil,
         themeManager: ThemeManaging? = nil,
         tutorialManager: TutorialManaging? = nil,
+        metricRegistry: MetricRegistryProtocol? = nil,
+        timePeriodManager: TimePeriodManaging? = nil,
         databaseManager: DatabaseManaging? = nil
     ) {
         self.logsRepository = logsRepository ?? MockLogsRepository()
@@ -46,6 +50,8 @@ final class MockDependencyContainer: DependencyContaining {
         self.navigationCoordinator = navigationCoordinator ?? MockNavigationCoordinator()
         self.themeManager = themeManager ?? MockThemeManager()
         self.tutorialManager = tutorialManager ?? MockTutorialManager()
+        self.metricRegistry = metricRegistry ?? MockMetricRegistry()
+        self.timePeriodManager = timePeriodManager ?? MockTimePeriodManager()
         self.databaseManager = databaseManager ?? MockDatabaseManager()
     }
 }

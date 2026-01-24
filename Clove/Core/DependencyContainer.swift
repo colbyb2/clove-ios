@@ -16,6 +16,8 @@ protocol DependencyContaining: AnyObject {
     var navigationCoordinator: NavigationCoordinating { get }
     var themeManager: ThemeManaging { get }
     var tutorialManager: TutorialManaging { get }
+    var metricRegistry: MetricRegistryProtocol { get }
+    var timePeriodManager: TimePeriodManaging { get }
 
     // MARK: - Database
     var databaseManager: DatabaseManaging { get }
@@ -50,4 +52,6 @@ final class DependencyContainer: DependencyContaining {
     lazy var navigationCoordinator: NavigationCoordinating = NavigationCoordinator.shared
     lazy var themeManager: ThemeManaging = Theme.shared
     lazy var tutorialManager: TutorialManaging = TutorialManager.shared
+    lazy var metricRegistry: MetricRegistryProtocol = MetricRegistry.shared
+    lazy var timePeriodManager: TimePeriodManaging = TimePeriodManager.shared
 }

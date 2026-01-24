@@ -4,14 +4,14 @@ import SwiftUI
 @Observable
 class NavigationCoordinator {
     static let shared = NavigationCoordinator()
-    
+
     /// Currently selected tab index
     var selectedTab: Int = 0
-    
+
     /// Date to navigate to in TodayView
     var targetDate: Date?
-    
-    private init() {}
+
+    init() {}
     
     /// Navigate to the Today tab and set a specific date for editing
     func editDayInTodayView(date: Date) {

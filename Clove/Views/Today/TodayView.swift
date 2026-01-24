@@ -451,7 +451,21 @@ struct TodayView: View {
 
 #Preview {
     NavigationStack {
-        TodayView(viewModel: TodayViewModel(settings: UserSettings(trackMood: true, trackPain: true, trackEnergy: true, trackSymptoms: true, trackMeals: false, trackActivities: false, trackMeds: false, showFlareToggle: true, trackWeather: false, trackNotes: true, trackBowelMovements: true)))
+        TodayView(viewModel: TodayViewModel.preview(
+            settings: UserSettings(
+                trackMood: true,
+                trackPain: true,
+                trackEnergy: true,
+                trackSymptoms: true,
+                trackMeals: false,
+                trackActivities: false,
+                trackMeds: false,
+                showFlareToggle: true,
+                trackWeather: false,
+                trackNotes: true,
+                trackBowelMovements: true
+            )
+        ))
     }
     .environment(NavigationCoordinator.shared)
 }

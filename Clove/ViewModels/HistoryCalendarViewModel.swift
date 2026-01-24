@@ -3,12 +3,18 @@ import GRDB
 
 @Observable
 class HistoryCalendarViewModel {
+   // MARK: - Dependencies
+   private let logsRepository: LogsRepositoryProtocol
+   private let settingsRepository: UserSettingsRepositoryProtocol
+   private let symptomsRepository: SymptomsRepositoryProtocol
+
+   // MARK: - State
    var logsByDate: [Date: DailyLog] = [:]
    var selectedDate: Date? = nil
    var selectedCategory: TrackingCategory = .allData
    var userSettings: UserSettings = .default
    var trackedSymptoms: [TrackedSymptom] = []
-   
+
    let calendar = Calendar.current
    
    var monthLogs: [DailyLog] {
@@ -46,8 +52,40 @@ class HistoryCalendarViewModel {
       return categories
    }
    
-   init() {
+   // MARK: - Initialization
+
+   /// Convenience initializer using production singletons
+   convenience init() {
+      self.init(
+         logsRepository: LogsRepo.shared,
+         settingsRepository: UserSettingsRepo.shared,
+         symptomsRepository: SymptomsRepo.shared
+      )
+   }
+
+   /// Designated initializer with full dependency injection
+   init(
+      logsRepository: LogsRepositoryProtocol,
+      settingsRepository: UserSettingsRepositoryProtocol,
+      symptomsRepository: SymptomsRepositoryProtocol
+   ) {
+      self.logsRepository = logsRepository
+      self.settingsRepository = settingsRepository
+      self.symptomsRepository = symptomsRepository
       loadData()
+   }
+
+   /// Preview factory with mock dependencies and sample data
+   static func preview(withSampleData: Bool = true) -> HistoryCalendarViewModel {
+      let container = MockDependencyContainer(
+         logsRepository: withSampleData ? MockLogsRepository.withSampleData(days: 30) : MockLogsRepository(),
+         symptomsRepository: MockSymptomsRepository.withDefaultSymptoms()
+      )
+      return HistoryCalendarViewModel(
+         logsRepository: container.logsRepository,
+         settingsRepository: container.settingsRepository,
+         symptomsRepository: container.symptomsRepository
+      )
    }
    
    func loadData() {
@@ -57,17 +95,17 @@ class HistoryCalendarViewModel {
    }
    
    func loadLogs() {
-      let logs = LogsRepo.shared.getLogs()
+      let logs = logsRepository.getLogs()
       // Use merging initializer to handle duplicate dates - keep the most recent entry (last one)
       self.logsByDate = Dictionary(logs.map { ($0.date.stripTime(), $0) }, uniquingKeysWith: { _, last in last })
    }
-   
+
    func loadUserSettings() {
-      self.userSettings = UserSettingsRepo.shared.getSettings() ?? .default
+      self.userSettings = settingsRepository.getSettings() ?? .default
    }
-   
+
    func loadTrackedSymptoms() {
-      self.trackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
+      self.trackedSymptoms = symptomsRepository.getTrackedSymptoms()
    }
    
    func log(for date: Date) -> DailyLog? {

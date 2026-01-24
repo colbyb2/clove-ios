@@ -4,12 +4,12 @@ import SwiftUI
 @Observable
 class TutorialManager {
    static let shared = TutorialManager()
-   
+
    var currentTutorial: Tutorial?
    var open: Bool = false
    var currentStep: Int = 0
-   
-   private init() {}
+
+   init() {}
    
    func startTutorial(_ tutorial: Tutorial) -> TutorialError? {
       guard !tutorial.shouldDisplay() else { return .Completed }

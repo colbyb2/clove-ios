@@ -35,5 +35,17 @@ protocol ToastManaging: AnyObject {
     func hide()
 }
 
+/// Protocol extension providing default parameters
+extension ToastManaging {
+    func showToast(
+        message: String,
+        color: Color = .black,
+        icon: Image? = nil,
+        duration: Double = 3.0
+    ) {
+        showToast(message: message, color: color, icon: icon, duration: duration)
+    }
+}
+
 /// Conform ToastManager to the protocol
 extension ToastManager: ToastManaging {}

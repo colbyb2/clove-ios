@@ -4,21 +4,68 @@ import GRDB
 
 @Observable
 class TodayViewModel {
+   // MARK: - Dependencies
+   private let logsRepository: LogsRepositoryProtocol
+   private let symptomsRepository: SymptomsRepositoryProtocol
+   private let settingsRepository: UserSettingsRepositoryProtocol
+   private let medicationRepository: MedicationRepositoryProtocol
+   private let toastManager: ToastManaging
+
+   // MARK: - State
    var settings: UserSettings = .default
-   
+
    var selectedDate: Date = Date()
    var logData: LogData = LogData()
-   
+
    var yesterdayLog: DailyLog? = nil
    var isSaving = false
-   
-   private var mocked: Bool = false
-   
-   init() {}
-   
-   init(settings: UserSettings) {
-      self.mocked = true
-      self.settings = settings
+
+   // MARK: - Initialization
+
+   /// Convenience initializer using production singletons
+   convenience init() {
+      self.init(
+         logsRepository: LogsRepo.shared,
+         symptomsRepository: SymptomsRepo.shared,
+         settingsRepository: UserSettingsRepo.shared,
+         medicationRepository: MedicationRepository.shared,
+         toastManager: ToastManager.shared
+      )
+   }
+
+   /// Designated initializer with full dependency injection
+   init(
+      logsRepository: LogsRepositoryProtocol,
+      symptomsRepository: SymptomsRepositoryProtocol,
+      settingsRepository: UserSettingsRepositoryProtocol,
+      medicationRepository: MedicationRepositoryProtocol,
+      toastManager: ToastManaging
+   ) {
+      self.logsRepository = logsRepository
+      self.symptomsRepository = symptomsRepository
+      self.settingsRepository = settingsRepository
+      self.medicationRepository = medicationRepository
+      self.toastManager = toastManager
+   }
+
+   /// Preview factory with mock dependencies and configurable state
+   static func preview(
+      settings: UserSettings = .default,
+      logData: LogData? = nil
+   ) -> TodayViewModel {
+      let container = MockDependencyContainer()
+      let vm = TodayViewModel(
+         logsRepository: container.logsRepository,
+         symptomsRepository: container.symptomsRepository,
+         settingsRepository: container.settingsRepository,
+         medicationRepository: container.medicationRepository,
+         toastManager: container.toastManager
+      )
+      vm.settings = settings
+      if let data = logData {
+         vm.logData = data
+      }
+      return vm
    }
    
    let moodEmojiMap: [ClosedRange<Double>: Character] = [
@@ -39,7 +86,6 @@ class TodayViewModel {
    }
    
    func load() {
-      guard !mocked else { return }
       loadSettings()
       loadTrackedSymptoms()
       loadLogData(for: selectedDate)
@@ -48,7 +94,7 @@ class TodayViewModel {
    
    func loadLogData(for date: Date) {
       self.selectedDate = date
-      if let data = LogsRepo.shared.getLogForDate(date) {
+      if let data = logsRepository.getLogForDate(date) {
          self.logData = LogData(from: data)
       } else {
          // No existing data for this date, create new LogData with default values
@@ -63,18 +109,18 @@ class TodayViewModel {
    }
    
    func loadSettings() {
-      self.settings = UserSettingsRepo.shared.getSettings() ?? .default
+      self.settings = settingsRepository.getSettings() ?? .default
    }
    
    func loadTrackedSymptoms() {
-      let trackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
+      let trackedSymptoms = symptomsRepository.getTrackedSymptoms()
       self.logData.symptomRatings = trackedSymptoms.map {
          return SymptomRatingVM(symptomId: $0.id ?? 0, symptomName: $0.name, ratingDouble: 5, isBinary: $0.isBinary)
       }
    }
    
    private func syncSymptomRatingsWithTrackedSymptoms() {
-      let currentTrackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
+      let currentTrackedSymptoms = symptomsRepository.getTrackedSymptoms()
       let trackedSymptomIds = Set(currentTrackedSymptoms.compactMap { $0.id })
       var updatedRatings: [SymptomRatingVM] = []
 
@@ -105,7 +151,7 @@ class TodayViewModel {
    }
    
    private func syncMedicationAdherenceWithTrackedMedications() {
-      let currentTrackedMedications = MedicationRepository.shared.getTrackedMedications()
+      let currentTrackedMedications = medicationRepository.getTrackedMedications()
       var updatedAdherence: [MedicationAdherence] = []
       
       // For each currently tracked medication, find existing adherence or create default
@@ -138,7 +184,7 @@ class TodayViewModel {
    
    func loadYesterdayLog() {
       let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-      self.yesterdayLog = LogsRepo.shared.getLogForDate(yesterday)
+      self.yesterdayLog = logsRepository.getLogForDate(yesterday)
    }
    
    func saveLog() {
@@ -167,14 +213,14 @@ class TodayViewModel {
          symptomRatings: logData.symptomRatings.map { $0.toModel() }
       )
 
-      let result = LogsRepo.shared.saveLog(log)
+      let result = logsRepository.saveLog(log)
       isSaving = false
 
       if result {
          let message = "Log saved successfully"
-         ToastManager.shared.showToast(message: message, color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
+         toastManager.showToast(message: message, color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
       } else {
-         ToastManager.shared.showToast(message: "Hmm, something went wrong.", color: CloveColors.error)
+         toastManager.showToast(message: "Hmm, something went wrong.", color: CloveColors.error)
       }
 
    }
@@ -186,19 +232,19 @@ class TodayViewModel {
       guard !trimmedName.isEmpty else { return }
       
       // Check if symptom already exists
-      if SymptomsRepo.shared.getTrackedSymptoms().contains(where: { $0.name.lowercased() == trimmedName.lowercased() }) {
-         ToastManager.shared.showToast(message: "Symptom already exists", color: CloveColors.error, icon: Image(systemName: "exclamationmark.triangle"))
+      if symptomsRepository.getTrackedSymptoms().contains(where: { $0.name.lowercased() == trimmedName.lowercased() }) {
+         toastManager.showToast(message: "Symptom already exists", color: CloveColors.error, icon: Image(systemName: "exclamationmark.triangle"))
          return
       }
       
       let symptom = TrackedSymptom(name: trimmedName)
-      let success = SymptomsRepo.shared.saveSymptom(symptom)
+      let success = symptomsRepository.saveSymptom(symptom)
       
       if success {
          loadTrackedSymptoms() // Refresh the list
-         ToastManager.shared.showToast(message: "Symptom added successfully", color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
+         toastManager.showToast(message: "Symptom added successfully", color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
       } else {
-         ToastManager.shared.showToast(message: "Failed to add symptom", color: CloveColors.error)
+         toastManager.showToast(message: "Failed to add symptom", color: CloveColors.error)
       }
    }
    
@@ -207,29 +253,29 @@ class TodayViewModel {
       guard !trimmedName.isEmpty else { return }
 
       // Check if another symptom already has this name
-      if SymptomsRepo.shared.getTrackedSymptoms().contains(where: { $0.name.lowercased() == trimmedName.lowercased() && $0.id != id }) {
-         ToastManager.shared.showToast(message: "Symptom name already exists", color: CloveColors.error, icon: Image(systemName: "exclamationmark.triangle"))
+      if symptomsRepository.getTrackedSymptoms().contains(where: { $0.name.lowercased() == trimmedName.lowercased() && $0.id != id }) {
+         toastManager.showToast(message: "Symptom name already exists", color: CloveColors.error, icon: Image(systemName: "exclamationmark.triangle"))
          return
       }
 
-      let success = SymptomsRepo.shared.updateSymptom(id: id, name: trimmedName, isBinary: isBinary)
+      let success = symptomsRepository.updateSymptom(id: id, name: trimmedName, isBinary: isBinary)
 
       if success {
          loadTrackedSymptoms() // Refresh the list
-         ToastManager.shared.showToast(message: "Symptom updated successfully", color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
+         toastManager.showToast(message: "Symptom updated successfully", color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
       } else {
-         ToastManager.shared.showToast(message: "Failed to update symptom", color: CloveColors.error)
+         toastManager.showToast(message: "Failed to update symptom", color: CloveColors.error)
       }
    }
    
    func deleteSymptom(id: Int64) {
-      let success = SymptomsRepo.shared.deleteSymptom(id: id)
+      let success = symptomsRepository.deleteSymptom(id: id)
       
       if success {
          loadTrackedSymptoms() // Refresh the list
-         ToastManager.shared.showToast(message: "Symptom deleted", color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
+         toastManager.showToast(message: "Symptom deleted", color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
       } else {
-         ToastManager.shared.showToast(message: "Failed to delete symptom", color: CloveColors.error)
+         toastManager.showToast(message: "Failed to delete symptom", color: CloveColors.error)
       }
    }
 }

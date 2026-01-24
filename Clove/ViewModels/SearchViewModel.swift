@@ -3,6 +3,10 @@ import SwiftUI
 
 @Observable
 class SearchViewModel {
+    // MARK: - Dependencies
+    private let searchRepository: SearchRepositoryProtocol
+
+    // MARK: - State
     var searchQuery: String = "" {
         didSet {
             if searchQuery.isEmpty {
@@ -31,7 +35,24 @@ class SearchViewModel {
     }
 
     private var searchTask: Task<Void, Never>?
-    private let searchRepo = SearchRepo.shared
+
+    // MARK: - Initialization
+
+    /// Convenience initializer using production singletons
+    convenience init() {
+        self.init(searchRepository: SearchRepo.shared)
+    }
+
+    /// Designated initializer with full dependency injection
+    init(searchRepository: SearchRepositoryProtocol) {
+        self.searchRepository = searchRepository
+    }
+
+    /// Preview factory with mock dependencies
+    static func preview() -> SearchViewModel {
+        let container = MockDependencyContainer()
+        return SearchViewModel(searchRepository: container.searchRepository)
+    }
 
     // MARK: - Search Methods
 
@@ -67,7 +88,7 @@ class SearchViewModel {
 
     private func searchInBackground() async -> [SearchResult] {
         await Task.detached {
-            self.searchRepo.searchLogs(
+            self.searchRepository.searchLogs(
                 query: self.searchQuery,
                 filters: self.categoryFilters
             )

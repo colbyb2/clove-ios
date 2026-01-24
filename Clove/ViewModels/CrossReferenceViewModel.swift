@@ -2,6 +2,11 @@ import SwiftUI
 
 @Observable
 class CrossReferenceViewModel {
+    // MARK: - Dependencies
+    private let metricRegistry: MetricRegistryProtocol
+    private let timePeriodManager: TimePeriodManaging
+
+    // MARK: - State
     var primaryMetric: (any MetricProvider)?
     var secondaryMetric: (any MetricProvider)?
     var currentAnalysis: CorrelationAnalysis?
@@ -12,16 +17,38 @@ class CrossReferenceViewModel {
     var errorMessage: String?
     var calculationStep: String?
     var currentCalculationStepIndex: Int = 0
-    
-    private let metricRegistry = MetricRegistry.shared
-    private let timePeriodManager = TimePeriodManager.shared
-    
-    init() {
+
+    // MARK: - Initialization
+
+    /// Convenience initializer using production singletons
+    convenience init() {
+        self.init(
+            metricRegistry: MetricRegistry.shared,
+            timePeriodManager: TimePeriodManager.shared
+        )
+    }
+
+    /// Designated initializer with full dependency injection
+    init(
+        metricRegistry: MetricRegistryProtocol,
+        timePeriodManager: TimePeriodManaging
+    ) {
+        self.metricRegistry = metricRegistry
+        self.timePeriodManager = timePeriodManager
+
         Task {
             await loadAvailableMetrics()
             await loadSuggestedCorrelations()
         }
         loadSavedCorrelations()
+    }
+
+    /// Preview factory with mock dependencies
+    static func preview() -> CrossReferenceViewModel {
+        return CrossReferenceViewModel(
+            metricRegistry: MockMetricRegistry(),
+            timePeriodManager: MockTimePeriodManager()
+        )
     }
     
     func calculateCorrelation(primary: any MetricProvider, secondary: any MetricProvider) {

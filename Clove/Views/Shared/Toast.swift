@@ -96,7 +96,7 @@ extension View {
 class ToastManager {
     static let shared = ToastManager()
 
-    private init() {}
+    init() {}
 
     var offset: CGFloat = 0
     var message: String = ""
