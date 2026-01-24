@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-class SearchRepo {
+final class SearchRepo {
     static let shared = SearchRepo(
         databaseManager: DatabaseManager.shared,
         logsRepository: LogsRepo.shared,

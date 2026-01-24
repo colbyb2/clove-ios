@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-class SymptomsRepo {
+final class SymptomsRepo {
     static let shared = SymptomsRepo(databaseManager: DatabaseManager.shared)
 
     private let databaseManager: DatabaseManaging

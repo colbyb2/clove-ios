@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 @Observable
-class MedicationRepository {
+final class MedicationRepository {
     static let shared = MedicationRepository(databaseManager: DatabaseManager.shared)
 
     private let databaseManager: DatabaseManaging

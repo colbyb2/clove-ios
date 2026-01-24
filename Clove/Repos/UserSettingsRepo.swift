@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-class UserSettingsRepo {
+final class UserSettingsRepo {
     static let shared = UserSettingsRepo(databaseManager: DatabaseManager.shared)
 
     private let databaseManager: DatabaseManaging

@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-class BowelMovementRepo {
+final class BowelMovementRepo {
     static let shared = BowelMovementRepo(databaseManager: DatabaseManager.shared)
 
     private let databaseManager: DatabaseManaging
