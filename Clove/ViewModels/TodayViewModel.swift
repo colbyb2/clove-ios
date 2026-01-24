@@ -9,6 +9,7 @@ class TodayViewModel {
    private let symptomsRepository: SymptomsRepositoryProtocol
    private let settingsRepository: UserSettingsRepositoryProtocol
    private let medicationRepository: MedicationRepositoryProtocol
+   private let bowelMovementRepository: BowelMovementRepositoryProtocol
    private let toastManager: ToastManaging
 
    // MARK: - State
@@ -29,6 +30,7 @@ class TodayViewModel {
          symptomsRepository: SymptomsRepo.shared,
          settingsRepository: UserSettingsRepo.shared,
          medicationRepository: MedicationRepository.shared,
+         bowelMovementRepository: BowelMovementRepo.shared,
          toastManager: ToastManager.shared
       )
    }
@@ -39,12 +41,14 @@ class TodayViewModel {
       symptomsRepository: SymptomsRepositoryProtocol,
       settingsRepository: UserSettingsRepositoryProtocol,
       medicationRepository: MedicationRepositoryProtocol,
+      bowelMovementRepository: BowelMovementRepositoryProtocol,
       toastManager: ToastManaging
    ) {
       self.logsRepository = logsRepository
       self.symptomsRepository = symptomsRepository
       self.settingsRepository = settingsRepository
       self.medicationRepository = medicationRepository
+      self.bowelMovementRepository = bowelMovementRepository
       self.toastManager = toastManager
    }
 
@@ -59,6 +63,7 @@ class TodayViewModel {
          symptomsRepository: container.symptomsRepository,
          settingsRepository: container.settingsRepository,
          medicationRepository: container.medicationRepository,
+         bowelMovementRepository: container.bowelMovementRepository,
          toastManager: container.toastManager
       )
       vm.settings = settings
@@ -94,16 +99,21 @@ class TodayViewModel {
    
    func loadLogData(for date: Date) {
       self.selectedDate = date
+
+      // Load bowel movements for this date (externally, not in LogData)
+      let bowelMovements = bowelMovementRepository.getBowelMovementsForDate(date)
+
       if let data = logsRepository.getLogForDate(date) {
-         self.logData = LogData(from: data)
+         self.logData = LogData(from: data, bowelMovements: bowelMovements)
       } else {
          // No existing data for this date, create new LogData with default values
          self.logData = LogData()
+         self.logData.bowelMovements = bowelMovements
       }
-      
+
       // Ensure symptom ratings match current tracked symptoms
       syncSymptomRatingsWithTrackedSymptoms()
-      
+
       // Ensure medication adherence matches current tracked medications
       syncMedicationAdherenceWithTrackedMedications()
    }

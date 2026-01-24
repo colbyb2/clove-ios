@@ -1,6 +1,8 @@
 import SwiftUI
 
-
+/// Observable data container for daily log entry form state.
+/// This is a pure data container with no database dependencies - all data loading
+/// should be performed by the ViewModel and passed in via initializers.
 @Observable
 class LogData {
     var mood: Double = 5
@@ -13,20 +15,25 @@ class LogData {
     var medicationAdherence: [MedicationAdherence] = []
     var notes: String? = nil
     var bowelMovements: [BowelMovement] = []
-    
-    // Computed property to get medications that were taken
+    var symptomRatings: [SymptomRatingVM] = []
+
+    /// Computed property to get medications that were taken
     var medicationsTaken: [String] {
         return medicationAdherence
             .filter { $0.wasTaken }
             .map { $0.medicationName }
     }
-    var symptomRatings: [SymptomRatingVM] = []
-    
+
+    /// Creates a new empty LogData with default values
     init() {
-        loadBowelMovements(for: Date())
+        // Pure initialization - no side effects or database calls
     }
-    
-    init(from log: DailyLog) {
+
+    /// Creates LogData from an existing DailyLog, optionally with bowel movements
+    /// - Parameters:
+    ///   - log: The DailyLog to populate from
+    ///   - bowelMovements: Bowel movements for this date (loaded externally by ViewModel)
+    init(from log: DailyLog, bowelMovements: [BowelMovement] = []) {
         if let logMood = log.mood {
             self.mood = Double(logMood)
         }
@@ -42,13 +49,9 @@ class LogData {
         self.activities = log.activities
         self.medicationAdherence = log.medicationAdherence
         self.notes = log.notes
-        self.symptomRatings = log.symptomRatings.map({ s in
-            return SymptomRatingVM(symptomId: s.symptomId, symptomName: s.symptomName, ratingDouble: Double(s.rating), isBinary: s.isBinary)
-        })
-        loadBowelMovements(for: log.date)
-    }
-    
-    private func loadBowelMovements(for date: Date) {
-        self.bowelMovements = BowelMovementRepo.shared.getBowelMovementsForDate(date)
+        self.symptomRatings = log.symptomRatings.map { s in
+            SymptomRatingVM(symptomId: s.symptomId, symptomName: s.symptomName, ratingDouble: Double(s.rating), isBinary: s.isBinary)
+        }
+        self.bowelMovements = bowelMovements
     }
 }
