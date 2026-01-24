@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @Environment(\.dependencies) private var dependencies
     @State private var navigationCoordinator = NavigationCoordinator.shared
-    
+
     var body: some View {
         TabView(selection: $navigationCoordinator.selectedTab) {
             NavigationStack {

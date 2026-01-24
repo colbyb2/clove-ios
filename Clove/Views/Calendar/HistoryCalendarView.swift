@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HistoryCalendarView: View {
+   @Environment(\.dependencies) private var dependencies
    @State private var viewModel = HistoryCalendarViewModel()
    @State private var currentMonth = Date()
 
@@ -62,7 +63,7 @@ struct HistoryCalendarView: View {
       }
       .onAppear {
          viewModel.loadData()
-         if TutorialManager.shared.startTutorial(Tutorials.CalendarView) == .Failure {
+         if dependencies.tutorialManager.startTutorial(Tutorials.CalendarView) == .Failure {
             print("Tutorial [CalendarView] Failed to Start")
          }
       }
@@ -431,8 +432,16 @@ struct EmptyLogView: View {
    }
 }
 
-#Preview {
+#Preview("With Data") {
    NavigationView {
       HistoryCalendarView()
    }
+   .previewScenario(.withData(days: 30))
+}
+
+#Preview("Empty") {
+   NavigationView {
+      HistoryCalendarView()
+   }
+   .previewScenario(.empty)
 }

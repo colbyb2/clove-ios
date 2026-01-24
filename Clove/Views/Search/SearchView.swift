@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SearchView: View {
+    @Environment(\.dependencies) private var dependencies
     @State private var viewModel = SearchViewModel()
     @State private var selectedLog: DailyLog?
     @State private var userSettings: UserSettings?
@@ -52,7 +53,7 @@ struct SearchView: View {
             .onAppear {
                 loadUserSettings()
                 // Trigger tutorial on first visit
-                if TutorialManager.shared.startTutorial(Tutorials.SearchView) == .Failure {
+                if dependencies.tutorialManager.startTutorial(Tutorials.SearchView) == .Failure {
                     print("Tutorial [SearchView] Failed to Start")
                 }
             }
@@ -62,7 +63,7 @@ struct SearchView: View {
     // MARK: - Helper Methods
 
     private func loadUserSettings() {
-        userSettings = UserSettingsRepo.shared.getSettings() ?? .default
+        userSettings = dependencies.settingsRepository.getSettings() ?? .default
     }
 
     private var availableCategories: [SearchCategory] {

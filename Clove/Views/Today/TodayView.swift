@@ -449,23 +449,18 @@ struct TodayView: View {
     }
 }
 
-#Preview {
+#Preview("All Features") {
     NavigationStack {
-        TodayView(viewModel: TodayViewModel.preview(
-            settings: UserSettings(
-                trackMood: true,
-                trackPain: true,
-                trackEnergy: true,
-                trackSymptoms: true,
-                trackMeals: false,
-                trackActivities: false,
-                trackMeds: false,
-                showFlareToggle: true,
-                trackWeather: false,
-                trackNotes: true,
-                trackBowelMovements: true
-            )
-        ))
+        TodayView(viewModel: TodayViewModel.preview(settings: .allEnabled))
     }
     .environment(NavigationCoordinator.shared)
+    .previewScenario(.full)
+}
+
+#Preview("Minimal Features") {
+    NavigationStack {
+        TodayView(viewModel: TodayViewModel.preview(settings: .minimal))
+    }
+    .environment(NavigationCoordinator.shared)
+    .previewScenario(.minimal)
 }

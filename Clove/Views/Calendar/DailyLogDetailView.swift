@@ -3,9 +3,10 @@ import SwiftUI
 struct DailyLogDetailView: View {
     let log: DailyLog
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dependencies) private var dependencies
     @State private var trackedSymptoms: [TrackedSymptom] = []
     @State private var bowelMovements: [BowelMovement] = []
-    @State private var userSettings = UserSettingsRepo.shared.getSettings()
+    @State private var userSettings: UserSettings?
 
     var body: some View {
         NavigationView {
@@ -83,6 +84,7 @@ struct DailyLogDetailView: View {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .onAppear {
+            loadUserSettings()
             loadTrackedSymptoms()
             loadBowelMovements()
         }
@@ -400,17 +402,21 @@ struct DailyLogDetailView: View {
     }
     
     // MARK: - Helper Functions
+    private func loadUserSettings() {
+        userSettings = dependencies.settingsRepository.getSettings()
+    }
+
     private func loadTrackedSymptoms() {
-        trackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
+        trackedSymptoms = dependencies.symptomsRepository.getTrackedSymptoms()
     }
-    
+
     private func loadBowelMovements() {
-        bowelMovements = BowelMovementRepo.shared.getBowelMovementsForDate(log.date)
+        bowelMovements = dependencies.bowelMovementRepository.getBowelMovementsForDate(log.date)
     }
-    
+
     private func editThisDay() {
         // Navigate to Today tab and set the date for editing
-        NavigationCoordinator.shared.editDayInTodayView(date: log.date)
+        dependencies.navigationCoordinator.editDayInTodayView(date: log.date)
         
         // Dismiss this view
         dismiss()
