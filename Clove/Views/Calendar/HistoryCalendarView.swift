@@ -90,7 +90,7 @@ struct HistoryCalendarView: View {
             // Poor mood: Coral orange
             case 3...4: return Color(red: 0.95, green: 0.5, blue: 0.3).opacity(0.85)
             // Worst mood: Deep rose red
-            case 1...2: return Color(red: 0.85, green: 0.25, blue: 0.35).opacity(0.9)
+            case 0...2: return Color(red: 0.85, green: 0.25, blue: 0.35).opacity(0.9)
             default: return .gray.opacity(0.5)
             }
          }
