@@ -106,6 +106,46 @@ class AppReviewManager: AppReviewManaging {
         UserDefaults.standard.removeObject(forKey: Constants.VERSION_UPDATE_DATE)
     }
 
+    // MARK: - Debug/Testing Methods
+
+    #if DEBUG
+    /// Forces the review prompt to appear, bypassing all eligibility checks
+    /// Use this for testing the prompt UI and behavior in development
+    func forcePromptForTesting() async {
+        await MainActor.run {
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                SKStoreReviewController.requestReview(in: windowScene)
+                print("🧪 [DEBUG] Review prompt forced for testing")
+            }
+        }
+    }
+
+    /// Prints the current eligibility status for debugging
+    func debugEligibilityStatus() async {
+        print("🧪 [DEBUG] App Review Eligibility Check:")
+        print("  - User has rated: \(UserDefaults.standard.bool(forKey: Constants.USER_HAS_RATED))")
+        print("  - Timing requirements: \(meetsTimingRequirements())")
+        print("  - Engagement requirements: \(await hasMinimumEngagement())")
+        print("  - Prompt limits: \(await meetsPromptLimits())")
+        print("  - Declined current version: \(declinedCurrentVersion())")
+
+        if let installDate = UserDefaults.standard.object(forKey: Constants.APP_INSTALL_DATE) as? Date {
+            let daysSinceInstall = Calendar.current.dateComponents([.day], from: installDate, to: Date()).day ?? 0
+            print("  - Days since install: \(daysSinceInstall) (need 7)")
+        }
+
+        let logsCount = logsRepository.getLogs().count
+        print("  - Total logs: \(logsCount) (need 5)")
+
+        let trackedSymptoms = symptomsRepository.getTrackedSymptoms().count
+        print("  - Tracked symptoms: \(trackedSymptoms) (need 1+)")
+
+        await dashboardManager.refreshDashboard()
+        let maxStreak = dashboardManager.currentStreaks.first?.currentStreak ?? 0
+        print("  - Current max streak: \(maxStreak) (need 3)")
+    }
+    #endif
+
     // MARK: - Private Setup Methods
 
     private func setupInstallDateIfNeeded() {

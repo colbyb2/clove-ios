@@ -35,7 +35,7 @@ struct SettingsView: View {
    var body: some View {
       ZStack {
          Form {
-            Section(header: Text("Customization")) {
+             Section(header: Text("Customization")) {
                HStack {
                   Image(systemName: "gear")
                      .font(.system(size: 16, weight: .medium))
