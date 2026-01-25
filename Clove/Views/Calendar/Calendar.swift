@@ -141,7 +141,7 @@ struct CalendarView: View {
 
    func textColor(for record: CalendarRecord?, isSelected: Bool) -> Color {
       // If there's a colored heatmap background, use white text for better contrast
-      if let record = record {
+      if record != nil {
          // Check if the color is likely to be dark/saturated
          return .white
       }

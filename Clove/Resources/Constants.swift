@@ -23,4 +23,13 @@ enum Constants {
 
    // Recent Metrics
    static let RECENT_METRICS = "recentMetrics"
+
+   // App Review Tracking
+   static let APP_INSTALL_DATE = "appInstallDate"
+   static let LAST_RATING_PROMPT_DATE = "lastRatingPromptDate"
+   static let RATING_PROMPT_COUNT_THIS_YEAR = "ratingPromptCountThisYear"
+   static let RATING_PROMPT_YEAR = "ratingPromptYear"
+   static let USER_HAS_RATED = "userHasRated"
+   static let RATING_PROMPT_DECLINED_VERSION = "ratingPromptDeclinedVersion"
+   static let VERSION_UPDATE_DATE = "versionUpdateDate"
 }

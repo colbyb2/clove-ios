@@ -229,6 +229,11 @@ class TodayViewModel {
       if result {
          let message = "Log saved successfully"
          toastManager.showToast(message: message, color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
+
+         // Check for rating prompt opportunity
+         Task {
+            await AppReviewManager.shared.promptForReviewIfEligible()
+         }
       } else {
          toastManager.showToast(message: "Hmm, something went wrong.", color: CloveColors.error)
       }

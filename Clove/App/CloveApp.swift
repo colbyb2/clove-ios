@@ -52,6 +52,9 @@ struct CloveApp: App {
     init() {
         NotificationManager.shared.clearBadge()
 
+        // Track app launch for review prompts and version updates
+        AppReviewManager.shared.trackAppLaunch()
+
         if !selectedColor.isEmpty, let color = selectedColor.toColor() {
             Theme.shared.accent = color
         }
