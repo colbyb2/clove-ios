@@ -14,7 +14,9 @@ enum Migrations {
         NotesTrackingMigration(),
         BowelMovementSettingMigration(),
         BowelMovementTableMigration(),
-        BinarySymptomMigration()
+        BinarySymptomMigration(),
+        FoodActivityTablesMigration(),
+        FoodActivityDataMigration()
     ]
 }
 
@@ -250,5 +252,184 @@ struct BinarySymptomMigration: Migration {
 extension Data {
     func toJSONString() -> String {
         return String(data: self, encoding: .utf8) ?? "{}"
+    }
+}
+
+/// Migration to create FoodEntry and ActivityEntry tables
+struct FoodActivityTablesMigration: Migration {
+    var identifier: String {
+        return "foodActivityTables_012725"
+    }
+
+    func migrate(_ db: Database) throws {
+        // Create FoodEntry table
+        try db.create(table: "foodEntry") { t in
+            t.autoIncrementedPrimaryKey("id")
+            t.column("name", .text).notNull()
+            t.column("category", .text).notNull()
+            t.column("date", .datetime).notNull()
+            t.column("icon", .text)
+            t.column("notes", .text)
+            t.column("isFavorite", .boolean).notNull().defaults(to: false)
+        }
+
+        // Create ActivityEntry table
+        try db.create(table: "activityEntry") { t in
+            t.autoIncrementedPrimaryKey("id")
+            t.column("name", .text).notNull()
+            t.column("category", .text).notNull()
+            t.column("date", .datetime).notNull()
+            t.column("duration", .integer)
+            t.column("intensity", .text)
+            t.column("icon", .text)
+            t.column("notes", .text)
+            t.column("isFavorite", .boolean).notNull().defaults(to: false)
+        }
+
+        // Create indexes for efficient date-based queries
+        try db.create(index: "foodEntry_date", on: "foodEntry", columns: ["date"])
+        try db.create(index: "activityEntry_date", on: "activityEntry", columns: ["date"])
+    }
+}
+
+/// Migration to convert existing meals/activities string arrays to new entry tables
+struct FoodActivityDataMigration: Migration {
+    var identifier: String {
+        return "foodActivityData_012725"
+    }
+
+    func migrate(_ db: Database) throws {
+        // Get all daily logs with meals or activities
+        let logs = try Row.fetchAll(db, sql: """
+            SELECT id, date, meals, activities FROM dailyLog
+            WHERE meals != '[]' OR activities != '[]'
+        """)
+
+        for log in logs {
+            let logDate: Date = log["date"]
+            let mealsJSON: String = log["meals"]
+            let activitiesJSON: String = log["activities"]
+
+            // Parse meals JSON array
+            if let mealsData = mealsJSON.data(using: .utf8),
+               let meals = try? JSONDecoder().decode([String].self, from: mealsData) {
+                for meal in meals {
+                    // Infer category based on common meal names
+                    let category = inferMealCategory(from: meal)
+
+                    try db.execute(sql: """
+                        INSERT INTO foodEntry (name, category, date, isFavorite)
+                        VALUES (?, ?, ?, 0)
+                    """, arguments: [meal, category.rawValue, logDate])
+                }
+            }
+
+            // Parse activities JSON array
+            if let activitiesData = activitiesJSON.data(using: .utf8),
+               let activities = try? JSONDecoder().decode([String].self, from: activitiesData) {
+                for activity in activities {
+                    // Infer category based on common activity names
+                    let category = inferActivityCategory(from: activity)
+
+                    try db.execute(sql: """
+                        INSERT INTO activityEntry (name, category, date, isFavorite)
+                        VALUES (?, ?, ?, 0)
+                    """, arguments: [activity, category.rawValue, logDate])
+                }
+            }
+        }
+    }
+
+    /// Infers the meal category based on the meal name
+    private func inferMealCategory(from name: String) -> MealCategory {
+        let lowercased = name.lowercased()
+
+        // Check for explicit meal type names
+        if lowercased.contains("breakfast") || lowercased.contains("cereal") ||
+            lowercased.contains("oatmeal") || lowercased.contains("pancake") ||
+            lowercased.contains("waffle") || lowercased.contains("eggs") {
+            return .breakfast
+        }
+
+        if lowercased.contains("lunch") || lowercased.contains("sandwich") ||
+            lowercased.contains("wrap") || lowercased.contains("salad") {
+            return .lunch
+        }
+
+        if lowercased.contains("dinner") || lowercased.contains("supper") {
+            return .dinner
+        }
+
+        if lowercased.contains("snack") || lowercased.contains("chips") ||
+            lowercased.contains("cookie") || lowercased.contains("fruit") ||
+            lowercased.contains("nuts") || lowercased.contains("candy") ||
+            lowercased.contains("chocolate") {
+            return .snack
+        }
+
+        if lowercased.contains("coffee") || lowercased.contains("tea") ||
+            lowercased.contains("water") || lowercased.contains("juice") ||
+            lowercased.contains("soda") || lowercased.contains("smoothie") ||
+            lowercased.contains("milk") || lowercased.contains("drink") {
+            return .beverage
+        }
+
+        // Default to snack for unrecognized items
+        return .snack
+    }
+
+    /// Infers the activity category based on the activity name
+    private func inferActivityCategory(from name: String) -> ActivityCategory {
+        let lowercased = name.lowercased()
+
+        // Exercise activities
+        if lowercased.contains("run") || lowercased.contains("walk") ||
+            lowercased.contains("gym") || lowercased.contains("workout") ||
+            lowercased.contains("swim") || lowercased.contains("cycling") ||
+            lowercased.contains("bike") || lowercased.contains("hike") ||
+            lowercased.contains("jog") || lowercased.contains("exercise") ||
+            lowercased.contains("lift") || lowercased.contains("cardio") ||
+            lowercased.contains("sport") || lowercased.contains("tennis") ||
+            lowercased.contains("basketball") || lowercased.contains("soccer") ||
+            lowercased.contains("football") || lowercased.contains("dance") {
+            return .exercise
+        }
+
+        // Wellness activities
+        if lowercased.contains("yoga") || lowercased.contains("meditat") ||
+            lowercased.contains("stretch") || lowercased.contains("relax") ||
+            lowercased.contains("therapy") || lowercased.contains("massage") ||
+            lowercased.contains("spa") || lowercased.contains("mindful") {
+            return .wellness
+        }
+
+        // Social activities
+        if lowercased.contains("friend") || lowercased.contains("family") ||
+            lowercased.contains("party") || lowercased.contains("dinner") ||
+            lowercased.contains("lunch") || lowercased.contains("meeting") ||
+            lowercased.contains("visit") || lowercased.contains("hangout") ||
+            lowercased.contains("date") || lowercased.contains("call") {
+            return .social
+        }
+
+        // Chores/household activities
+        if lowercased.contains("clean") || lowercased.contains("laundry") ||
+            lowercased.contains("cook") || lowercased.contains("shop") ||
+            lowercased.contains("grocery") || lowercased.contains("errand") ||
+            lowercased.contains("chore") || lowercased.contains("dishes") ||
+            lowercased.contains("vacuum") || lowercased.contains("organizing") {
+            return .chores
+        }
+
+        // Rest activities
+        if lowercased.contains("rest") || lowercased.contains("nap") ||
+            lowercased.contains("sleep") || lowercased.contains("relax") ||
+            lowercased.contains("tv") || lowercased.contains("movie") ||
+            lowercased.contains("reading") || lowercased.contains("read") {
+            return .rest
+        }
+
+        // Default to other for unrecognized activities
+        return .other
     }
 }

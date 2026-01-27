@@ -63,25 +63,11 @@ struct TodayView: View {
                     }
                     
                     if viewModel.settings.trackMeals {
-                        TagInputView(
-                            title: "Meals",
-                            placeholder: "Add a meal...",
-                            type: .meals,
-                            color: CloveColors.green,
-                            items: $viewModel.logData.meals
-                        )
-                        .padding(.vertical, CloveSpacing.small)
+                        FoodTracker(date: viewModel.selectedDate)
                     }
-                    
+
                     if viewModel.settings.trackActivities {
-                        TagInputView(
-                            title: "Activities",
-                            placeholder: "Add an activity...",
-                            type: .activities,
-                            color: CloveColors.blue,
-                            items: $viewModel.logData.activities
-                        )
-                        .padding(.vertical, CloveSpacing.small)
+                        ActivityTracker(date: viewModel.selectedDate)
                     }
                     
                     if viewModel.settings.trackMeds {

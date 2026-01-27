@@ -10,6 +10,8 @@ final class MockDependencyContainer: DependencyContaining {
     var settingsRepository: UserSettingsRepositoryProtocol
     var medicationRepository: MedicationRepositoryProtocol
     var bowelMovementRepository: BowelMovementRepositoryProtocol
+    var foodEntryRepository: FoodEntryRepositoryProtocol
+    var activityEntryRepository: ActivityEntryRepositoryProtocol
     var searchRepository: SearchRepositoryProtocol
 
     // MARK: - Managers
@@ -32,6 +34,8 @@ final class MockDependencyContainer: DependencyContaining {
         settingsRepository: UserSettingsRepositoryProtocol? = nil,
         medicationRepository: MedicationRepositoryProtocol? = nil,
         bowelMovementRepository: BowelMovementRepositoryProtocol? = nil,
+        foodEntryRepository: FoodEntryRepositoryProtocol? = nil,
+        activityEntryRepository: ActivityEntryRepositoryProtocol? = nil,
         searchRepository: SearchRepositoryProtocol? = nil,
         toastManager: ToastManaging? = nil,
         navigationCoordinator: NavigationCoordinating? = nil,
@@ -40,13 +44,15 @@ final class MockDependencyContainer: DependencyContaining {
         metricRegistry: MetricRegistryProtocol? = nil,
         timePeriodManager: TimePeriodManaging? = nil,
         databaseManager: DatabaseManaging? = nil,
-        appReviewManager: AppReviewManaging? = nil,
+        appReviewManager: AppReviewManaging? = nil
     ) {
         self.logsRepository = logsRepository ?? MockLogsRepository()
         self.symptomsRepository = symptomsRepository ?? MockSymptomsRepository()
         self.settingsRepository = settingsRepository ?? MockUserSettingsRepository()
         self.medicationRepository = medicationRepository ?? MockMedicationRepository()
         self.bowelMovementRepository = bowelMovementRepository ?? MockBowelMovementRepository()
+        self.foodEntryRepository = foodEntryRepository ?? MockFoodEntryRepository()
+        self.activityEntryRepository = activityEntryRepository ?? MockActivityEntryRepository()
         self.searchRepository = searchRepository ?? MockSearchRepository()
         self.toastManager = toastManager ?? MockToastManager()
         self.navigationCoordinator = navigationCoordinator ?? MockNavigationCoordinator()

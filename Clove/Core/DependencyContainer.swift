@@ -9,6 +9,8 @@ protocol DependencyContaining: AnyObject {
     var settingsRepository: UserSettingsRepositoryProtocol { get }
     var medicationRepository: MedicationRepositoryProtocol { get }
     var bowelMovementRepository: BowelMovementRepositoryProtocol { get }
+    var foodEntryRepository: FoodEntryRepositoryProtocol { get }
+    var activityEntryRepository: ActivityEntryRepositoryProtocol { get }
     var searchRepository: SearchRepositoryProtocol { get }
 
     // MARK: - Managers
@@ -42,6 +44,8 @@ final class DependencyContainer: DependencyContaining {
     lazy var settingsRepository: UserSettingsRepositoryProtocol = UserSettingsRepo(databaseManager: databaseManager)
     lazy var medicationRepository: MedicationRepositoryProtocol = MedicationRepository(databaseManager: databaseManager)
     lazy var bowelMovementRepository: BowelMovementRepositoryProtocol = BowelMovementRepo(databaseManager: databaseManager)
+    lazy var foodEntryRepository: FoodEntryRepositoryProtocol = FoodEntryRepo(databaseManager: databaseManager)
+    lazy var activityEntryRepository: ActivityEntryRepositoryProtocol = ActivityEntryRepo(databaseManager: databaseManager)
     lazy var searchRepository: SearchRepositoryProtocol = SearchRepo(
         databaseManager: databaseManager,
         logsRepository: logsRepository,

@@ -136,12 +136,12 @@ struct SettingsView: View {
                      Image(systemName: "bandage")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(Theme.shared.accent)
-                     
+
                      Text("Manage Symptoms")
                         .foregroundStyle(CloveColors.primaryText)
-                     
+
                      Spacer()
-                     
+
                      Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(CloveColors.secondaryText)
@@ -150,7 +150,31 @@ struct SettingsView: View {
                .accessibilityLabel("Manage symptoms")
                .accessibilityHint("Add, edit, or remove symptoms for daily tracking")
             }
-            
+
+            Section(header: Text("Food & Activities")) {
+               HStack {
+                  Image(systemName: "fork.knife")
+                     .font(.system(size: 16, weight: .medium))
+                     .foregroundStyle(CloveColors.green)
+                  NavigationLink("Manage Foods") {
+                     ManageFoodsView()
+                  }
+               }
+               .accessibilityLabel("Manage foods")
+               .accessibilityHint("View and organize your food entries and favorites")
+
+               HStack {
+                  Image(systemName: "figure.run")
+                     .font(.system(size: 16, weight: .medium))
+                     .foregroundStyle(CloveColors.blue)
+                  NavigationLink("Manage Activities") {
+                     ManageActivitiesView()
+                  }
+               }
+               .accessibilityLabel("Manage activities")
+               .accessibilityHint("View and organize your activity entries and favorites")
+            }
+
             Section(header: Text("Data")) {
                Button(action: {
                   showExportSheet = true

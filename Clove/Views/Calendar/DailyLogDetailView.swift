@@ -6,6 +6,8 @@ struct DailyLogDetailView: View {
     @Environment(\.dependencies) private var dependencies
     @State private var trackedSymptoms: [TrackedSymptom] = []
     @State private var bowelMovements: [BowelMovement] = []
+    @State private var foodEntries: [FoodEntry] = []
+    @State private var activityEntries: [ActivityEntry] = []
     @State private var userSettings: UserSettings?
 
     var body: some View {
@@ -87,6 +89,8 @@ struct DailyLogDetailView: View {
             loadUserSettings()
             loadTrackedSymptoms()
             loadBowelMovements()
+            loadFoodEntries()
+            loadActivityEntries()
         }
     }
     
@@ -170,40 +174,19 @@ struct DailyLogDetailView: View {
     private var lifestyleSection: some View {
         VStack(spacing: CloveSpacing.medium) {
             SectionHeaderView(title: "Activities & Lifestyle", emoji: "🌟")
-            
+
             VStack(spacing: CloveSpacing.medium) {
-                if !log.meals.isEmpty {
-                    VStack(alignment: .leading, spacing: CloveSpacing.small) {
-                        HStack {
-                            Text("🍎")
-                                .font(.system(size: 16))
-                            Text("Meals")
-                                .font(CloveFonts.body())
-                                .foregroundStyle(CloveColors.primaryText)
-                            Spacer()
-                        }
-                        .padding(.horizontal, CloveSpacing.medium)
-                        
-                       TagListView(items: log.meals, color: CloveColors.green)
-                    }
+                // Food Entries Section
+                if !foodEntries.isEmpty {
+                    FoodEntriesDetailSection(entries: foodEntries)
                 }
-                
-                if !log.activities.isEmpty {
-                    VStack(alignment: .leading, spacing: CloveSpacing.small) {
-                        HStack {
-                            Text("🏃")
-                                .font(.system(size: 16))
-                            Text("Activities")
-                                .font(CloveFonts.body())
-                                .foregroundStyle(CloveColors.primaryText)
-                            Spacer()
-                        }
-                        .padding(.horizontal, CloveSpacing.medium)
-                        
-                       TagListView(items: log.activities, color: CloveColors.blue)
-                    }
+
+                // Activity Entries Section
+                if !activityEntries.isEmpty {
+                    ActivityEntriesDetailSection(entries: activityEntries)
                 }
-                
+
+                // Medications Section
                 if !log.medicationAdherence.isEmpty {
                     VStack(alignment: .leading, spacing: CloveSpacing.small) {
                         HStack {
@@ -215,7 +198,7 @@ struct DailyLogDetailView: View {
                             Spacer()
                         }
                         .padding(.horizontal, CloveSpacing.medium)
-                        
+
                         MedicationAdherenceView(adherence: log.medicationAdherence)
                     }
                 }
@@ -392,7 +375,7 @@ struct DailyLogDetailView: View {
     }
     
     private var hasLifestyleData: Bool {
-        !log.meals.isEmpty || !log.activities.isEmpty || !log.medicationAdherence.isEmpty
+        !foodEntries.isEmpty || !activityEntries.isEmpty || !log.medicationAdherence.isEmpty
     }
     
     private var hasAnyData: Bool {
@@ -412,6 +395,14 @@ struct DailyLogDetailView: View {
 
     private func loadBowelMovements() {
         bowelMovements = dependencies.bowelMovementRepository.getBowelMovementsForDate(log.date)
+    }
+
+    private func loadFoodEntries() {
+        foodEntries = dependencies.foodEntryRepository.getEntriesForDate(log.date)
+    }
+
+    private func loadActivityEntries() {
+        activityEntries = dependencies.activityEntryRepository.getEntriesForDate(log.date)
     }
 
     private func editThisDay() {
@@ -603,6 +594,202 @@ struct MedicationAdherenceView: View {
                    )
                 }
             }
+        }
+    }
+}
+
+// MARK: - Food Entries Detail Section
+struct FoodEntriesDetailSection: View {
+    let entries: [FoodEntry]
+
+    private var groupedEntries: [MealCategory: [FoodEntry]] {
+        Dictionary(grouping: entries, by: { $0.category })
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: CloveSpacing.small) {
+            HStack {
+                Text("🍽️")
+                    .font(.system(size: 16))
+                Text("Meals")
+                    .font(CloveFonts.body())
+                    .foregroundStyle(CloveColors.primaryText)
+                Spacer()
+            }
+            .padding(.horizontal, CloveSpacing.medium)
+
+            VStack(spacing: CloveSpacing.small) {
+                ForEach(MealCategory.allCases) { category in
+                    if let categoryEntries = groupedEntries[category], !categoryEntries.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 4) {
+                                Text(category.emoji)
+                                    .font(.system(size: 12))
+                                Text(category.displayName)
+                                    .font(.system(.caption, design: .rounded).weight(.medium))
+                                    .foregroundStyle(CloveColors.secondaryText)
+                            }
+                            .padding(.horizontal, CloveSpacing.medium)
+
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 6) {
+                                    ForEach(categoryEntries) { entry in
+                                        FoodEntryDetailChip(entry: entry)
+                                    }
+                                }
+                                .padding(.horizontal, CloveSpacing.medium)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct FoodEntryDetailChip: View {
+    let entry: FoodEntry
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if entry.isFavorite {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.yellow)
+            }
+
+            Text(entry.name)
+                .font(.system(.caption, design: .rounded).weight(.medium))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(CloveColors.green)
+        .clipShape(Capsule())
+    }
+}
+
+// MARK: - Activity Entries Detail Section
+struct ActivityEntriesDetailSection: View {
+    let entries: [ActivityEntry]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: CloveSpacing.small) {
+            HStack {
+                Text("🏃")
+                    .font(.system(size: 16))
+                Text("Activities")
+                    .font(CloveFonts.body())
+                    .foregroundStyle(CloveColors.primaryText)
+                Spacer()
+
+                if totalDuration > 0 {
+                    Text(formattedTotalDuration)
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+            }
+            .padding(.horizontal, CloveSpacing.medium)
+
+            VStack(spacing: CloveSpacing.xsmall) {
+                ForEach(entries) { entry in
+                    ActivityEntryDetailRow(entry: entry)
+                }
+            }
+        }
+    }
+
+    private var totalDuration: Int {
+        entries.compactMap { $0.duration }.reduce(0, +)
+    }
+
+    private var formattedTotalDuration: String {
+        if totalDuration < 60 {
+            return "\(totalDuration) min total"
+        } else {
+            let hours = totalDuration / 60
+            let minutes = totalDuration % 60
+            if minutes == 0 {
+                return "\(hours)h total"
+            } else {
+                return "\(hours)h \(minutes)m total"
+            }
+        }
+    }
+}
+
+struct ActivityEntryDetailRow: View {
+    let entry: ActivityEntry
+
+    var body: some View {
+        HStack(spacing: CloveSpacing.small) {
+            // Category icon
+            Image(systemName: entry.category.icon)
+                .font(.system(size: 12))
+                .foregroundStyle(categoryColor)
+                .frame(width: 24, height: 24)
+                .background(categoryColor.opacity(0.15))
+                .clipShape(Circle())
+
+            // Name and details
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Text(entry.name)
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                        .foregroundStyle(CloveColors.primaryText)
+
+                    if entry.isFavorite {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.yellow)
+                    }
+                }
+
+                HStack(spacing: 6) {
+                    if let duration = entry.formattedDuration {
+                        Text(duration)
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
+
+                    if let intensity = entry.intensity {
+                        Text(intensity.indicator)
+                            .font(.system(size: 10))
+                            .foregroundStyle(intensityColor(intensity))
+                    }
+
+                    Text(entry.formattedTime)
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, CloveSpacing.medium)
+        .padding(.vertical, CloveSpacing.xsmall)
+        .background(CloveColors.card.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
+        .padding(.horizontal, CloveSpacing.medium)
+    }
+
+    private var categoryColor: Color {
+        switch entry.category {
+        case .exercise: return CloveColors.blue
+        case .wellness: return CloveColors.green
+        case .social: return CloveColors.orange
+        case .chores: return CloveColors.yellow
+        case .rest: return Theme.shared.accent
+        case .other: return CloveColors.secondaryText
+        }
+    }
+
+    private func intensityColor(_ intensity: ActivityIntensity) -> Color {
+        switch intensity {
+        case .low: return CloveColors.green
+        case .medium: return CloveColors.orange
+        case .high: return CloveColors.red
         }
     }
 }
