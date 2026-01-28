@@ -212,35 +212,35 @@ extension OptimizedDataLoader {
     
     /// Get available activities across all logs (cached)
     func getAvailableActivities() async -> Set<String> {
-        let logs = await getAllLogsForSession()
+        // Get unique activity names from the new ActivityEntry table
+        let activityRepo = ActivityEntryRepo.shared
+        let allEntries = activityRepo.getAllEntries()
+
         var activities = Set<String>()
-        
-        for log in logs {
-            for activity in log.activities {
-                let cleanName = activity.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !cleanName.isEmpty {
-                    activities.insert(cleanName)
-                }
+        for entry in allEntries {
+            let cleanName = entry.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !cleanName.isEmpty {
+                activities.insert(cleanName)
             }
         }
-        
+
         return activities
     }
-    
+
     /// Get available meals across all logs (cached)
     func getAvailableMeals() async -> Set<String> {
-        let logs = await getAllLogsForSession()
+        // Get unique food names from the new FoodEntry table
+        let foodRepo = FoodEntryRepo.shared
+        let allEntries = foodRepo.getAllEntries()
+
         var meals = Set<String>()
-        
-        for log in logs {
-            for meal in log.meals {
-                let cleanName = meal.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !cleanName.isEmpty {
-                    meals.insert(cleanName)
-                }
+        for entry in allEntries {
+            let cleanName = entry.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !cleanName.isEmpty {
+                meals.insert(cleanName)
             }
         }
-        
+
         return meals
     }
 }

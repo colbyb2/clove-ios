@@ -116,7 +116,7 @@ struct MedicationMetricProvider: MetricProvider {
 
 struct ActivityMetricProvider: MetricProvider {
     let activityName: String
-    
+
     var id: String { "activity_\(activityName.lowercased().replacingOccurrences(of: " ", with: "_"))" }
     var displayName: String { activityName }
     var description: String { "Days when \(activityName.lowercased()) was done" }
@@ -125,37 +125,58 @@ struct ActivityMetricProvider: MetricProvider {
     let dataType: MetricDataType = .binary
     let chartType: MetricChartType = .line
     let valueRange: ClosedRange<Double>? = 0...1
-    
+
     private let dataLoader = OptimizedDataLoader.shared
-    
+    private let activityRepo = ActivityEntryRepo.shared
+
     init(activityName: String) {
         self.activityName = activityName
     }
-    
+
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
-        let logs = await dataLoader.filterSessionLogs(for: period)
-        
-        return logs.map { log in
-            let wasDone = log.activities.contains(activityName)
-            return MetricDataPoint(
-                date: log.date,
+        let entries = activityRepo.getEntries(for: period)
+        let calendar = Calendar.current
+
+        // Get all unique days with this activity
+        var dayData: [Date: Bool] = [:]
+        for entry in entries {
+            if entry.name.lowercased() == activityName.lowercased() {
+                let dayStart = calendar.startOfDay(for: entry.date)
+                dayData[dayStart] = true
+            }
+        }
+
+        // Create data points for each unique day
+        return dayData.map { (date, wasDone) in
+            MetricDataPoint(
+                date: date,
                 value: wasDone ? 1.0 : 0.0,
                 rawValue: wasDone,
                 metricId: id
             )
-        }
+        }.sorted { $0.date < $1.date }
     }
-    
+
     func getDataPointCount(for period: TimePeriod) async -> Int {
-        return await dataLoader.getDataPointCount(for: period) { log in
-            log.activities.contains(activityName)
+        let entries = activityRepo.getEntries(for: period)
+        let calendar = Calendar.current
+
+        // Count unique days with this activity
+        var uniqueDays = Set<Date>()
+        for entry in entries {
+            if entry.name.lowercased() == activityName.lowercased() {
+                let dayStart = calendar.startOfDay(for: entry.date)
+                uniqueDays.insert(dayStart)
+            }
         }
+
+        return uniqueDays.count
     }
-    
+
     func formatValue(_ value: Double) -> String {
         return value == 1.0 ? "✅" : "❌"
     }
-    
+
     var chartConfiguration: MetricChartConfiguration {
         MetricChartConfiguration(
             chartType: .line,
@@ -172,7 +193,7 @@ struct ActivityMetricProvider: MetricProvider {
 
 struct MealMetricProvider: MetricProvider {
     let mealName: String
-    
+
     var id: String { "meal_\(mealName.lowercased().replacingOccurrences(of: " ", with: "_"))" }
     var displayName: String { mealName }
     var description: String { "Days when \(mealName.lowercased()) was eaten" }
@@ -181,37 +202,58 @@ struct MealMetricProvider: MetricProvider {
     let dataType: MetricDataType = .binary
     let chartType: MetricChartType = .line
     let valueRange: ClosedRange<Double>? = 0...1
-    
+
     private let dataLoader = OptimizedDataLoader.shared
-    
+    private let foodRepo = FoodEntryRepo.shared
+
     init(mealName: String) {
         self.mealName = mealName
     }
-    
+
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
-        let logs = await dataLoader.filterSessionLogs(for: period)
-        
-        return logs.map { log in
-            let wasEaten = log.meals.contains(mealName)
-            return MetricDataPoint(
-                date: log.date,
+        let entries = foodRepo.getEntries(for: period)
+        let calendar = Calendar.current
+
+        // Get all unique days with this meal
+        var dayData: [Date: Bool] = [:]
+        for entry in entries {
+            if entry.name.lowercased() == mealName.lowercased() {
+                let dayStart = calendar.startOfDay(for: entry.date)
+                dayData[dayStart] = true
+            }
+        }
+
+        // Create data points for each unique day
+        return dayData.map { (date, wasEaten) in
+            MetricDataPoint(
+                date: date,
                 value: wasEaten ? 1.0 : 0.0,
                 rawValue: wasEaten,
                 metricId: id
             )
-        }
+        }.sorted { $0.date < $1.date }
     }
-    
+
     func getDataPointCount(for period: TimePeriod) async -> Int {
-        return await dataLoader.getDataPointCount(for: period) { log in
-            log.meals.contains(mealName)
+        let entries = foodRepo.getEntries(for: period)
+        let calendar = Calendar.current
+
+        // Count unique days with this meal
+        var uniqueDays = Set<Date>()
+        for entry in entries {
+            if entry.name.lowercased() == mealName.lowercased() {
+                let dayStart = calendar.startOfDay(for: entry.date)
+                uniqueDays.insert(dayStart)
+            }
         }
+
+        return uniqueDays.count
     }
-    
+
     func formatValue(_ value: Double) -> String {
         return value == 1.0 ? "✅" : "❌"
     }
-    
+
     var chartConfiguration: MetricChartConfiguration {
         MetricChartConfiguration(
             chartType: .line,
@@ -313,28 +355,46 @@ struct ActivityCountMetricProvider: MetricProvider {
     let dataType: MetricDataType = .count
     let chartType: MetricChartType = .bar
     let valueRange: ClosedRange<Double>? = nil
-    
+
     private let dataLoader = OptimizedDataLoader.shared
-    
+    private let activityRepo = ActivityEntryRepo.shared
+
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
-        let logs = await dataLoader.filterSessionLogs(for: period)
-        
-        return logs.map { log in
+        let entries = activityRepo.getEntries(for: period)
+        let calendar = Calendar.current
+
+        // Count entries by day
+        var countsByDay: [Date: Int] = [:]
+        for entry in entries {
+            let dayStart = calendar.startOfDay(for: entry.date)
+            countsByDay[dayStart, default: 0] += 1
+        }
+
+        // Create data points for each unique day with activities
+        return countsByDay.map { (date, count) in
             MetricDataPoint(
-                date: log.date,
-                value: Double(log.activities.count),
-                rawValue: log.activities,
+                date: date,
+                value: Double(count),
+                rawValue: count,
                 metricId: id
             )
-        }
+        }.sorted { $0.date < $1.date }
     }
-    
+
     func getDataPointCount(for period: TimePeriod) async -> Int {
-        return await dataLoader.getDataPointCount(for: period) { log in
-            !log.activities.isEmpty
+        let entries = activityRepo.getEntries(for: period)
+        let calendar = Calendar.current
+
+        // Count unique days with activities
+        var uniqueDays = Set<Date>()
+        for entry in entries {
+            let dayStart = calendar.startOfDay(for: entry.date)
+            uniqueDays.insert(dayStart)
         }
+
+        return uniqueDays.count
     }
-    
+
     func formatValue(_ value: Double) -> String {
         return String(Int(value))
     }
@@ -349,28 +409,46 @@ struct MealCountMetricProvider: MetricProvider {
     let dataType: MetricDataType = .count
     let chartType: MetricChartType = .bar
     let valueRange: ClosedRange<Double>? = nil
-    
+
     private let dataLoader = OptimizedDataLoader.shared
-    
+    private let foodRepo = FoodEntryRepo.shared
+
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
-        let logs = await dataLoader.filterSessionLogs(for: period)
-        
-        return logs.map { log in
+        let entries = foodRepo.getEntries(for: period)
+        let calendar = Calendar.current
+
+        // Count entries by day
+        var countsByDay: [Date: Int] = [:]
+        for entry in entries {
+            let dayStart = calendar.startOfDay(for: entry.date)
+            countsByDay[dayStart, default: 0] += 1
+        }
+
+        // Create data points for each unique day with meals
+        return countsByDay.map { (date, count) in
             MetricDataPoint(
-                date: log.date,
-                value: Double(log.meals.count),
-                rawValue: log.meals,
+                date: date,
+                value: Double(count),
+                rawValue: count,
                 metricId: id
             )
-        }
+        }.sorted { $0.date < $1.date }
     }
-    
+
     func getDataPointCount(for period: TimePeriod) async -> Int {
-        return await dataLoader.getDataPointCount(for: period) { log in
-            !log.meals.isEmpty
+        let entries = foodRepo.getEntries(for: period)
+        let calendar = Calendar.current
+
+        // Count unique days with meals
+        var uniqueDays = Set<Date>()
+        for entry in entries {
+            let dayStart = calendar.startOfDay(for: entry.date)
+            uniqueDays.insert(dayStart)
         }
+
+        return uniqueDays.count
     }
-    
+
     func formatValue(_ value: Double) -> String {
         return String(Int(value))
     }
