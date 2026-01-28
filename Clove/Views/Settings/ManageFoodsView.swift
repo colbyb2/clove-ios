@@ -34,7 +34,7 @@ struct ManageFoodsView: View {
             // Category filter
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: CloveSpacing.small) {
-                    CategoryFilterChip(
+                    MealCategoryChip(
                         title: "All",
                         isSelected: selectedCategory == nil
                     ) {
@@ -42,7 +42,7 @@ struct ManageFoodsView: View {
                     }
 
                     ForEach(MealCategory.allCases) { category in
-                        CategoryFilterChip(
+                        MealCategoryChip(
                             title: category.displayName,
                             emoji: category.emoji,
                             isSelected: selectedCategory == category
@@ -193,7 +193,7 @@ struct ManageFoodsView: View {
 
 // MARK: - Supporting Views
 
-private struct CategoryFilterChip: View {
+private struct MealCategoryChip: View {
     let title: String
     var emoji: String? = nil
     let isSelected: Bool

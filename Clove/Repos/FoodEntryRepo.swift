@@ -15,11 +15,11 @@ final class FoodEntryRepo {
     @discardableResult
     func save(_ entry: FoodEntry) -> FoodEntry? {
         do {
-            return try databaseManager.write { db in
-                var newEntry = entry
+            var newEntry = entry
+            try databaseManager.write { db in
                 try newEntry.insert(db)
-                return newEntry
             }
+            return newEntry
         } catch {
             print("Error saving food entry: \(error)")
             return nil
@@ -28,7 +28,7 @@ final class FoodEntryRepo {
 
     func save(_ entries: [FoodEntry]) -> Bool {
         do {
-            try databaseManager.write { db in
+            try databaseManager.write { db -> Void in
                 for var entry in entries {
                     try entry.insert(db)
                 }
