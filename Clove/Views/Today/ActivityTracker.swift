@@ -5,6 +5,7 @@ struct ActivityTracker: View {
 
     @State private var activityEntries: [ActivityEntry] = []
     @State private var showAddActivitySheet: Bool = false
+    @State private var isExpanded: Bool = true
 
     private let repo = ActivityEntryRepo.shared
 
@@ -12,12 +13,28 @@ struct ActivityTracker: View {
         VStack(spacing: CloveSpacing.small) {
             // Main Header Row
             HStack {
-                HStack(spacing: CloveSpacing.small) {
-                    Text("🏃")
-                        .font(.system(size: 20))
-                    Text("Activities")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                Button(action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isExpanded.toggle()
+                    }
+                    // Haptic feedback
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                    impactFeedback.impactOccurred()
+                }) {
+                    HStack(spacing: CloveSpacing.small) {
+                        Text("🏃")
+                            .font(.system(size: 20))
+                        Text("Activities")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundStyle(CloveColors.primaryText)
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(CloveColors.secondaryText)
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    }
                 }
+                .buttonStyle(PlainButtonStyle())
 
                 Spacer()
 
@@ -47,7 +64,7 @@ struct ActivityTracker: View {
             }
 
             // Today's Activity Entries
-            if !activityEntries.isEmpty {
+            if !activityEntries.isEmpty && isExpanded {
                 VStack(alignment: .leading, spacing: CloveSpacing.small) {
                     ForEach(activityEntries) { entry in
                         ActivityEntryRow(entry: entry) {
@@ -66,6 +83,7 @@ struct ActivityTracker: View {
                         }
                     }
                 }
+                .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
             }
         }
         .padding(.vertical, CloveSpacing.small)

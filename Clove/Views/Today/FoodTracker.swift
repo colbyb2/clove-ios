@@ -5,6 +5,7 @@ struct FoodTracker: View {
 
     @State private var foodEntries: [FoodEntry] = []
     @State private var showAddFoodSheet: Bool = false
+    @State private var isExpanded: Bool = true
 
     private let repo = FoodEntryRepo.shared
 
@@ -12,12 +13,28 @@ struct FoodTracker: View {
         VStack(spacing: CloveSpacing.small) {
             // Main Header Row
             HStack {
-                HStack(spacing: CloveSpacing.small) {
-                    Text("🍽️")
-                        .font(.system(size: 20))
-                    Text("Meals")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                Button(action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isExpanded.toggle()
+                    }
+                    // Haptic feedback
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                    impactFeedback.impactOccurred()
+                }) {
+                    HStack(spacing: CloveSpacing.small) {
+                        Text("🍽️")
+                            .font(.system(size: 20))
+                        Text("Meals")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundStyle(CloveColors.primaryText)
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(CloveColors.secondaryText)
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    }
                 }
+                .buttonStyle(PlainButtonStyle())
 
                 Spacer()
 
@@ -46,20 +63,16 @@ struct FoodTracker: View {
                 .accessibilityHint("Opens food selection sheet")
             }
 
-            // Today's Food Entries grouped by category
-            if !foodEntries.isEmpty {
-                VStack(alignment: .leading, spacing: CloveSpacing.medium) {
-                    ForEach(MealCategory.allCases) { category in
-                        let categoryEntries = foodEntries.filter { $0.category == category }
-                        if !categoryEntries.isEmpty {
-                            FoodCategorySection(
-                                category: category,
-                                entries: categoryEntries,
-                                onDelete: deleteFoodEntry
-                            )
+            // Today's Food Entries
+            if !foodEntries.isEmpty && isExpanded {
+                VStack(alignment: .leading, spacing: CloveSpacing.small) {
+                    ForEach(foodEntries) { entry in
+                        FoodEntryRow(entry: entry) {
+                            deleteFoodEntry(entry)
                         }
                     }
                 }
+                .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
             }
         }
         .padding(.vertical, CloveSpacing.small)
@@ -100,121 +113,87 @@ struct FoodTracker: View {
     }
 }
 
-// MARK: - Food Category Section
+// MARK: - Food Entry Row
 
-private struct FoodCategorySection: View {
-    let category: MealCategory
-    let entries: [FoodEntry]
-    let onDelete: (FoodEntry) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
-            // Category header
-            HStack(spacing: 6) {
-                Text(category.emoji)
-                    .font(.system(size: 14))
-
-                Text(category.displayName)
-                    .font(.system(.subheadline, design: .rounded).weight(.medium))
-                    .foregroundStyle(CloveColors.secondaryText)
-            }
-
-            // Food items
-            FlowLayout(spacing: 8) {
-                ForEach(entries) { entry in
-                    FoodEntryChip(entry: entry) {
-                        onDelete(entry)
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Food Entry Chip
-
-private struct FoodEntryChip: View {
+private struct FoodEntryRow: View {
     let entry: FoodEntry
     let onDelete: () -> Void
 
-    @State private var showDeleteConfirm = false
-
     var body: some View {
-        HStack(spacing: 6) {
-            if entry.isFavorite {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.yellow)
+        HStack(spacing: 12) {
+            // Category indicator
+            ZStack {
+                Circle()
+                    .fill(categoryColor.opacity(0.15))
+                    .frame(width: 36, height: 36)
+
+                Image(systemName: entry.category.icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(categoryColor)
             }
 
-            Text(entry.name)
-                .font(.system(.subheadline, design: .rounded).weight(.medium))
-                .foregroundStyle(.white)
-                .lineLimit(1)
+            // Details
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(entry.name)
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                        .foregroundStyle(CloveColors.primaryText)
 
-            Button(action: {
-                onDelete()
-            }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.8))
-            }
-            .frame(width: 16, height: 16)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(CloveColors.green)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: CloveColors.green.opacity(0.3), radius: 2, x: 0, y: 1)
-    }
-}
+                    if entry.isFavorite {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.yellow)
+                    }
+                }
 
-// MARK: - Flow Layout
+                HStack(spacing: 8) {
+                    Text(entry.category.displayName)
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(categoryColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(categoryColor.opacity(0.1))
+                        )
 
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
+                    Text(entry.formattedTime)
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = computeLayout(proposal: proposal, subviews: subviews)
-        return result.size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = computeLayout(proposal: proposal, subviews: subviews)
-
-        for (index, position) in result.positions.enumerated() {
-            subviews[index].place(
-                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
-                proposal: .unspecified
-            )
-        }
-    }
-
-    private func computeLayout(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
-        let maxWidth = proposal.width ?? .infinity
-        var positions: [CGPoint] = []
-        var currentX: CGFloat = 0
-        var currentY: CGFloat = 0
-        var maxHeight: CGFloat = 0
-        var rowHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-
-            if currentX + size.width > maxWidth && currentX > 0 {
-                // Move to next row
-                currentX = 0
-                currentY += rowHeight + spacing
-                rowHeight = 0
+                if let notes = entry.notes, !notes.isEmpty {
+                    Text(notes)
+                        .font(.system(.caption))
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .italic()
+                        .lineLimit(1)
+                }
             }
 
-            positions.append(CGPoint(x: currentX, y: currentY))
-            currentX += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-            maxHeight = max(maxHeight, currentY + rowHeight)
-        }
+            Spacer()
 
-        return (CGSize(width: maxWidth, height: maxHeight), positions)
+            // Delete Button
+            Button(action: onDelete) {
+                Image(systemName: "trash")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.red.opacity(0.7))
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .padding(12)
+        .background(CloveColors.card.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
+    }
+
+    private var categoryColor: Color {
+        switch entry.category {
+        case .breakfast: return CloveColors.orange
+        case .lunch: return CloveColors.yellow
+        case .dinner: return Theme.shared.accent
+        case .snack: return CloveColors.green
+        case .beverage: return CloveColors.blue
+        }
     }
 }
 
