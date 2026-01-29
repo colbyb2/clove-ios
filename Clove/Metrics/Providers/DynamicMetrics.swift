@@ -123,7 +123,7 @@ struct ActivityMetricProvider: MetricProvider {
     let icon = "🏃"
     let category: MetricCategory = .activities
     let dataType: MetricDataType = .binary
-    let chartType: MetricChartType = .line
+    let chartType: MetricChartType = .scatter
     let valueRange: ClosedRange<Double>? = 0...1
 
     private let dataLoader = OptimizedDataLoader.shared
@@ -135,21 +135,32 @@ struct ActivityMetricProvider: MetricProvider {
 
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
         let entries = activityRepo.getEntries(for: period)
+        let logs = await dataLoader.filterSessionLogs(for: period)
         let calendar = Calendar.current
 
-        // Get all unique days with this activity
-        var dayData: [Date: Bool] = [:]
+        // Get all days with this activity
+        var daysWithActivity = Set<Date>()
         for entry in entries {
             if entry.name.lowercased() == activityName.lowercased() {
                 let dayStart = calendar.startOfDay(for: entry.date)
-                dayData[dayStart] = true
+                daysWithActivity.insert(dayStart)
             }
         }
 
-        // Create data points for each unique day
-        return dayData.map { (date, wasDone) in
-            MetricDataPoint(
-                date: date,
+        // Get all unique days from both logs and entries
+        var allDays = Set<Date>()
+        for log in logs {
+            allDays.insert(calendar.startOfDay(for: log.date))
+        }
+        for day in daysWithActivity {
+            allDays.insert(day)
+        }
+
+        // Create data points for all unique days
+        return allDays.map { day in
+            let wasDone = daysWithActivity.contains(day)
+            return MetricDataPoint(
+                date: day,
                 value: wasDone ? 1.0 : 0.0,
                 rawValue: wasDone,
                 metricId: id
@@ -200,7 +211,7 @@ struct MealMetricProvider: MetricProvider {
     let icon = "🍽️"
     let category: MetricCategory = .meals
     let dataType: MetricDataType = .binary
-    let chartType: MetricChartType = .line
+    let chartType: MetricChartType = .scatter
     let valueRange: ClosedRange<Double>? = 0...1
 
     private let dataLoader = OptimizedDataLoader.shared
@@ -212,21 +223,32 @@ struct MealMetricProvider: MetricProvider {
 
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
         let entries = foodRepo.getEntries(for: period)
+        let logs = await dataLoader.filterSessionLogs(for: period)
         let calendar = Calendar.current
 
-        // Get all unique days with this meal
-        var dayData: [Date: Bool] = [:]
+        // Get all days with this meal
+        var daysWithMeal = Set<Date>()
         for entry in entries {
             if entry.name.lowercased() == mealName.lowercased() {
                 let dayStart = calendar.startOfDay(for: entry.date)
-                dayData[dayStart] = true
+                daysWithMeal.insert(dayStart)
             }
         }
 
-        // Create data points for each unique day
-        return dayData.map { (date, wasEaten) in
-            MetricDataPoint(
-                date: date,
+        // Get all unique days from both logs and entries
+        var allDays = Set<Date>()
+        for log in logs {
+            allDays.insert(calendar.startOfDay(for: log.date))
+        }
+        for day in daysWithMeal {
+            allDays.insert(day)
+        }
+
+        // Create data points for all unique days
+        return allDays.map { day in
+            let wasEaten = daysWithMeal.contains(day)
+            return MetricDataPoint(
+                date: day,
                 value: wasEaten ? 1.0 : 0.0,
                 rawValue: wasEaten,
                 metricId: id
@@ -361,6 +383,7 @@ struct ActivityCountMetricProvider: MetricProvider {
 
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
         let entries = activityRepo.getEntries(for: period)
+        let logs = await dataLoader.filterSessionLogs(for: period)
         let calendar = Calendar.current
 
         // Count entries by day
@@ -370,10 +393,20 @@ struct ActivityCountMetricProvider: MetricProvider {
             countsByDay[dayStart, default: 0] += 1
         }
 
-        // Create data points for each unique day with activities
-        return countsByDay.map { (date, count) in
-            MetricDataPoint(
-                date: date,
+        // Get all unique days from both logs and entries
+        var allDays = Set<Date>()
+        for log in logs {
+            allDays.insert(calendar.startOfDay(for: log.date))
+        }
+        for day in countsByDay.keys {
+            allDays.insert(day)
+        }
+
+        // Create data points for all unique days
+        return allDays.map { day in
+            let count = countsByDay[day] ?? 0
+            return MetricDataPoint(
+                date: day,
                 value: Double(count),
                 rawValue: count,
                 metricId: id
@@ -415,6 +448,7 @@ struct MealCountMetricProvider: MetricProvider {
 
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
         let entries = foodRepo.getEntries(for: period)
+        let logs = await dataLoader.filterSessionLogs(for: period)
         let calendar = Calendar.current
 
         // Count entries by day
@@ -424,10 +458,20 @@ struct MealCountMetricProvider: MetricProvider {
             countsByDay[dayStart, default: 0] += 1
         }
 
-        // Create data points for each unique day with meals
-        return countsByDay.map { (date, count) in
-            MetricDataPoint(
-                date: date,
+        // Get all unique days from both logs and entries
+        var allDays = Set<Date>()
+        for log in logs {
+            allDays.insert(calendar.startOfDay(for: log.date))
+        }
+        for day in countsByDay.keys {
+            allDays.insert(day)
+        }
+
+        // Create data points for all unique days
+        return allDays.map { day in
+            let count = countsByDay[day] ?? 0
+            return MetricDataPoint(
+                date: day,
                 value: Double(count),
                 rawValue: count,
                 metricId: id

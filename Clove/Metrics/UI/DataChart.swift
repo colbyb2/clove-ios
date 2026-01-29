@@ -55,7 +55,7 @@ struct ChartBuilder: View {
             PointMark(x: .value("Date", point.date),
                       y: .value("Value", point.value)
             )
-            .foregroundStyle(metric.dataType == .binary ? (point.value < 5 ? CloveColors.red : CloveColors.green) : Theme.shared.accent)
+            .foregroundStyle(metric.dataType == .binary ? (point.value < 0.5 ? CloveColors.red : CloveColors.green) : Theme.shared.accent)
             .symbolSize(14)
             .opacity(animationProgress)
             

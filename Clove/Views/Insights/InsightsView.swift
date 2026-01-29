@@ -227,7 +227,7 @@ struct InsightsView: View {
                         .onTapGesture {
                             showingFullScreenChart = true
                         }
-                        .frame(minHeight: 500)
+                        .frame(minHeight: metric.dataType == .binary ? 200 : 500)
 
                     HStack {
                         Spacer()
