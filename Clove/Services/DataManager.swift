@@ -188,12 +188,12 @@ class DataManager {
         case .meals:
             // Get food entries from the new FoodEntryRepo
             let foodEntries = FoodEntryRepo.shared.getEntriesForDate(log.date)
-            let mealNames = foodEntries.map { $0.name }
+            let mealNames = foodEntries.map { "\($0.name) (\($0.category.displayName))" }
             return mealNames.joined(separator: "; ")
         case .activities:
             // Get activity entries from the new ActivityEntryRepo
             let activityEntries = ActivityEntryRepo.shared.getEntriesForDate(log.date)
-            let activityNames = activityEntries.map { $0.name }
+            let activityNames = activityEntries.map { "\($0.name) (\($0.category.displayName))" }
             return activityNames.joined(separator: "; ")
         case .notes:
             return log.notes ?? ""

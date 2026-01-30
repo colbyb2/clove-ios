@@ -345,9 +345,30 @@ class DataImportManager {
         for foodString in foodStrings {
             guard !foodString.isEmpty else { continue }
 
-            // Simple format: just food names
-            // Default to snack category since we don't export category info
-            entries.append(FoodEntry(name: foodString, category: .snack, date: date))
+            // Parse "Salmon (Lunch)" format
+            guard let parenIndex = foodString.firstIndex(of: "(") else {
+                // No category, default to snack
+                entries.append(FoodEntry(name: foodString, category: .snack, date: date))
+                continue
+            }
+
+            let name = String(foodString[..<parenIndex]).trimmingCharacters(in: .whitespaces)
+            let categoryString = String(foodString[foodString.index(after: parenIndex)...])
+                .replacingOccurrences(of: ")", with: "")
+                .trimmingCharacters(in: .whitespaces)
+
+            // Map category display name to enum
+            let category: MealCategory
+            switch categoryString {
+            case "Breakfast": category = .breakfast
+            case "Lunch": category = .lunch
+            case "Dinner": category = .dinner
+            case "Snack": category = .snack
+            case "Beverage": category = .beverage
+            default: category = .snack
+            }
+
+            entries.append(FoodEntry(name: name, category: category, date: date))
         }
 
         return entries
@@ -362,9 +383,31 @@ class DataImportManager {
         for activityString in activityStrings {
             guard !activityString.isEmpty else { continue }
 
-            // Simple format: just activity names
-            // Default to other category since we don't export category info
-            entries.append(ActivityEntry(name: activityString, category: .other, date: date))
+            // Parse "Lift (Exercise)" format
+            guard let parenIndex = activityString.firstIndex(of: "(") else {
+                // No category, default to other
+                entries.append(ActivityEntry(name: activityString, category: .other, date: date))
+                continue
+            }
+
+            let name = String(activityString[..<parenIndex]).trimmingCharacters(in: .whitespaces)
+            let categoryString = String(activityString[activityString.index(after: parenIndex)...])
+                .replacingOccurrences(of: ")", with: "")
+                .trimmingCharacters(in: .whitespaces)
+
+            // Map category display name to enum
+            let category: ActivityCategory
+            switch categoryString {
+            case "Exercise": category = .exercise
+            case "Wellness": category = .wellness
+            case "Social": category = .social
+            case "Chores": category = .chores
+            case "Rest": category = .rest
+            case "Other": category = .other
+            default: category = .other
+            }
+
+            entries.append(ActivityEntry(name: name, category: category, date: date))
         }
 
         return entries
