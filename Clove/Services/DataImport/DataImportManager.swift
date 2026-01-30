@@ -130,14 +130,20 @@ class DataImportManager {
     
     private func clearExistingData() throws {
         let dbManager = DatabaseManager.shared
-        
+
         try dbManager.write { db in
             // Clear all existing logs
             try db.execute(sql: "DELETE FROM dailyLog")
-            
-            // Clear all bowel movements  
+
+            // Clear all bowel movements
             try db.execute(sql: "DELETE FROM bowelMovement")
-            
+
+            // Clear all food entries
+            try db.execute(sql: "DELETE FROM foodEntry")
+
+            // Clear all activity entries
+            try db.execute(sql: "DELETE FROM activityEntry")
+
             // Note: We don't clear symptoms or medications as they might be reused
         }
     }
@@ -181,17 +187,29 @@ class DataImportManager {
         
         // Parse list fields
         let medications = parseListField(getValue("Medications", row: row, columnMap: columnMap))
-        let meals = parseListField(getValue("Meals", row: row, columnMap: columnMap))
-        let activities = parseListField(getValue("Activities", row: row, columnMap: columnMap))
+        let mealsData = getValue("Meals", row: row, columnMap: columnMap)
+        let activitiesData = getValue("Activities", row: row, columnMap: columnMap)
         let notes = getValue("Notes", row: row, columnMap: columnMap)
-        
+
+        // Parse and save food entries from the new format
+        let foodEntries = parseFoodEntries(mealsData, for: date)
+        for foodEntry in foodEntries {
+            _ = FoodEntryRepo.shared.save(foodEntry)
+        }
+
+        // Parse and save activity entries from the new format
+        let activityEntries = parseActivityEntries(activitiesData, for: date)
+        for activityEntry in activityEntries {
+            _ = ActivityEntryRepo.shared.save(activityEntry)
+        }
+
         // Parse symptom ratings
         let symptomRatings = try parseSymptomRatings(row: row, columnMap: columnMap, symptomColumns: symptomColumns)
-        
+
         // Parse bowel movements and create them
         let bowelMovementsData = getValue("Bowel Movements", row: row, columnMap: columnMap)
         let bowelMovements = try parseBowelMovements(bowelMovementsData, for: date)
-        
+
         // Save bowel movements
         var savedBowelMovementCount = 0
         for movement in bowelMovements {
@@ -199,15 +217,15 @@ class DataImportManager {
                 savedBowelMovementCount += 1
             }
         }
-        
-        // Create daily log
+
+        // Create daily log (meals and activities are now in separate tables)
         let dailyLog = DailyLog(
             date: date,
             mood: mood,
             painLevel: painLevel,
             energyLevel: energyLevel,
-            meals: meals,
-            activities: activities,
+            meals: [],
+            activities: [],
             medicationsTaken: medications,
             medicationAdherence: [], // Not exported, so empty on import
             notes: notes.isEmpty ? nil : notes,
@@ -215,7 +233,7 @@ class DataImportManager {
             weather: weather.isEmpty ? nil : weather,
             symptomRatings: symptomRatings
         )
-        
+
         return (dailyLog, savedBowelMovementCount)
     }
     
@@ -306,18 +324,52 @@ class DataImportManager {
     private func createDateWithTime(baseDate: Date, timeString: String) -> Date? {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
-        
+
         guard let time = formatter.date(from: timeString) else { return nil }
-        
+
         let calendar = Calendar.current
         let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
-        
+
         return calendar.date(bySettingHour: timeComponents.hour ?? 0,
                            minute: timeComponents.minute ?? 0,
                            second: 0,
                            of: calendar.startOfDay(for: baseDate))
     }
-    
+
+    private func parseFoodEntries(_ value: String, for date: Date) -> [FoodEntry] {
+        guard !value.isEmpty else { return [] }
+
+        var entries: [FoodEntry] = []
+        let foodStrings = value.components(separatedBy: ";").map { $0.trimmingCharacters(in: .whitespaces) }
+
+        for foodString in foodStrings {
+            guard !foodString.isEmpty else { continue }
+
+            // Simple format: just food names
+            // Default to snack category since we don't export category info
+            entries.append(FoodEntry(name: foodString, category: .snack, date: date))
+        }
+
+        return entries
+    }
+
+    private func parseActivityEntries(_ value: String, for date: Date) -> [ActivityEntry] {
+        guard !value.isEmpty else { return [] }
+
+        var entries: [ActivityEntry] = []
+        let activityStrings = value.components(separatedBy: ";").map { $0.trimmingCharacters(in: .whitespaces) }
+
+        for activityString in activityStrings {
+            guard !activityString.isEmpty else { continue }
+
+            // Simple format: just activity names
+            // Default to other category since we don't export category info
+            entries.append(ActivityEntry(name: activityString, category: .other, date: date))
+        }
+
+        return entries
+    }
+
     @MainActor
     private func updateProgress(_ progress: Double) {
         self.importProgress = progress

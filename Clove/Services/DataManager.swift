@@ -186,9 +186,15 @@ class DataManager {
             let takenMedications = log.medicationAdherence.filter { $0.wasTaken }.map { $0.medicationName }
             return takenMedications.joined(separator: "; ")
         case .meals:
-            return log.meals.joined(separator: "; ")
+            // Get food entries from the new FoodEntryRepo
+            let foodEntries = FoodEntryRepo.shared.getEntriesForDate(log.date)
+            let mealNames = foodEntries.map { $0.name }
+            return mealNames.joined(separator: "; ")
         case .activities:
-            return log.activities.joined(separator: "; ")
+            // Get activity entries from the new ActivityEntryRepo
+            let activityEntries = ActivityEntryRepo.shared.getEntriesForDate(log.date)
+            let activityNames = activityEntries.map { $0.name }
+            return activityNames.joined(separator: "; ")
         case .notes:
             return log.notes ?? ""
         }
