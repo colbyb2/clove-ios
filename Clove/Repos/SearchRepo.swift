@@ -5,21 +5,29 @@ final class SearchRepo {
     static let shared = SearchRepo(
         databaseManager: DatabaseManager.shared,
         logsRepository: LogsRepo.shared,
-        bowelMovementRepository: BowelMovementRepo.shared
+        bowelMovementRepository: BowelMovementRepo.shared,
+        foodEntryRepository: FoodEntryRepo.shared,
+        activityEntryRepository: ActivityEntryRepo.shared
     )
 
     private let databaseManager: DatabaseManaging
     private let logsRepository: LogsRepositoryProtocol
     private let bowelMovementRepository: BowelMovementRepositoryProtocol
+    private let foodEntryRepository: FoodEntryRepositoryProtocol
+    private let activityEntryRepository: ActivityEntryRepositoryProtocol
 
     init(
         databaseManager: DatabaseManaging,
         logsRepository: LogsRepositoryProtocol,
-        bowelMovementRepository: BowelMovementRepositoryProtocol
+        bowelMovementRepository: BowelMovementRepositoryProtocol,
+        foodEntryRepository: FoodEntryRepositoryProtocol,
+        activityEntryRepository: ActivityEntryRepositoryProtocol
     ) {
         self.databaseManager = databaseManager
         self.logsRepository = logsRepository
         self.bowelMovementRepository = bowelMovementRepository
+        self.foodEntryRepository = foodEntryRepository
+        self.activityEntryRepository = activityEntryRepository
     }
 
     // MARK: - Main Search Method
@@ -102,48 +110,55 @@ final class SearchRepo {
     }
 
     func searchMeals(query: String) -> [SearchResult] {
-        let logs = logsRepository.getLogs()
+        // Search through FoodEntry entries
+        let allFoodEntries = foodEntryRepository.getAllEntries()
 
-        return logs.flatMap { log -> [SearchResult] in
-            log.meals.compactMap { meal in
-                guard meal.range(of: query, options: .caseInsensitive) != nil else {
-                    return nil
-                }
-
-                let contextSnippet = meal
-                let fullRange = meal.startIndex..<meal.endIndex
-
-                return SearchResult(
-                    log: log,
-                    matchedCategory: .meals,
-                    matchedText: meal,
-                    contextSnippet: contextSnippet,
-                    matchRange: fullRange
-                )
+        return allFoodEntries.compactMap { foodEntry in
+            guard foodEntry.name.range(of: query, options: .caseInsensitive) != nil else {
+                return nil
             }
+
+            // Get or create log for this date
+            let log = logsRepository.getLogForDate(foodEntry.date) ?? DailyLog(date: foodEntry.date)
+
+            let contextSnippet = "\(foodEntry.name) (\(foodEntry.category.displayName))"
+            let fullRange = foodEntry.name.startIndex..<foodEntry.name.endIndex
+
+            return SearchResult(
+                log: log,
+                matchedCategory: .meals,
+                matchedText: foodEntry.name,
+                contextSnippet: contextSnippet,
+                matchRange: fullRange
+            )
         }
     }
 
     func searchActivities(query: String) -> [SearchResult] {
-        let logs = logsRepository.getLogs()
+        // Search through ActivityEntry entries
+        let allActivityEntries = activityEntryRepository.getAllEntries()
 
-        return logs.flatMap { log -> [SearchResult] in
-            log.activities.compactMap { activity in
-                guard activity.range(of: query, options: .caseInsensitive) != nil else {
-                    return nil
-                }
-
-                let contextSnippet = activity
-                let fullRange = activity.startIndex..<activity.endIndex
-
-                return SearchResult(
-                    log: log,
-                    matchedCategory: .activities,
-                    matchedText: activity,
-                    contextSnippet: contextSnippet,
-                    matchRange: fullRange
-                )
+        return allActivityEntries.compactMap { activityEntry in
+            guard activityEntry.name.range(of: query, options: .caseInsensitive) != nil else {
+                return nil
             }
+
+            // Get or create log for this date
+            let log = logsRepository.getLogForDate(activityEntry.date) ?? DailyLog(date: activityEntry.date)
+
+            var contextSnippet = "\(activityEntry.name) (\(activityEntry.category.displayName))"
+            if let duration = activityEntry.duration {
+                contextSnippet += " - \(duration) min"
+            }
+            let fullRange = activityEntry.name.startIndex..<activityEntry.name.endIndex
+
+            return SearchResult(
+                log: log,
+                matchedCategory: .activities,
+                matchedText: activityEntry.name,
+                contextSnippet: contextSnippet,
+                matchRange: fullRange
+            )
         }
     }
 

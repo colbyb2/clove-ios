@@ -49,7 +49,9 @@ final class DependencyContainer: DependencyContaining {
     lazy var searchRepository: SearchRepositoryProtocol = SearchRepo(
         databaseManager: databaseManager,
         logsRepository: logsRepository,
-        bowelMovementRepository: bowelMovementRepository
+        bowelMovementRepository: bowelMovementRepository,
+        foodEntryRepository: foodEntryRepository,
+        activityEntryRepository: activityEntryRepository
     )
 
     // MARK: - Managers (lazy-loaded)

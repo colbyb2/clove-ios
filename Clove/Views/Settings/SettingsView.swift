@@ -166,7 +166,7 @@ struct SettingsView: View {
                HStack {
                   Image(systemName: "figure.run")
                      .font(.system(size: 16, weight: .medium))
-                     .foregroundStyle(CloveColors.blue)
+                     .foregroundStyle(CloveColors.info)
                   NavigationLink("Manage Activities") {
                      ManageActivitiesView()
                   }
