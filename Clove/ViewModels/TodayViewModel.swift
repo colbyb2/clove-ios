@@ -10,6 +10,7 @@ class TodayViewModel {
    private let settingsRepository: UserSettingsRepositoryProtocol
    private let medicationRepository: MedicationRepositoryProtocol
    private let bowelMovementRepository: BowelMovementRepositoryProtocol
+   private let cycleRepository: CycleRepositoryProtocol
    private let toastManager: ToastManaging
 
    // MARK: - State
@@ -19,6 +20,7 @@ class TodayViewModel {
    var logData: LogData = LogData()
 
    var yesterdayLog: DailyLog? = nil
+   var cycleEntry: Cycle? = nil
    var isSaving = false
 
    // MARK: - Initialization
@@ -31,6 +33,7 @@ class TodayViewModel {
          settingsRepository: UserSettingsRepo.shared,
          medicationRepository: MedicationRepository.shared,
          bowelMovementRepository: BowelMovementRepo.shared,
+         cycleRepository: CycleRepo.shared,
          toastManager: ToastManager.shared
       )
    }
@@ -42,6 +45,7 @@ class TodayViewModel {
       settingsRepository: UserSettingsRepositoryProtocol,
       medicationRepository: MedicationRepositoryProtocol,
       bowelMovementRepository: BowelMovementRepositoryProtocol,
+      cycleRepository: CycleRepositoryProtocol,
       toastManager: ToastManaging
    ) {
       self.logsRepository = logsRepository
@@ -49,6 +53,7 @@ class TodayViewModel {
       self.settingsRepository = settingsRepository
       self.medicationRepository = medicationRepository
       self.bowelMovementRepository = bowelMovementRepository
+      self.cycleRepository = cycleRepository
       self.toastManager = toastManager
    }
 
@@ -64,6 +69,7 @@ class TodayViewModel {
          settingsRepository: container.settingsRepository,
          medicationRepository: container.medicationRepository,
          bowelMovementRepository: container.bowelMovementRepository,
+         cycleRepository: container.cycleRepository,
          toastManager: container.toastManager
       )
       vm.settings = settings
@@ -102,6 +108,9 @@ class TodayViewModel {
 
       // Load bowel movements for this date (externally, not in LogData)
       let bowelMovements = bowelMovementRepository.getBowelMovementsForDate(date)
+
+      // Load cycle entry for this date (externally, not in LogData)
+      loadCycleEntry(for: date)
 
       if let data = logsRepository.getLogForDate(date) {
          self.logData = LogData(from: data, bowelMovements: bowelMovements)
@@ -285,12 +294,36 @@ class TodayViewModel {
    
    func deleteSymptom(id: Int64) {
       let success = symptomsRepository.deleteSymptom(id: id)
-      
+
       if success {
          loadTrackedSymptoms() // Refresh the list
          toastManager.showToast(message: "Symptom deleted", color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
       } else {
          toastManager.showToast(message: "Failed to delete symptom", color: CloveColors.error)
+      }
+   }
+
+   // MARK: - Cycle Management
+
+   func loadCycleEntry(for date: Date) {
+      let entries = cycleRepository.getCyclesForDate(date)
+      self.cycleEntry = entries.first
+   }
+
+   func deleteCycleEntry() {
+      guard let id = cycleEntry?.id else { return }
+      if cycleRepository.delete(id: id) {
+         cycleEntry = nil
+         toastManager.showToast(
+            message: "Cycle entry deleted",
+            color: CloveColors.success,
+            icon: Image(systemName: "checkmark.circle")
+         )
+      } else {
+         toastManager.showToast(
+            message: "Failed to delete cycle entry",
+            color: CloveColors.error
+         )
       }
    }
 }

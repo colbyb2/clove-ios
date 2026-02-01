@@ -9,7 +9,14 @@ struct TodayView: View {
     @State private var showWeatherSelection: Bool = false
     @State private var showMedicationSelection: Bool = false
     @State private var showNotesEntry: Bool = false
-    
+    @State private var showOccasionalFeaturesMenu: Bool = false
+    @State private var showCycleEntry: Bool = false
+
+    private var shouldShowFAB: Bool {
+        viewModel.settings.trackCycle
+        // Future: || viewModel.settings.trackOtherFeature
+    }
+
     var body: some View {
         ZStack {
             CloveColors.background
@@ -210,9 +217,9 @@ struct TodayView: View {
                                     Text("Flare Day")
                                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                                 }
-                                
+
                                 Spacer()
-                                
+
                                 CloveToggle(toggled: $viewModel.logData.isFlareDay, onColor: .error, handleColor: .card.opacity(0.6))
                                     .accessibilityLabel("Flare day toggle")
                                     .accessibilityHint(viewModel.logData.isFlareDay ? "Currently marked as flare day, tap to unmark" : "Currently not marked as flare day, tap to mark")
@@ -222,7 +229,7 @@ struct TodayView: View {
                                         impactFeedback.impactOccurred()
                                     }
                             }
-                            
+
                             if viewModel.logData.isFlareDay {
                                 Text("Take care of yourself today")
                                     .font(CloveFonts.small())
@@ -232,7 +239,26 @@ struct TodayView: View {
                         }
                         .padding(.vertical, CloveSpacing.small)
                     }
-                    
+
+                    // Cycle Indicator
+                    if let cycle = viewModel.cycleEntry {
+                        VStack(spacing: CloveSpacing.small) {
+                            CycleIndicator(
+                                cycle: cycle,
+                                onTap: {
+                                    showCycleEntry = true
+                                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                    impactFeedback.impactOccurred()
+                                },
+                                onDelete: {
+                                    viewModel.deleteCycleEntry()
+                                }
+                            )
+                        }
+                        .padding(.vertical, CloveSpacing.small)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+
                     Button(action: {
                         // Haptic feedback for save action
                         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
@@ -275,6 +301,24 @@ struct TodayView: View {
                 .padding()
             }
             .padding(.vertical)
+
+            // Floating Action Button
+            if shouldShowFAB {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        FloatingActionButton {
+                            showOccasionalFeaturesMenu = true
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                            impactFeedback.impactOccurred()
+                        }
+                        .padding(.trailing, CloveSpacing.medium)
+                        .padding(.bottom, 80)
+                    }
+                }
+                .transition(.scale.combined(with: .opacity))
+            }
         }
         .onAppear {
             viewModel.load()
@@ -309,6 +353,28 @@ struct TodayView: View {
                 notes: $viewModel.logData.notes,
                 date: viewModel.selectedDate
             )
+        }
+        .sheet(isPresented: $showOccasionalFeaturesMenu) {
+            OccasionalFeaturesMenu(settings: viewModel.settings) { feature in
+                switch feature {
+                case .cycle:
+                    showOccasionalFeaturesMenu = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showCycleEntry = true
+                    }
+                }
+            }
+            .presentationDetents([.height(300)])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(CloveColors.card)
+        }
+        .sheet(isPresented: $showCycleEntry) {
+            CycleEntrySheet(
+                date: viewModel.selectedDate,
+                existingEntry: viewModel.cycleEntry
+            ) {
+                viewModel.loadCycleEntry(for: viewModel.selectedDate)
+            }
         }
     }
 

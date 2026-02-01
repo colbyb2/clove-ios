@@ -10,6 +10,7 @@ final class MockDependencyContainer: DependencyContaining {
     var settingsRepository: UserSettingsRepositoryProtocol
     var medicationRepository: MedicationRepositoryProtocol
     var bowelMovementRepository: BowelMovementRepositoryProtocol
+    var cycleRepository: CycleRepositoryProtocol
     var foodEntryRepository: FoodEntryRepositoryProtocol
     var activityEntryRepository: ActivityEntryRepositoryProtocol
     var searchRepository: SearchRepositoryProtocol
@@ -34,6 +35,7 @@ final class MockDependencyContainer: DependencyContaining {
         settingsRepository: UserSettingsRepositoryProtocol? = nil,
         medicationRepository: MedicationRepositoryProtocol? = nil,
         bowelMovementRepository: BowelMovementRepositoryProtocol? = nil,
+        cycleRepository: CycleRepositoryProtocol? = nil,
         foodEntryRepository: FoodEntryRepositoryProtocol? = nil,
         activityEntryRepository: ActivityEntryRepositoryProtocol? = nil,
         searchRepository: SearchRepositoryProtocol? = nil,
@@ -51,6 +53,7 @@ final class MockDependencyContainer: DependencyContaining {
         self.settingsRepository = settingsRepository ?? MockUserSettingsRepository()
         self.medicationRepository = medicationRepository ?? MockMedicationRepository()
         self.bowelMovementRepository = bowelMovementRepository ?? MockBowelMovementRepository()
+        self.cycleRepository = cycleRepository ?? MockCycleRepository()
         self.foodEntryRepository = foodEntryRepository ?? MockFoodEntryRepository()
         self.activityEntryRepository = activityEntryRepository ?? MockActivityEntryRepository()
         self.searchRepository = searchRepository ?? MockSearchRepository()
