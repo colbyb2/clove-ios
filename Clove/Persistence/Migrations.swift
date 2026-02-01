@@ -16,7 +16,8 @@ enum Migrations {
         BowelMovementTableMigration(),
         BinarySymptomMigration(),
         FoodActivityTablesMigration(),
-        FoodActivityDataMigration()
+        FoodActivityDataMigration(),
+        CycleTableMigration()
     ]
 }
 
@@ -431,5 +432,25 @@ struct FoodActivityDataMigration: Migration {
 
         // Default to other for unrecognized activities
         return .other
+    }
+}
+
+/// Migration to create Cycle table for period tracking
+struct CycleTableMigration: Migration {
+    var identifier: String {
+        return "cycleTable_020126"
+    }
+
+    func migrate(_ db: Database) throws {
+        try db.create(table: "cycle") { t in
+            t.autoIncrementedPrimaryKey("id")
+            t.column("date", .date).notNull()
+            t.column("flow", .text).notNull()
+            t.column("isStartOfCycle", .boolean).notNull().defaults(to: false)
+            t.column("hasCramps", .boolean).notNull().defaults(to: false)
+        }
+
+        // Create index for efficient date-based queries
+        try db.create(index: "cycle_date", on: "cycle", columns: ["date"])
     }
 }
