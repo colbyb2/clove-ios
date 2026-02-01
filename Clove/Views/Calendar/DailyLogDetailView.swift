@@ -9,6 +9,8 @@ struct DailyLogDetailView: View {
     @State private var foodEntries: [FoodEntry] = []
     @State private var activityEntries: [ActivityEntry] = []
     @State private var userSettings: UserSettings?
+    @State private var isFoodsExpanded: Bool = true
+    @State private var isActivitiesExpanded: Bool = true
 
     var body: some View {
         NavigationView {
@@ -178,12 +180,12 @@ struct DailyLogDetailView: View {
             VStack(spacing: CloveSpacing.medium) {
                 // Food Entries Section
                 if !foodEntries.isEmpty {
-                    FoodEntriesDetailSection(entries: foodEntries)
+                    FoodEntriesDetailSection(entries: foodEntries, isExpanded: $isFoodsExpanded)
                 }
 
                 // Activity Entries Section
                 if !activityEntries.isEmpty {
-                    ActivityEntriesDetailSection(entries: activityEntries)
+                    ActivityEntriesDetailSection(entries: activityEntries, isExpanded: $isActivitiesExpanded)
                 }
 
                 // Medications Section
@@ -601,45 +603,39 @@ struct MedicationAdherenceView: View {
 // MARK: - Food Entries Detail Section
 struct FoodEntriesDetailSection: View {
     let entries: [FoodEntry]
-
-    private var groupedEntries: [MealCategory: [FoodEntry]] {
-        Dictionary(grouping: entries, by: { $0.category })
-    }
+    @Binding var isExpanded: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: CloveSpacing.small) {
-            HStack {
-                Text("🍽️")
-                    .font(.system(size: 16))
-                Text("Meals")
-                    .font(CloveFonts.body())
-                    .foregroundStyle(CloveColors.primaryText)
-                Spacer()
+            // Collapsible header
+            Button(action: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    isExpanded.toggle()
+                }
+            }) {
+                HStack {
+                    Text("🍽️")
+                        .font(.system(size: 16))
+                    Text("Meals")
+                        .font(CloveFonts.body())
+                        .foregroundStyle(CloveColors.primaryText)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+
+                    Spacer()
+                }
+                .padding(.horizontal, CloveSpacing.medium)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, CloveSpacing.medium)
+            .buttonStyle(.plain)
 
-            VStack(spacing: CloveSpacing.small) {
-                ForEach(MealCategory.allCases) { category in
-                    if let categoryEntries = groupedEntries[category], !categoryEntries.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack(spacing: 4) {
-                                Text(category.emoji)
-                                    .font(.system(size: 12))
-                                Text(category.displayName)
-                                    .font(.system(.caption, design: .rounded).weight(.medium))
-                                    .foregroundStyle(CloveColors.secondaryText)
-                            }
-                            .padding(.horizontal, CloveSpacing.medium)
-
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 6) {
-                                    ForEach(categoryEntries) { entry in
-                                        FoodEntryDetailChip(entry: entry)
-                                    }
-                                }
-                                .padding(.horizontal, CloveSpacing.medium)
-                            }
-                        }
+            if isExpanded {
+                VStack(spacing: CloveSpacing.xsmall) {
+                    ForEach(entries.sorted(by: { $0.date < $1.date })) { entry in
+                        FoodEntryDetailRow(entry: entry)
                     }
                 }
             }
@@ -647,54 +643,110 @@ struct FoodEntriesDetailSection: View {
     }
 }
 
-struct FoodEntryDetailChip: View {
+struct FoodEntryDetailRow: View {
     let entry: FoodEntry
 
     var body: some View {
-        HStack(spacing: 4) {
-            if entry.isFavorite {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 8))
-                    .foregroundStyle(.yellow)
+        HStack(spacing: CloveSpacing.small) {
+            // Category icon
+            Image(systemName: entry.category.icon)
+                .font(.system(size: 12))
+                .foregroundStyle(categoryColor)
+                .frame(width: 24, height: 24)
+                .background(categoryColor.opacity(0.15))
+                .clipShape(Circle())
+
+            // Name and details
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Text(entry.name)
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                        .foregroundStyle(CloveColors.primaryText)
+
+                    if entry.isFavorite {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.yellow)
+                    }
+                }
+
+                HStack(spacing: 6) {
+                    Text(entry.category.displayName)
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(categoryColor)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(categoryColor.opacity(0.1)))
+
+                    Text(entry.formattedTime)
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
             }
 
-            Text(entry.name)
-                .font(.system(.caption, design: .rounded).weight(.medium))
-                .foregroundStyle(.white)
-                .lineLimit(1)
+            Spacer()
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(CloveColors.green)
-        .clipShape(Capsule())
+        .padding(.horizontal, CloveSpacing.medium)
+        .padding(.vertical, CloveSpacing.xsmall)
+        .background(CloveColors.card.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
+        .padding(.horizontal, CloveSpacing.medium)
+    }
+
+    private var categoryColor: Color {
+        switch entry.category {
+        case .breakfast: return CloveColors.orange
+        case .lunch: return CloveColors.green
+        case .dinner: return CloveColors.blue
+        case .snack: return Theme.shared.accent
+        case .beverage: return CloveColors.blue.opacity(0.8)
+        }
     }
 }
 
 // MARK: - Activity Entries Detail Section
 struct ActivityEntriesDetailSection: View {
     let entries: [ActivityEntry]
+    @Binding var isExpanded: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: CloveSpacing.small) {
-            HStack {
-                Text("🏃")
-                    .font(.system(size: 16))
-                Text("Activities")
-                    .font(CloveFonts.body())
-                    .foregroundStyle(CloveColors.primaryText)
-                Spacer()
-
-                if totalDuration > 0 {
-                    Text(formattedTotalDuration)
-                        .font(.system(.caption, design: .rounded))
-                        .foregroundStyle(CloveColors.secondaryText)
+            // Collapsible header
+            Button(action: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    isExpanded.toggle()
                 }
-            }
-            .padding(.horizontal, CloveSpacing.medium)
+            }) {
+                HStack {
+                    Text("🏃")
+                        .font(.system(size: 16))
+                    Text("Activities")
+                        .font(CloveFonts.body())
+                        .foregroundStyle(CloveColors.primaryText)
 
-            VStack(spacing: CloveSpacing.xsmall) {
-                ForEach(entries) { entry in
-                    ActivityEntryDetailRow(entry: entry)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+
+                    Spacer()
+
+                    if totalDuration > 0 {
+                        Text(formattedTotalDuration)
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
+                }
+                .padding(.horizontal, CloveSpacing.medium)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                VStack(spacing: CloveSpacing.xsmall) {
+                    ForEach(entries.sorted(by: { $0.date < $1.date })) { entry in
+                        ActivityEntryDetailRow(entry: entry)
+                    }
                 }
             }
         }
