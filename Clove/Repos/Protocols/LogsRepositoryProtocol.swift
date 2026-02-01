@@ -1,7 +1,7 @@
 import Foundation
 
 /// Protocol defining operations for daily log management
-protocol LogsRepositoryProtocol: Sendable {
+protocol LogsRepositoryProtocol {
     /// Saves a daily log, updating existing log if one exists for the date
     /// - Parameter log: The log to save
     /// - Returns: True if successful, false otherwise

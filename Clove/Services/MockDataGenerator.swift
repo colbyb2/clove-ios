@@ -94,7 +94,7 @@ class MockDataGenerator {
             let medications = sampleMedications.randomElement() ?? []
             
             // Generate symptom ratings with some correlation to pain/mood
-            var symptomRatings = sampleSymptoms.map { symptom in
+            let symptomRatings = sampleSymptoms.map { symptom in
                 var rating = symptom
                 switch symptom.symptomName {
                 case "Headache":
@@ -112,7 +112,7 @@ class MockDataGenerator {
             }
             
             // Generate medication adherence with some randomness
-            var medicationAdherence = sampleMedicationAdherence.map { med in
+            let medicationAdherence = sampleMedicationAdherence.map { med in
                 var adherence = med
                 adherence.wasTaken = Bool.random() ? true : Double.random(in: 0...1) > 0.2 // 80% adherence rate
                 return adherence

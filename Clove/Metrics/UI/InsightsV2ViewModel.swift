@@ -46,12 +46,8 @@ class InsightsV2ViewModel {
         isLoadingMetricData = true
         errorMessage = nil
         
-        do {
-            let data = await metric.getDataPoints(for: timePeriodManager.selectedPeriod)
-            self.metricData = data.sorted { $0.date < $1.date }
-        } catch {
-            self.errorMessage = "Failed to load metric data: \(error.localizedDescription)"
-        }
+        let data = await metric.getDataPoints(for: timePeriodManager.selectedPeriod)
+        self.metricData = data.sorted { $0.date < $1.date }
         
         isLoadingMetricData = false
     }
@@ -128,12 +124,8 @@ class InsightsV2ViewModel {
         isLoadingMetricData = true
         errorMessage = nil
         
-        do {
-            let (data, info) = await metric.getAggregatedDataPoints(for: timePeriodManager.selectedPeriod, maxPoints: maxPoints)
-            self.metricData = data.sorted { $0.date < $1.date }
-        } catch {
-            self.errorMessage = "Failed to load aggregated metric data: \(error.localizedDescription)"
-        }
+        let (data, _) = await metric.getAggregatedDataPoints(for: timePeriodManager.selectedPeriod, maxPoints: maxPoints)
+        self.metricData = data.sorted { $0.date < $1.date }
         
         isLoadingMetricData = false
     }

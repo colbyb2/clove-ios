@@ -411,7 +411,7 @@ struct DataImportView: View {
             selectedFileName = url.lastPathComponent
             showWarning = true
             
-        case .failure(let error):
+        case .failure(_):
             importError = ImportError.fileReadError
             importCompleted = true
         }

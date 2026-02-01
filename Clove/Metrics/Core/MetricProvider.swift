@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - Core Protocol
 
 /// Protocol that all metrics must implement to provide consistent data access and formatting
-protocol MetricProvider: Identifiable, Sendable {
+protocol MetricProvider: Identifiable {
     // MARK: - Identification
     var id: String { get }
     var displayName: String { get }

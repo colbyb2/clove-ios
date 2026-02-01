@@ -1,7 +1,7 @@
 import Foundation
 
 /// Protocol defining operations for bowel movement tracking
-protocol BowelMovementRepositoryProtocol: Sendable {
+protocol BowelMovementRepositoryProtocol {
     /// Saves multiple bowel movements
     /// - Parameter bowelMovements: The bowel movements to save
     /// - Returns: True if successful, false otherwise

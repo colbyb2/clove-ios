@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - Data Type Definitions
 
 /// Defines the type of data a metric represents
-enum MetricDataType: Sendable, Equatable {
+enum MetricDataType: Equatable {
     case continuous(range: ClosedRange<Double>)  // 1-10 scale
     case binary                                 // 0/1, yes/no
     case categorical(values: [String])           // weather types, bowel movement types
@@ -14,7 +14,7 @@ enum MetricDataType: Sendable, Equatable {
 }
 
 /// Chart type for display
-enum MetricChartType: Sendable {
+enum MetricChartType {
     case line
     case area
     case bar
@@ -69,7 +69,7 @@ struct MetricChartConfig {
 }
 
 /// Represents a formatted metric value
-struct MetricValue: Sendable {
+struct MetricValue {
     let value: Double
     let rawValue: (any Sendable)?
     let formattedValue: String
@@ -82,7 +82,7 @@ struct MetricValue: Sendable {
 }
 
 /// Chart configuration for metrics
-struct MetricChartConfiguration: Sendable {
+struct MetricChartConfiguration {
     let chartType: MetricChartType
     let primaryColor: Color
     let showGradient: Bool
@@ -101,7 +101,7 @@ struct MetricChartConfiguration: Sendable {
 }
 
 /// Statistics calculated from metric data
-struct MetricStatistics: Sendable {
+struct MetricStatistics {
     let mean: Double
     let median: Double
     let min: Double
@@ -110,7 +110,7 @@ struct MetricStatistics: Sendable {
     let trend: TrendDirection
     let changePercentage: Double
     
-    enum TrendDirection: Sendable {
+    enum TrendDirection {
         case increasing
         case decreasing
         case stable

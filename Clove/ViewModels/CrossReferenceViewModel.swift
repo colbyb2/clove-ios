@@ -270,7 +270,6 @@ class CrossReferenceViewModel {
         guard n > 2 else { return 1.0 }
         
         let t = coefficient * sqrt((n - 2) / (1 - coefficient * coefficient))
-        let df = n - 2
         
         // Simplified p-value calculation (approximation)
         // In a real implementation, you'd use a proper t-distribution function

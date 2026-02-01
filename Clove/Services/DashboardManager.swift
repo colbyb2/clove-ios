@@ -212,7 +212,7 @@ class DashboardManager {
    
    func reorderWidgets(from source: IndexSet, to destination: Int) {
       widgets.move(fromOffsets: source, toOffset: destination)
-      for (index, widget) in widgets.enumerated() {
+      for (index, _) in widgets.enumerated() {
          widgets[index].position = index
       }
       saveWidgetPreferences()

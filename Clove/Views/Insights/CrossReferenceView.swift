@@ -734,7 +734,7 @@ struct MetricPairSelector: View {
                }
 
                // Mini preview chart
-               if let metric = selectedMetric, !recentDataPoints.isEmpty {
+               if let _ = selectedMetric, !recentDataPoints.isEmpty {
                   Chart {
                      ForEach(Array(recentDataPoints.enumerated()), id: \.offset) { index, point in
                         LineMark(

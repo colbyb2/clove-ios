@@ -107,35 +107,25 @@ actor OptimizedDataLoader {
     
     private func loadLogsFromDatabase(for period: TimePeriod) async -> [DailyLog] {
         return await withCheckedContinuation { continuation in
-            do {
-                let logs = LogsRepo.shared.getLogs()
-                
-                guard period != .allTime, let dateRange = period.dateRange else {
-                    continuation.resume(returning: logs.sorted { $0.date < $1.date })
-                    return
-                }
-                
-                let filteredLogs = logs.filter { log in
-                    dateRange.contains(log.date)
-                }.sorted { $0.date < $1.date }
-                
-                continuation.resume(returning: filteredLogs)
-            } catch {
-                print("Error loading logs from database: \(error)")
-                continuation.resume(returning: [])
+            let logs = LogsRepo.shared.getLogs()
+            
+            guard period != .allTime, let dateRange = period.dateRange else {
+                continuation.resume(returning: logs.sorted { $0.date < $1.date })
+                return
             }
+            
+            let filteredLogs = logs.filter { log in
+                dateRange.contains(log.date)
+            }.sorted { $0.date < $1.date }
+            
+            continuation.resume(returning: filteredLogs)
         }
     }
     
     private func loadAllLogsFromDatabase() async -> [DailyLog] {
         return await withCheckedContinuation { continuation in
-            do {
-                let logs = LogsRepo.shared.getLogs().sorted { $0.date < $1.date }
-                continuation.resume(returning: logs)
-            } catch {
-                print("Error loading all logs from database: \(error)")
-                continuation.resume(returning: [])
-            }
+            let logs = LogsRepo.shared.getLogs().sorted { $0.date < $1.date }
+            continuation.resume(returning: logs)
         }
     }
 }

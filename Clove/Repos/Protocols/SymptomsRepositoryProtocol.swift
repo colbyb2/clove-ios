@@ -1,7 +1,7 @@
 import Foundation
 
 /// Protocol defining operations for symptom tracking management
-protocol SymptomsRepositoryProtocol: Sendable {
+protocol SymptomsRepositoryProtocol {
     /// Retrieves all tracked symptoms
     /// - Returns: Array of tracked symptoms
     func getTrackedSymptoms() -> [TrackedSymptom]

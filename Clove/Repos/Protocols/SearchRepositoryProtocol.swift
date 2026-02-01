@@ -1,7 +1,7 @@
 import Foundation
 
 /// Protocol defining operations for searching across logs
-protocol SearchRepositoryProtocol: Sendable {
+protocol SearchRepositoryProtocol {
     /// Searches logs based on query and category filters
     /// - Parameters:
     ///   - query: The search query

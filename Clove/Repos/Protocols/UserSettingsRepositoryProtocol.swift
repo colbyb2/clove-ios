@@ -1,7 +1,7 @@
 import Foundation
 
 /// Protocol defining operations for user settings management
-protocol UserSettingsRepositoryProtocol: Sendable {
+protocol UserSettingsRepositoryProtocol {
     /// Retrieves the user settings
     /// - Returns: The user settings if found, nil otherwise
     func getSettings() -> UserSettings?

@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Data Aggregation Types
 
-enum AggregationMethod: Sendable {
+enum AggregationMethod {
     case average        // For continuous data (mood, pain, energy)
     case sum           // For count data (activities, meals)
     case frequency     // For binary data (percentage of days with condition)
@@ -10,7 +10,7 @@ enum AggregationMethod: Sendable {
     case latest        // For latest value in period
 }
 
-struct AggregationConfig: Sendable {
+struct AggregationConfig {
     let maxDataPoints: Int
     let method: AggregationMethod
     let preserveZeros: Bool // Whether to include periods with no data as zero
@@ -22,7 +22,7 @@ struct AggregationConfig: Sendable {
     )
 }
 
-struct AggregatedDataInfo: Sendable {
+struct AggregatedDataInfo {
     let originalCount: Int
     let aggregatedCount: Int
     let aggregationLevel: AggregationLevel

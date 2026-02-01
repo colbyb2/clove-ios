@@ -15,7 +15,7 @@ final class ActivityEntryRepo {
     @discardableResult
     func save(_ entry: ActivityEntry) -> ActivityEntry? {
         do {
-            var newEntry = entry
+            let newEntry = entry
             try databaseManager.write { db in
                 try newEntry.insert(db)
             }
@@ -29,7 +29,7 @@ final class ActivityEntryRepo {
     func save(_ entries: [ActivityEntry]) -> Bool {
         do {
             try databaseManager.write { db -> Void in
-                for var entry in entries {
+                for entry in entries {
                     try entry.insert(db)
                 }
             }

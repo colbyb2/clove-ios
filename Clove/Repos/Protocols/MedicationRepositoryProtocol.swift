@@ -1,7 +1,7 @@
 import Foundation
 
 /// Protocol defining operations for medication tracking management
-protocol MedicationRepositoryProtocol: Sendable {
+protocol MedicationRepositoryProtocol {
     // MARK: - TrackedMedication Methods
 
     /// Retrieves all tracked medications

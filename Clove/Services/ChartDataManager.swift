@@ -665,9 +665,7 @@ class ChartDataManager {
       if period == .week || period == .month {
          return data // Return daily data for week and month views
       }
-      
-      let groupingComponent: Calendar.Component = aggregationLevel == .monthly ? .month : .weekOfYear
-      
+            
       let grouped = Dictionary(grouping: data) { dataPoint in
          if aggregationLevel == .monthly {
             // Group by year-month combination to avoid cross-year issues

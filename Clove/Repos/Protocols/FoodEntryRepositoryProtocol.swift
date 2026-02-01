@@ -1,7 +1,7 @@
 import Foundation
 
 /// Protocol defining operations for food entry tracking
-protocol FoodEntryRepositoryProtocol: Sendable {
+protocol FoodEntryRepositoryProtocol {
     /// Saves a food entry
     /// - Parameter entry: The food entry to save
     /// - Returns: The saved entry with ID populated, or nil on failure

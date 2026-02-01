@@ -1,7 +1,7 @@
 import Foundation
 
 /// Protocol defining operations for activity entry tracking
-protocol ActivityEntryRepositoryProtocol: Sendable {
+protocol ActivityEntryRepositoryProtocol {
     /// Saves an activity entry
     /// - Parameter entry: The activity entry to save
     /// - Returns: The saved entry with ID populated, or nil on failure
