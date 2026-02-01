@@ -152,7 +152,7 @@ struct EmojiSlider: View {
                
                // Emoji thumb
                HStack {
-                  Text("\(currentEmoji)")
+                  Text(verbatim: String(currentEmoji))
                      .font(.system(size: 45))
                      .offset(x: currentOffset)
                      .animation(.interactiveSpring(), value: currentOffset)
