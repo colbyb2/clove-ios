@@ -21,13 +21,13 @@ enum FlowLevel: String, Codable, CaseIterable, Identifiable {
         }
     }
     
-    var numericValue: Int {
+    var numericValue: Double {
         switch self {
-        case .spotting: return 1
-        case .light: return 2
-        case .medium: return 3
-        case .heavy: return 4
-        case .veryHeavy: return 5
+        case .spotting: return 1.0
+        case .light: return 2.0
+        case .medium: return 3.0
+        case .heavy: return 4.0
+        case .veryHeavy: return 5.0
         }
     }
 }

@@ -230,21 +230,21 @@ struct MedicationAdherenceMetricProvider: MetricProvider {
 
 struct BowelMovementMetricProvider: MetricProvider {
     let id: String = "bowelMovements"
-    
+
     let displayName: String = "Bowel Movements"
-    
+
     let description: String = "Daily bowel movements."
-    
+
     let icon: String = "💩"
-    
+
     var category: MetricCategory = .coreHealth
-    
+
     var dataType: MetricDataType = .count
-    
+
     var chartType: MetricChartType = .stackedBar
-    
+
     var valueRange: ClosedRange<Double>? = 1...7
-    
+
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
         let data: [MetricDataPoint] = BowelMovementRepo.shared.getBowelMovements(for: period)
             .map { bm in
@@ -252,13 +252,73 @@ struct BowelMovementMetricProvider: MetricProvider {
             }
         return data
     }
-    
+
     func formatValue(_ value: Double) -> String {
         return "Type \(Int(value.rounded()))"
     }
-    
+
     func getDataPointCount(for period: TimePeriod) async -> Int {
         return BowelMovementRepo.shared.getBowelMovements(for: period).count
     }
-    
+
+}
+
+// MARK: - Flow Level Metric Provider
+
+struct FlowLevelMetricProvider: MetricProvider {
+    let id = "flow_level"
+    let displayName = "Flow Level"
+    let description = "Period flow intensity"
+    let icon = "🩸"
+    let category: MetricCategory = .coreHealth
+    let dataType: MetricDataType = .continuous(range: 0...5)
+    let chartType: MetricChartType = .line
+    let valueRange: ClosedRange<Double>? = 0...5
+
+    func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
+        let cycles = CycleRepo.shared.getCycles(for: period)
+
+        return cycles.map { cycle in
+            MetricDataPoint(
+                date: cycle.date,
+                value: cycle.flow.numericValue,
+                rawValue: cycle.flow,
+                metricId: id
+            )
+        }
+    }
+
+    func getDataPointCount(for period: TimePeriod) async -> Int {
+        return CycleRepo.shared.getCycles(for: period).count
+    }
+
+    func formatValue(_ value: Double) -> String {
+        switch value {
+        case 0:
+            return "None"
+        case 1:
+            return "Spotting"
+        case 2:
+            return "Light"
+        case 3:
+            return "Medium"
+        case 4:
+            return "Heavy"
+        case 5:
+            return "Very Heavy"
+        default:
+            return String(Int(value.rounded()))
+        }
+    }
+
+    var chartConfiguration: MetricChartConfiguration {
+        MetricChartConfiguration(
+            chartType: .line,
+            primaryColor: CloveColors.red,
+            showGradient: true,
+            lineWidth: 2.5,
+            showDataPoints: true,
+            enableInteraction: true
+        )
+    }
 }
