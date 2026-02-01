@@ -52,7 +52,8 @@ extension UserSettings {
         showFlareToggle: false,
         trackWeather: false,
         trackNotes: false,
-        trackBowelMovements: false
+        trackBowelMovements: false,
+        trackCycle: false
     )
 
     /// All tracking features enabled
@@ -67,7 +68,8 @@ extension UserSettings {
         showFlareToggle: true,
         trackWeather: true,
         trackNotes: true,
-        trackBowelMovements: true
+        trackBowelMovements: true,
+        trackCycle: true
     )
 }
 

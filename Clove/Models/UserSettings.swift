@@ -2,7 +2,7 @@ import GRDB
 
 struct UserSettings: Codable, FetchableRecord, PersistableRecord, Identifiable {
     var id: Int64? = 1 // always ID 1 (singleton row)
-    
+
     var trackMood: Bool
     var trackPain: Bool
     var trackEnergy: Bool
@@ -14,6 +14,7 @@ struct UserSettings: Codable, FetchableRecord, PersistableRecord, Identifiable {
     var trackWeather: Bool
     var trackNotes: Bool
     var trackBowelMovements: Bool
+    var trackCycle: Bool
 }
 
 extension UserSettings {
@@ -29,9 +30,10 @@ extension UserSettings {
         showFlareToggle: true,
         trackWeather: true,
         trackNotes: true,
-        trackBowelMovements: false
+        trackBowelMovements: false,
+        trackCycle: false
     )
-    
+
     /// Blank settings
     static let blank = UserSettings(
         trackMood: false,
@@ -44,12 +46,13 @@ extension UserSettings {
         showFlareToggle: false,
         trackWeather: false,
         trackNotes: false,
-        trackBowelMovements: false
+        trackBowelMovements: false,
+        trackCycle: false
     )
 }
 
 extension UserSettings {
     func isSomeEnabled() -> Bool {
-        return trackMood || trackPain || trackEnergy || trackSymptoms || trackMeals || trackActivities || trackMeds || showFlareToggle || trackWeather || trackNotes || trackBowelMovements
+        return trackMood || trackPain || trackEnergy || trackSymptoms || trackMeals || trackActivities || trackMeds || showFlareToggle || trackWeather || trackNotes || trackBowelMovements || trackCycle
     }
 }

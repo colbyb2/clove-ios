@@ -17,7 +17,8 @@ enum Migrations {
         BinarySymptomMigration(),
         FoodActivityTablesMigration(),
         FoodActivityDataMigration(),
-        CycleTableMigration()
+        CycleTableMigration(),
+        CycleSettingMigration()
     ]
 }
 
@@ -452,5 +453,18 @@ struct CycleTableMigration: Migration {
 
         // Create index for efficient date-based queries
         try db.create(index: "cycle_date", on: "cycle", columns: ["date"])
+    }
+}
+
+/// Migration to add cycle tracking setting to UserSettings table
+struct CycleSettingMigration: Migration {
+    var identifier: String {
+        return "cycleSetting_020126"
+    }
+
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "userSettings") { t in
+            t.add(column: "trackCycle", .boolean).notNull().defaults(to: false)
+        }
     }
 }

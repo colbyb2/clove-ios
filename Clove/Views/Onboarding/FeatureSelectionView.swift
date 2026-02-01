@@ -32,7 +32,8 @@ struct FeatureSelectionView: View {
                     featureButton(name: "Medications", icon: "pills.fill", color: Color(hex: "6eb59e"), selected: $vm.baseSettings.trackMeds, animationDelay: 0.7)
                     featureButton(name: "Weather", icon: "cloud.sun.fill", color: Color(hex: "8ec5ff"), selected: $vm.baseSettings.trackWeather, animationDelay: 0.8)
                     featureButton(name: "Bowel Movements", icon: "toilet", color: Color(hex: "9b6230"), selected: $vm.baseSettings.trackBowelMovements, animationDelay: 0.9)
-                    featureButton(name: "Flare Ups", icon: "flame.fill", color: Color(hex: "ed5c40"), selected: $vm.baseSettings.showFlareToggle, animationDelay: 1.0)
+                    featureButton(name: "Cycle", icon: "drop.fill", color: Color(hex: "ff6b9d"), selected: $vm.baseSettings.trackCycle, animationDelay: 1.0)
+                    featureButton(name: "Flare Ups", icon: "flame.fill", color: Color(hex: "ed5c40"), selected: $vm.baseSettings.showFlareToggle, animationDelay: 1.1)
                 }
                 .padding(.vertical)
             }

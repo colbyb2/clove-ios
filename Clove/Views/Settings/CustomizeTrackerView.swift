@@ -13,7 +13,7 @@ struct CustomizeTrackerView: View {
     @State private var trackingOffset: CGFloat = 30
     @State private var inputOffset: CGFloat = 30
     @State private var buttonOffset: CGFloat = 30
-    @State private var trackingAnimations: [Bool] = Array(repeating: false, count: 11)
+    @State private var trackingAnimations: [Bool] = Array(repeating: false, count: 12)
     
     // Tracking options with icons and colors
     private let trackingOptions = [
@@ -26,6 +26,7 @@ struct CustomizeTrackerView: View {
         TrackingOption(key: "trackMeds", title: "Medications", icon: "pills.fill", color: .purple, description: "Track medication adherence"),
         TrackingOption(key: "trackWeather", title: "Weather", icon: "cloud.sun", color: .mint, description: "Record weather conditions"),
         TrackingOption(key: "trackBowelMovements", title: "Bowel Movements", icon: "toilet", color: Color(hex: "9b6230"), description: "Track Bristol Stool Chart types"),
+        TrackingOption(key: "trackCycle", title: "Cycle", icon: "drop.fill", color: Color(hex: "ff6b9d"), description: "Track period and flow levels"),
         TrackingOption(key: "trackNotes", title: "Notes", icon: "note.text", color: .indigo, description: "Add daily notes"),
         TrackingOption(key: "showFlareToggle", title: "Flare Toggle", icon: "exclamationmark.triangle", color: .pink, description: "Mark flare-up days")
     ]
@@ -328,6 +329,7 @@ struct CustomizeTrackerView: View {
         case "trackMeds": return viewModel.settings.trackMeds
         case "trackWeather": return viewModel.settings.trackWeather
         case "trackBowelMovements": return viewModel.settings.trackBowelMovements
+        case "trackCycle": return viewModel.settings.trackCycle
         case "trackNotes": return viewModel.settings.trackNotes
         case "showFlareToggle": return viewModel.settings.showFlareToggle
         default: return false
@@ -345,11 +347,12 @@ struct CustomizeTrackerView: View {
         case "trackMeds": viewModel.settings.trackMeds = value
         case "trackWeather": viewModel.settings.trackWeather = value
         case "trackBowelMovements": viewModel.settings.trackBowelMovements = value
+        case "trackCycle": viewModel.settings.trackCycle = value
         case "trackNotes": viewModel.settings.trackNotes = value
         case "showFlareToggle": viewModel.settings.showFlareToggle = value
         default: break
         }
-        
+
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.impactOccurred()
     }
