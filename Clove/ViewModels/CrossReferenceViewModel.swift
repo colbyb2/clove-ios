@@ -133,8 +133,9 @@ class CrossReferenceViewModel {
     
     private func loadAvailableMetrics() async {
         let metrics = await metricRegistry.getAllAvailableMetrics()
+        let finalMetrics = metrics
         await MainActor.run {
-            self.availableMetrics = metrics
+            self.availableMetrics = finalMetrics
         }
     }
     
@@ -337,9 +338,9 @@ class CrossReferenceViewModel {
             ("medication_adherence", "mood"),
             ("medication_adherence", "pain_level")
         ]
-        
+
         var pairs: [MetricPair] = []
-        
+
         for (primaryId, secondaryId) in commonPairs {
             if let primaryMetric = await metricRegistry.getMetric(id: primaryId),
                let secondaryMetric = await metricRegistry.getMetric(id: secondaryId) {
@@ -352,9 +353,10 @@ class CrossReferenceViewModel {
                 pairs.append(pair)
             }
         }
-        
+
+        let finalPairs = pairs
         await MainActor.run {
-            self.suggestedPairs = pairs
+            self.suggestedPairs = finalPairs
         }
     }
     

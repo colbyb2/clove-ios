@@ -223,28 +223,28 @@ class DashboardManager {
    private func loadMetricSummaries() async {
       let availableMetrics = chartDataManager.getAvailableMetrics()
       var summaries: [MetricSummaryData] = []
-      
+
       for metric in availableMetrics.prefix(4) { // Limit to top 4 metrics
          // Ignore weather for metric overview trends
          if metric == .weather { continue }
-         
+
          let currentData = chartDataManager.getChartData(for: metric, period: .week)
          let previousData = chartDataManager.getChartData(for: metric, period: .month)
-         
+
          guard !currentData.isEmpty else { continue }
-         
+
          let currentValue = currentData.last?.value
          let currentWeekAvg = currentData.map { $0.value }.reduce(0, +) / Double(currentData.count)
-         
+
          // Calculate previous week average for comparison
          let allMonthData = previousData.sorted { $0.date < $1.date }
          let previousWeekData = allMonthData.dropLast(currentData.count).suffix(7)
          let previousWeekAvg = previousWeekData.isEmpty ? currentWeekAvg :
          previousWeekData.map { $0.value }.reduce(0, +) / Double(previousWeekData.count)
-         
+
          let changePercentage = previousWeekAvg != 0 ?
          ((currentWeekAvg - previousWeekAvg) / previousWeekAvg) * 100 : 0
-         
+
          let trend: MetricSummaryData.TrendDirection
          if abs(changePercentage) < 5 {
             trend = .stable
@@ -253,7 +253,7 @@ class DashboardManager {
          } else {
             trend = metric == .painLevel ? .up : .down
          }
-         
+
          summaries.append(MetricSummaryData(
             metric: metric,
             currentValue: currentValue,
@@ -263,31 +263,32 @@ class DashboardManager {
             icon: metric.icon
          ))
       }
-      
+
+      let finalSummaries = summaries
       await MainActor.run {
-         self.metricSummaries = summaries
+         self.metricSummaries = finalSummaries
       }
    }
    
    private func loadStreakData() async {
       var streaks: [StreakData] = []
       let availableMetrics = chartDataManager.getAvailableMetrics()
-      
+
       for metric in availableMetrics.prefix(3) {
          // Ignore weather for streaks calculation
          if metric == .weather { continue }
-         
+
          let data = chartDataManager.getChartData(for: metric, period: .month)
             .sorted { $0.date < $1.date }
-         
+
          guard data.count >= 3 else { continue }
-         
+
          let threshold = getGoodThreshold(for: metric)
          let recentValues = data.suffix(30).map { $0.value }
-         
+
          let currentStreak = calculateCurrentStreak(values: recentValues, threshold: threshold, metric: metric)
          let longestStreak = calculateLongestStreak(values: recentValues, threshold: threshold, metric: metric)
-         
+
          if currentStreak > 0 || longestStreak >= 3 {
             streaks.append(StreakData(
                metricName: metric.displayName,
@@ -298,48 +299,49 @@ class DashboardManager {
             ))
          }
       }
-      
+
+      let finalStreaks = streaks.sorted { $0.currentStreak > $1.currentStreak }
       await MainActor.run {
-         self.currentStreaks = streaks.sorted { $0.currentStreak > $1.currentStreak }
+         self.currentStreaks = finalStreaks
       }
    }
    
    private func loadHealthScore() async {
       let availableMetrics = chartDataManager.getAvailableMetrics()
       guard !availableMetrics.isEmpty else { return }
-      
+
       var components: [HealthScoreData.ScoreComponent] = []
       var totalWeightedScore = 0.0
       var totalWeight = 0.0
-      
+
       for metric in availableMetrics {
          // Ignore weather
          if metric == .weather { continue }
-         
+
          let data = chartDataManager.getChartData(for: metric, period: .week)
          guard !data.isEmpty else { continue }
-         
+
          let average = data.map { $0.value }.reduce(0, +) / Double(data.count)
          let normalizedScore = normalizeMetricScore(metric: metric, value: average)
          let weight = getMetricWeight(metric)
-         
+
          components.append(HealthScoreData.ScoreComponent(
             name: metric.displayName,
             score: normalizedScore,
             weight: weight
          ))
-         
+
          totalWeightedScore += normalizedScore * weight
          totalWeight += weight
       }
-      
+
       let overallScore = totalWeight > 0 ? totalWeightedScore / totalWeight : 0
-      
+
       // Calculate trend by comparing with previous week
       let previousScore = await calculatePreviousHealthScore()
       let trend: HealthScoreData.TrendDirection
       let scoreDiff = overallScore - previousScore
-      
+
       if abs(scoreDiff) < 2 {
          trend = .stable
       } else if scoreDiff > 0 {
@@ -347,29 +349,32 @@ class DashboardManager {
       } else {
          trend = .declining
       }
-      
+
+      let finalHealthScore = HealthScoreData(
+         overallScore: overallScore,
+         components: components,
+         trend: trend,
+         lastUpdated: Date()
+      )
+
       await MainActor.run {
-         self.healthScore = HealthScoreData(
-            overallScore: overallScore,
-            components: components,
-            trend: trend,
-            lastUpdated: Date()
-         )
+         self.healthScore = finalHealthScore
       }
    }
    
    private func loadTopInsights() async {
       await insightsEngine.generateInsights(forPeriod: .week)
-      
+
+      let insights = Array(insightsEngine.currentInsights.prefix(3))
       await MainActor.run {
-         self.topInsights = Array(insightsEngine.currentInsights.prefix(3))
+         self.topInsights = insights
       }
    }
    
    private func loadWeeklyPatterns() async {
       let availableMetrics = chartDataManager.getAvailableMetrics()
       var patterns: [String: [Double]] = [:]
-      
+
       for metric in availableMetrics.prefix(2) {
          let data = chartDataManager.getChartData(for: metric, period: .month)
          let weeklyPattern = calculateWeeklyPattern(data: data)
@@ -377,33 +382,35 @@ class DashboardManager {
             patterns[metric.displayName] = weeklyPattern
          }
       }
-      
+
+      let finalPatterns = patterns
       await MainActor.run {
-         self.weeklyPatterns = patterns
+         self.weeklyPatterns = finalPatterns
       }
    }
    
    private func loadTopCorrelation() async {
       let availableMetrics = chartDataManager.getAvailableMetrics()
       guard availableMetrics.count >= 2 else { return }
-      
+
       var bestCorrelation: (String, String, Double) = ("", "", 0)
-      
+
       for i in 0..<availableMetrics.count {
          for j in (i+1)..<availableMetrics.count {
             let metric1 = availableMetrics[i]
             let metric2 = availableMetrics[j]
-            
+
             let correlation = calculateCorrelation(metric1: metric1, metric2: metric2)
             if abs(correlation) > abs(bestCorrelation.2) {
                bestCorrelation = (metric1.displayName, metric2.displayName, correlation)
             }
          }
       }
-      
+
       if abs(bestCorrelation.2) > 0.3 {
+         let finalCorrelation = bestCorrelation
          await MainActor.run {
-            self.topCorrelation = bestCorrelation
+            self.topCorrelation = finalCorrelation
          }
       }
    }
