@@ -16,9 +16,7 @@ struct HistoryCalendarView: View {
          .padding(.horizontal)
          
          CalendarView(
-            records: viewModel.logsByDate.mapValues({ log in
-               return CalendarRecord(color: getLogColor(log: log))
-            }),
+            records: getCalendarRecords(),
             onDaySelected: { date in
                viewModel.selectedDate = date
             },
@@ -69,6 +67,29 @@ struct HistoryCalendarView: View {
       }
    }
    
+   func getCalendarRecords() -> [Date: CalendarRecord] {
+      // Get all unique dates from both logs and cycles
+      let allDates = Set(viewModel.logsByDate.keys).union(Set(viewModel.cyclesByDate.keys))
+
+      var records: [Date: CalendarRecord] = [:]
+      for date in allDates {
+         let log = viewModel.logsByDate[date]
+         // Only show cycle indicator if the feature is enabled
+         let hasCycle = viewModel.userSettings.trackCycle && viewModel.cyclesByDate[date] != nil
+
+         // Get the color based on the log data (if it exists)
+         let color = log != nil ? getLogColor(log: log!) : .clear
+
+         records[date] = CalendarRecord(
+            color: color,
+            icon: nil,
+            hasCycleEntry: hasCycle
+         )
+      }
+
+      return records
+   }
+
    func getLogColor(log: DailyLog) -> Color {
       switch viewModel.selectedCategory {
       case .allData:

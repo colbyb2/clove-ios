@@ -7,9 +7,11 @@ class HistoryCalendarViewModel {
    private let logsRepository: LogsRepositoryProtocol
    private let settingsRepository: UserSettingsRepositoryProtocol
    private let symptomsRepository: SymptomsRepositoryProtocol
+   private let cycleRepository: CycleRepositoryProtocol
 
    // MARK: - State
    var logsByDate: [Date: DailyLog] = [:]
+   var cyclesByDate: [Date: Cycle] = [:]
    var selectedDate: Date? = nil
    var selectedCategory: TrackingCategory = .allData
    var userSettings: UserSettings = .default
@@ -59,7 +61,8 @@ class HistoryCalendarViewModel {
       self.init(
          logsRepository: LogsRepo.shared,
          settingsRepository: UserSettingsRepo.shared,
-         symptomsRepository: SymptomsRepo.shared
+         symptomsRepository: SymptomsRepo.shared,
+         cycleRepository: CycleRepo.shared
       )
    }
 
@@ -67,11 +70,13 @@ class HistoryCalendarViewModel {
    init(
       logsRepository: LogsRepositoryProtocol,
       settingsRepository: UserSettingsRepositoryProtocol,
-      symptomsRepository: SymptomsRepositoryProtocol
+      symptomsRepository: SymptomsRepositoryProtocol,
+      cycleRepository: CycleRepositoryProtocol
    ) {
       self.logsRepository = logsRepository
       self.settingsRepository = settingsRepository
       self.symptomsRepository = symptomsRepository
+      self.cycleRepository = cycleRepository
       loadData()
    }
 
@@ -84,20 +89,28 @@ class HistoryCalendarViewModel {
       return HistoryCalendarViewModel(
          logsRepository: container.logsRepository,
          settingsRepository: container.settingsRepository,
-         symptomsRepository: container.symptomsRepository
+         symptomsRepository: container.symptomsRepository,
+         cycleRepository: container.cycleRepository
       )
    }
    
    func loadData() {
       loadLogs()
+      loadCycles()
       loadUserSettings()
       loadTrackedSymptoms()
    }
-   
+
    func loadLogs() {
       let logs = logsRepository.getLogs()
       // Use merging initializer to handle duplicate dates - keep the most recent entry (last one)
       self.logsByDate = Dictionary(logs.map { ($0.date.stripTime(), $0) }, uniquingKeysWith: { _, last in last })
+   }
+
+   func loadCycles() {
+      let cycles = cycleRepository.getAllCycles()
+      // Use merging initializer to handle duplicate dates - keep the most recent entry (last one)
+      self.cyclesByDate = Dictionary(cycles.map { ($0.date.stripTime(), $0) }, uniquingKeysWith: { _, last in last })
    }
 
    func loadUserSettings() {

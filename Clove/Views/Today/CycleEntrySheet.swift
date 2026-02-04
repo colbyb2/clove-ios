@@ -11,157 +11,141 @@ struct CycleEntrySheet: View {
     @State private var hasCramps: Bool = false
     @State private var animateIn = false
 
+    // Assuming these singletons exist based on your code
     private let repo = CycleRepo.shared
     private let toastManager = ToastManager.shared
 
     var body: some View {
-        VStack(spacing: 24) {
-            // Header
-            VStack(spacing: 8) {
-                Text("Track Cycle")
-                    .font(.system(.title2, design: .rounded).weight(.semibold))
+        VStack(spacing: 0) {
+            // MARK: - Header
+            ZStack {
+                Text("Log Period")
+                    .font(.system(.headline, design: .rounded).weight(.bold))
                     .foregroundStyle(CloveColors.primary)
-
-                Text(formatDate(date))
-                    .font(.system(.subheadline))
-                    .foregroundStyle(CloveColors.secondaryText)
+                
+                HStack {
+                    Spacer()
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(CloveColors.secondaryText.opacity(0.5))
+                    }
+                }
             }
-            .multilineTextAlignment(.center)
-            .opacity(animateIn ? 1 : 0)
-            .offset(y: animateIn ? 0 : -20)
+            .padding()
+            .padding(.top, 10)
 
             ScrollView {
-                VStack(spacing: 24) {
-                    // Flow Level Selection
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Flow Level")
-                            .font(.system(.body, design: .rounded).weight(.semibold))
-                            .foregroundStyle(CloveColors.primary)
+                VStack(spacing: 32) {
+                    
+                    // MARK: - Date Display
+                    HStack {
+                        Image(systemName: "calendar")
+                            .foregroundStyle(Theme.shared.accent)
+                        Text(date.formatted(date: .complete, time: .omitted))
+                            .font(.system(.subheadline, design: .rounded).weight(.medium))
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
+                    .padding(.top, 12)
+                    .opacity(animateIn ? 1 : 0)
+                    
+                    // MARK: - Flow Selector
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Flow Intensity")
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(CloveColors.secondaryText)
+                            .padding(.horizontal)
 
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
-                            ForEach(FlowLevel.allCases) { flow in
-                                FlowLevelCard(
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
+                            ForEach(FlowLevel.allCases, id: \.self) { flow in
+                                FlowOptionCard(
                                     flow: flow,
                                     isSelected: selectedFlow == flow
                                 ) {
-                                    // Haptic feedback
-                                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                                    impactFeedback.impactOccurred()
-
+                                    triggerHaptic()
                                     selectedFlow = flow
                                 }
                             }
                         }
+                        .padding(.horizontal)
                     }
                     .opacity(animateIn ? 1 : 0)
-                    .scaleEffect(animateIn ? 1 : 0.8)
+                    .offset(y: animateIn ? 0 : 20)
 
-                    // Toggles Section
-                    VStack(spacing: 16) {
-                        // First day toggle
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("First day of cycle")
-                                    .font(.system(.body, design: .rounded).weight(.semibold))
-                                    .foregroundStyle(CloveColors.primary)
-
-                                Text("Mark if this is day 1")
-                                    .font(.system(.caption))
-                                    .foregroundStyle(CloveColors.secondaryText)
+                    // MARK: - Details Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Details")
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(CloveColors.secondaryText)
+                            .padding(.horizontal)
+                        
+                        VStack(spacing: 12) {
+                            // Cycle Start Toggle
+                            DetailSelectionRow(
+                                title: "Period Started",
+                                subtitle: "Mark as Day 1 of new cycle",
+                                icon: "arrow.counterclockwise.circle.fill",
+                                color: .blue,
+                                isSelected: isStartOfCycle
+                            ) {
+                                triggerHaptic(style: .light)
+                                isStartOfCycle.toggle()
                             }
-
-                            Spacer()
-
-                            Toggle("", isOn: $isStartOfCycle)
-                                .labelsHidden()
-                                .tint(Theme.shared.accent)
-                                .onChange(of: isStartOfCycle) { _, _ in
-                                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                    impactFeedback.impactOccurred()
-                                }
-                        }
-                        .padding()
-                        .background(CloveColors.card)
-                        .clipShape(RoundedRectangle(cornerRadius: CloveCorners.medium))
-
-                        // Cramps toggle
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Has cramps")
-                                    .font(.system(.body, design: .rounded).weight(.semibold))
-                                    .foregroundStyle(CloveColors.primary)
-
-                                Text("Track cramping symptoms")
-                                    .font(.system(.caption))
-                                    .foregroundStyle(CloveColors.secondaryText)
+                            
+                            // Cramps Toggle
+                            DetailSelectionRow(
+                                title: "Cramping",
+                                subtitle: "Pain or discomfort present",
+                                icon: "bolt.heart.fill",
+                                color: .orange,
+                                isSelected: hasCramps
+                            ) {
+                                triggerHaptic(style: .light)
+                                hasCramps.toggle()
                             }
-
-                            Spacer()
-
-                            Toggle("", isOn: $hasCramps)
-                                .labelsHidden()
-                                .tint(Theme.shared.accent)
-                                .onChange(of: hasCramps) { _, _ in
-                                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                    impactFeedback.impactOccurred()
-                                }
                         }
-                        .padding()
-                        .background(CloveColors.card)
-                        .clipShape(RoundedRectangle(cornerRadius: CloveCorners.medium))
+                        .padding(.horizontal)
                     }
                     .opacity(animateIn ? 1 : 0)
+                    .offset(y: animateIn ? 0 : 30)
                 }
-                .padding(.horizontal)
+                .padding(.bottom, 100) // Space for button
             }
-
-            // Save Button
-            Button(action: saveEntry) {
-                HStack(spacing: CloveSpacing.small) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 18, weight: .semibold))
-
-                    Text("Save")
-                        .font(.system(size: 18, weight: .semibold))
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(
-                    RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .fill(selectedFlow == nil ? CloveColors.secondaryText : Theme.shared.accent)
-                        .shadow(
-                            color: selectedFlow == nil ? .clear : Theme.shared.accent.opacity(0.3),
-                            radius: 4,
-                            x: 0,
-                            y: 2
+            
+            // MARK: - Footer / Save
+            VStack {
+                Divider()
+                Button(action: saveEntry) {
+                    Text(existingEntry != nil ? "Update Entry" : "Save Entry")
+                        .font(.system(.body, design: .rounded).weight(.bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(isValid ? Theme.shared.accent : Color.gray.opacity(0.3))
                         )
-                )
+                }
+                .disabled(!isValid)
+                .padding()
             }
-            .disabled(selectedFlow == nil)
-            .padding(.horizontal)
-            .padding(.bottom, 8)
-            .opacity(animateIn ? 1 : 0)
+            .background(CloveColors.card)
         }
-        .padding(.top, 30)
+        .background(CloveColors.background)
         .onAppear {
-            // Load existing entry if provided
             if let entry = existingEntry {
                 selectedFlow = entry.flow
                 isStartOfCycle = entry.isStartOfCycle
                 hasCramps = entry.hasCramps
             }
-
-            withAnimation(.easeOut(duration: 0.5).delay(0.1)) {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                 animateIn = true
             }
         }
     }
-
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: date)
+    
+    private var isValid: Bool {
+        selectedFlow != nil
     }
 
     private func saveEntry() {
@@ -177,81 +161,150 @@ struct CycleEntrySheet: View {
 
         if repo.save([entry]) {
             toastManager.showToast(
-                message: "Cycle entry saved",
+                message: "Cycle logged",
                 color: CloveColors.success,
-                icon: Image(systemName: "checkmark.circle")
+                icon: Image(systemName: "checkmark.circle.fill")
             )
             onSave()
             dismiss()
         } else {
             toastManager.showToast(
-                message: "Failed to save cycle entry",
+                message: "Error saving",
                 color: CloveColors.error
             )
         }
     }
+    
+    private func triggerHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.impactOccurred()
+    }
 }
 
-struct FlowLevelCard: View {
+// MARK: - Subcomponents
+
+struct FlowOptionCard: View {
     let flow: FlowLevel
     let isSelected: Bool
-    let onTap: () -> Void
-
-    @State private var isPressed = false
+    let action: () -> Void
+    
+    // Dynamic styling based on flow intensity
+    var style: (icon: String, scale: CGFloat, color: Color) {
+        switch flow {
+        case .spotting: return ("drop", 0.8, .pink.opacity(0.6))
+        case .light:    return ("drop.fill", 0.8, .pink.opacity(0.8))
+        case .medium:   return ("drop.fill", 1.0, .pink)
+        case .heavy:    return ("drop.fill", 1.2, .red)
+        case .veryHeavy: return ("drop.triangle.fill", 1.1, .purple) // Or a deeper red
+        }
+    }
 
     var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: 8) {
-                Text(flowEmoji(for: flow))
-                    .font(.system(size: 32))
-                    .scaleEffect(isSelected ? 1.2 : 1.0)
-
+        Button(action: action) {
+            VStack(spacing: 12) {
+                Image(systemName: style.icon)
+                    .font(.system(size: 28))
+                    .foregroundStyle(isSelected ? .white : style.color)
+                    .scaleEffect(style.scale)
+                
                 Text(flow.displayName)
-                    .font(.system(.body, design: .rounded).weight(.semibold))
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
                     .foregroundStyle(isSelected ? .white : CloveColors.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 90)
+            .frame(height: 100)
             .background(
-                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(isSelected ? Theme.shared.accent : CloveColors.card)
                     .shadow(
-                        color: isSelected ? Theme.shared.accent.opacity(0.3) : .gray.opacity(0.2),
+                        color: isSelected ? Theme.shared.accent.opacity(0.3) : Color.black.opacity(0.05),
                         radius: isSelected ? 8 : 4,
-                        x: 0,
                         y: isSelected ? 4 : 2
                     )
             )
-            .scaleEffect(isPressed ? 0.95 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: isPressed)
-            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isSelected)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? Color.clear : Color.gray.opacity(0.1), lineWidth: 1)
+            )
         }
-        .buttonStyle(PlainButtonStyle())
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-            isPressed = pressing
-        }, perform: {})
-        .accessibilityLabel("\(flow.displayName) flow")
-        .accessibilityHint(isSelected ? "Currently selected" : "Tap to select \(flow.displayName.lowercased()) flow")
-    }
-
-    private func flowEmoji(for flow: FlowLevel) -> String {
-        switch flow {
-        case .spotting: return "💧"
-        case .light: return "🩸"
-        case .medium: return "🩸🩸"
-        case .heavy: return "🩸🩸🩸"
-        case .veryHeavy: return "🩸🩸🩸🩸"
-        }
+        .buttonStyle(BouncyButtonStyle())
     }
 }
 
+struct DetailSelectionRow: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let color: Color
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                // Icon Box
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(isSelected ? color : Color.gray.opacity(0.1))
+                        .frame(width: 44, height: 44)
+                    
+                    Image(systemName: icon)
+                        .foregroundStyle(isSelected ? .white : color)
+                        .font(.system(size: 20))
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(.body, design: .rounded).weight(.semibold))
+                        .foregroundStyle(CloveColors.primary)
+                    
+                    Text(subtitle)
+                        .font(.system(.caption))
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+                
+                Spacer()
+                
+                // Custom Checkbox/Radio UI
+                Circle()
+                    .strokeBorder(isSelected ? color : Color.gray.opacity(0.3), lineWidth: 2)
+                    .background(Circle().fill(isSelected ? color : Color.clear))
+                    .frame(width: 24, height: 24)
+                    .overlay {
+                        if isSelected {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                    }
+            }
+            .padding(12)
+            .background(CloveColors.card)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? color.opacity(0.3) : Color.gray.opacity(0.1), lineWidth: 1)
+            )
+        }
+        .buttonStyle(BouncyButtonStyle())
+    }
+}
+
+struct BouncyButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Preview Helpers
+// Assuming these types exist in your project, defining mocks for preview
 #Preview {
     CycleEntrySheet(
         date: Date(),
         existingEntry: nil
     ) {
-        print("Cycle entry saved")
+        print("Saved")
     }
 }

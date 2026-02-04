@@ -6,130 +6,187 @@ struct CycleIndicator: View {
     let onDelete: () -> Void
 
     @State private var showDeleteConfirmation = false
+    @State private var isPressed = false
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: CloveSpacing.medium) {
-                // Icon
-                Text("🩸")
-                    .font(.system(size: 24))
+            HStack(spacing: 16) {
+                // MARK: - Leading Icon
+                // Visualizes flow intensity with color and scale
+                ZStack {
+                    Circle()
+                        .fill(flowColor.opacity(0.15))
+                        .frame(width: 36, height: 36)
+                    
+                    Image(systemName: flowIcon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(flowColor)
+                }
 
-                // Content
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text("Cycle: \(cycle.flow.displayName)")
-                            .font(.system(.body, design: .rounded).weight(.semibold))
-                            .foregroundStyle(CloveColors.primary)
-
-                        // Badges
-                        if cycle.isStartOfCycle {
-                            Badge(text: "First Day", color: CloveColors.accent)
+                // MARK: - Main Content
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(cycle.flow.displayName)
+                        .font(.system(.body, design: .rounded).weight(.semibold))
+                        .foregroundStyle(CloveColors.primary)
+                    
+                    // Metadata Row (Start of Cycle / Cramps)
+                    if cycle.isStartOfCycle || cycle.hasCramps {
+                        HStack(spacing: 12) {
+                            if cycle.isStartOfCycle {
+                                MetadataItem(
+                                    icon: "arrow.counterclockwise",
+                                    text: "Day 1",
+                                    color: .blue
+                                )
+                            }
+                            
+                            if cycle.hasCramps {
+                                MetadataItem(
+                                    icon: "bolt.heart.fill",
+                                    text: "Cramps",
+                                    color: .orange
+                                )
+                            }
                         }
-
-                        if cycle.hasCramps {
-                            Badge(text: "Cramps", color: CloveColors.orange)
-                        }
+                    } else {
+                        // Fallback text if no extra tags, to keep vertical rhythm
+                        Text("Logged entry")
+                            .font(.system(.caption))
+                            .foregroundStyle(CloveColors.secondaryText)
                     }
-
-                    Text(flowDescription(for: cycle.flow))
-                        .font(.system(.caption))
-                        .foregroundStyle(CloveColors.secondaryText)
                 }
 
                 Spacer()
 
-                // Delete button
+                // MARK: - Delete Action
+                // Hit-tested separately to prevent triggering the main onTap
                 Button(action: {
+                    let impact = UIImpactFeedbackGenerator(style: .medium)
+                    impact.impactOccurred()
                     showDeleteConfirmation = true
                 }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(CloveColors.secondaryText)
+                    Image(systemName: "trash")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(CloveColors.secondaryText.opacity(0.6))
+                        .frame(width: 32, height: 32)
+                        .background(Color.gray.opacity(0.1)) // Subtle touch target
+                        .clipShape(Circle())
                 }
-                .buttonStyle(PlainButtonStyle())
+                .buttonStyle(PlainButtonStyle()) // Prevents parent click
             }
-            .padding()
+            .padding(12)
             .background(CloveColors.card)
-            .clipShape(RoundedRectangle(cornerRadius: CloveCorners.medium))
-            .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.gray.opacity(0.08), lineWidth: 1)
+            )
+            .scaleEffect(isPressed ? 0.98 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
         }
         .buttonStyle(PlainButtonStyle())
+        .onLongPressGesture(minimumDuration: 0, pressing: { pressing in
+            isPressed = pressing
+        }, perform: onTap)
         .confirmationDialog(
-            "Delete cycle entry?",
+            "Delete Entry?",
             isPresented: $showDeleteConfirmation,
             titleVisibility: .visible
         ) {
             Button("Delete", role: .destructive) {
-                onDelete()
+                withAnimation { onDelete() }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This will permanently remove this cycle entry.")
+            Text("This will remove this cycle log from your history.")
         }
-        .accessibilityLabel("Cycle entry: \(cycle.flow.displayName)")
-        .accessibilityHint("Tap to edit, or tap delete button to remove")
     }
 
-    private func flowDescription(for flow: FlowLevel) -> String {
-        switch flow {
-        case .spotting: return "Very light bleeding"
-        case .light: return "Light flow"
-        case .medium: return "Moderate flow"
-        case .heavy: return "Heavy flow"
-        case .veryHeavy: return "Very heavy flow"
+    // MARK: - Helper Logic
+    
+    private var flowColor: Color {
+        switch cycle.flow {
+        case .spotting: return .pink.opacity(0.6)
+        case .light: return .pink
+        case .medium: return .red
+        case .heavy: return .red.opacity(0.9)
+        case .veryHeavy: return .purple
+        }
+    }
+    
+    private var flowIcon: String {
+        switch cycle.flow {
+        case .spotting, .light: return "drop"
+        case .medium, .heavy: return "drop.fill"
+        case .veryHeavy: return "drop.triangle.fill"
         }
     }
 }
 
-struct Badge: View {
+// MARK: - Subcomponents
+
+struct MetadataItem: View {
+    let icon: String
     let text: String
     let color: Color
-
+    
     var body: some View {
-        Text(text)
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                Capsule()
-                    .fill(color)
-            )
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .bold))
+            
+            Text(text)
+                .font(.system(size: 11, weight: .semibold))
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(color.opacity(0.1))
+        .clipShape(Capsule())
     }
 }
 
-#Preview {
-    VStack(spacing: 16) {
-        CycleIndicator(
-            cycle: Cycle(
-                date: Date(),
-                flow: .medium,
-                isStartOfCycle: true,
-                hasCramps: true
-            ),
-            onTap: {
-                print("Tapped cycle indicator")
-            },
-            onDelete: {
-                print("Delete cycle entry")
-            }
-        )
+// MARK: - Preview
 
-        CycleIndicator(
-            cycle: Cycle(
-                date: Date(),
-                flow: .light,
-                isStartOfCycle: false,
-                hasCramps: false
-            ),
-            onTap: {
-                print("Tapped cycle indicator")
-            },
-            onDelete: {
-                print("Delete cycle entry")
-            }
-        )
+#Preview {
+    ZStack {
+        Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+        
+        VStack(spacing: 16) {
+            CycleIndicator(
+                cycle: Cycle(
+                    date: Date(),
+                    flow: .heavy,
+                    isStartOfCycle: true,
+                    hasCramps: true
+                ),
+                onTap: {},
+                onDelete: {}
+            )
+            
+            CycleIndicator(
+                cycle: Cycle(
+                    date: Date(),
+                    flow: .light,
+                    isStartOfCycle: false,
+                    hasCramps: false
+                ),
+                onTap: {},
+                onDelete: {}
+            )
+            
+            CycleIndicator(
+                cycle: Cycle(
+                    date: Date(),
+                    flow: .spotting,
+                    isStartOfCycle: false,
+                    hasCramps: true
+                ),
+                onTap: {},
+                onDelete: {}
+            )
+        }
+        .padding()
     }
-    .padding()
-    .background(CloveColors.background)
 }

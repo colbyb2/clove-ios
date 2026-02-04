@@ -2,18 +2,20 @@ import SwiftUI
 
 struct OccasionalFeaturesMenu: View {
     @Environment(\.dismiss) private var dismiss
+    // Assuming you inject this, or just pass the boolean for preview
     let settings: UserSettings
     let onFeatureSelected: (OccasionalFeature) -> Void
 
-    enum OccasionalFeature {
+    enum OccasionalFeature: CaseIterable {
         case cycle
-        // Future: case sexualActivity, case appointment, etc.
     }
 
+    // Dynamic filter based on settings
     private var availableFeatures: [OccasionalFeature] {
         var features: [OccasionalFeature] = []
         if settings.trackCycle { features.append(.cycle) }
-        // Future: Add other occasional features here
+        // Mocking future logic
+        // features.append(.appointment)
         return features
     }
 
@@ -21,113 +23,126 @@ struct OccasionalFeaturesMenu: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            // Header
+            // MARK: - Header
+            // Using a standard "Sheet" handle feel
             VStack(spacing: 8) {
-                Text("Add Entry")
-                    .font(.system(.title2, design: .rounded).weight(.semibold))
+                Capsule()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 36, height: 5)
+                    .padding(.bottom, 10)
+                
+                Text("Log Activity")
+                    .font(.system(.title3, design: .rounded).weight(.bold))
                     .foregroundStyle(CloveColors.primary)
 
-                Text("Track occasional features")
+                Text("Select an occasional metric to track")
                     .font(.system(.subheadline))
                     .foregroundStyle(CloveColors.secondaryText)
             }
             .multilineTextAlignment(.center)
             .opacity(animateIn ? 1 : 0)
-            .offset(y: animateIn ? 0 : -20)
+            .offset(y: animateIn ? 0 : 10)
 
-            // Feature Grid
+            // MARK: - Feature Grid
             if availableFeatures.isEmpty {
-                Text("No occasional features enabled")
-                    .font(.system(.body, design: .rounded))
-                    .foregroundStyle(CloveColors.secondaryText)
-                    .padding()
+                ContentUnavailableView(
+                    "No Features Enabled",
+                    systemImage: "slider.horizontal.3",
+                    description: Text("Enable occasional tracking in Settings.")
+                )
             } else {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 16)], spacing: 16) {
                     ForEach(availableFeatures, id: \.self) { feature in
-                        FeatureCard(feature: feature) {
+                        Button(action: {
+                            triggerHaptic()
                             onFeatureSelected(feature)
+                        }) {
+                            FeatureCardContent(feature: feature)
                         }
+                        .buttonStyle(BouncyCardStyle()) // <--- The magic happens here
                     }
                 }
                 .padding(.horizontal)
                 .opacity(animateIn ? 1 : 0)
-                .scaleEffect(animateIn ? 1 : 0.8)
+                .scaleEffect(animateIn ? 1 : 0.95)
             }
 
             Spacer()
         }
-        .padding(.top, 30)
+        .padding(.top, 10)
+        .background(CloveColors.background) // Ensure contrast
         .onAppear {
-            withAnimation(.easeOut(duration: 0.5).delay(0.1)) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 animateIn = true
             }
         }
     }
+    
+    private func triggerHaptic() {
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+    }
 }
 
-extension OccasionalFeaturesMenu.OccasionalFeature: Hashable {}
+// MARK: - Visual Components
 
-struct FeatureCard: View {
+struct FeatureCardContent: View {
     let feature: OccasionalFeaturesMenu.OccasionalFeature
-    let onTap: () -> Void
 
-    @State private var isPressed = false
-
-    private var featureInfo: (name: String, emoji: String) {
+    var info: (title: String, icon: String, color: Color) {
         switch feature {
         case .cycle:
-            return ("Cycle", "🩸")
+            return ("Cycle", "drop.fill", Color.pink.opacity(0.8))
         }
     }
 
     var body: some View {
-        Button(action: {
-            // Haptic feedback
-            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-            impactFeedback.impactOccurred()
-
-            // Dismiss after brief delay to show selection
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                onTap()
+        VStack(spacing: 14) {
+            // Icon Circle
+            ZStack {
+                Circle()
+                    .fill(info.color.opacity(0.15))
+                    .frame(width: 48, height: 48)
+                
+                Image(systemName: info.icon)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(info.color)
             }
-        }) {
-            VStack(spacing: 12) {
-                Text(featureInfo.emoji)
-                    .font(.system(size: 40))
 
-                Text(featureInfo.name)
-                    .font(.system(.body, design: .rounded).weight(.semibold))
-                    .foregroundStyle(CloveColors.primary)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 100)
-            .background(
-                RoundedRectangle(cornerRadius: CloveCorners.medium)
-                    .fill(CloveColors.card)
-                    .shadow(
-                        color: .gray.opacity(0.2),
-                        radius: 4,
-                        x: 0,
-                        y: 2
-                    )
-            )
-            .scaleEffect(isPressed ? 0.95 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: isPressed)
+            Text(info.title)
+                .font(.system(.body, design: .rounded).weight(.medium))
+                .foregroundStyle(CloveColors.primary)
         }
-        .buttonStyle(PlainButtonStyle())
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-            isPressed = pressing
-        }, perform: {})
-        .accessibilityLabel("\(featureInfo.name) tracking")
-        .accessibilityHint("Tap to add \(featureInfo.name.lowercased()) entry")
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(CloveColors.card)
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+        )
+        // Add a subtle border for definition
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Interaction Logic (The "Apple Feel")
+
+struct BouncyCardStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
+            .opacity(configuration.isPressed ? 0.8 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
 
 #Preview {
-    OccasionalFeaturesMenu(settings: .allEnabled) { feature in
-        print("Selected feature: \(feature)")
+    Color.gray.sheet(isPresented: .constant(true)) {
+        OccasionalFeaturesMenu(settings: .allEnabled) { _ in }
+            .presentationDetents([.height(350)])
+            .presentationCornerRadius(24)
     }
-    .presentationDetents([.height(300)])
-    .presentationDragIndicator(.visible)
-    .presentationBackground(CloveColors.card)
 }

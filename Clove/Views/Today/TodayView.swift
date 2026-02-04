@@ -12,7 +12,7 @@ struct TodayView: View {
     @State private var showOccasionalFeaturesMenu: Bool = false
     @State private var showCycleEntry: Bool = false
 
-    private var shouldShowFAB: Bool {
+    private var shouldShowQuickAdd: Bool {
         viewModel.settings.trackCycle
         // Future: || viewModel.settings.trackOtherFeature
     }
@@ -165,6 +165,34 @@ struct TodayView: View {
                         BowelMovementTracker(date: viewModel.selectedDate)
                     }
                     
+                    // MARK: Cycle Indicator
+                    if let cycle = viewModel.cycleEntry {
+                        VStack(spacing: CloveSpacing.small) {
+                            HStack(spacing: CloveSpacing.small) {
+                                Text("🩸")
+                                    .font(.system(size: 20))
+                                Text("Cycle")
+                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                Spacer()
+                            }
+                            
+                            CycleIndicator(
+                                cycle: cycle,
+                                onTap: {
+                                    showCycleEntry = true
+                                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                    impactFeedback.impactOccurred()
+                                },
+                                onDelete: {
+                                    viewModel.deleteCycleEntry()
+                                }
+                            )
+                        }
+                        .padding(.vertical, CloveSpacing.small)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                    
+                    // MARK: Notes
                     if viewModel.settings.trackNotes {
                         VStack(spacing: CloveSpacing.small) {
                             HStack {
@@ -208,6 +236,7 @@ struct TodayView: View {
                         .padding(.vertical, CloveSpacing.small)
                     }
                     
+                    // MARK: Flare Toggle
                     if viewModel.settings.showFlareToggle {
                         VStack(spacing: CloveSpacing.small) {
                             HStack {
@@ -239,26 +268,30 @@ struct TodayView: View {
                         }
                         .padding(.vertical, CloveSpacing.small)
                     }
-
-                    // Cycle Indicator
-                    if let cycle = viewModel.cycleEntry {
-                        VStack(spacing: CloveSpacing.small) {
-                            CycleIndicator(
-                                cycle: cycle,
-                                onTap: {
-                                    showCycleEntry = true
-                                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                    impactFeedback.impactOccurred()
-                                },
-                                onDelete: {
-                                    viewModel.deleteCycleEntry()
-                                }
-                            )
+                    
+                    // MARK: Quick Add
+                    if shouldShowQuickAdd {
+                        Button {
+                            self.showOccasionalFeaturesMenu = true
+                        } label: {
+                            HStack(spacing: CloveSpacing.small) {
+                                Image(systemName: "ellipsis.circle")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text("Track Other")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
                         }
-                        .padding(.vertical, CloveSpacing.small)
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 46) // Large touch target
+                        .background(
+                            RoundedRectangle(cornerRadius: CloveCorners.medium)
+                                .fill(CloveColors.card)
+                                .shadow(color: Theme.shared.accent.opacity(0.3), radius: 4, x: 0, y: 2)
+                        )
                     }
 
+                    // MARK: Save Button
                     Button(action: {
                         // Haptic feedback for save action
                         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
@@ -267,7 +300,8 @@ struct TodayView: View {
                         viewModel.saveLog()
                         
                         // Success haptic feedback (will be triggered by toast in ViewModel)
-                    }) {
+                    })
+                    {
                         HStack(spacing: CloveSpacing.small) {
                             if viewModel.isSaving {
                                 ProgressView()
@@ -293,32 +327,10 @@ struct TodayView: View {
                     .disabled(viewModel.isSaving)
                     .accessibilityLabel(viewModel.isSaving ? "Saving health log" : "Save today's health log")
                     .accessibilityHint(viewModel.isSaving ? "Currently saving with weather data" : "Saves all current ratings and settings")
-                    
-                    //            Button("DEV - Add Logs") {
-                    //               DEVCreateLogs.execute()
-                    //            }
                 }
                 .padding()
             }
             .padding(.vertical)
-
-            // Floating Action Button
-            if shouldShowFAB {
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        FloatingActionButton {
-                            showOccasionalFeaturesMenu = true
-                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                            impactFeedback.impactOccurred()
-                        }
-                        .padding(.trailing, CloveSpacing.medium)
-                        .padding(.bottom, 80)
-                    }
-                }
-                .transition(.scale.combined(with: .opacity))
-            }
         }
         .onAppear {
             viewModel.load()
