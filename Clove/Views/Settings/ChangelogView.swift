@@ -50,6 +50,16 @@ struct ChangelogItem: Identifiable {
 class ChangelogData {
     static let versions: [ChangelogVersion] = [
         ChangelogVersion(
+            version: "1.5.0",
+            date: "February 2026",
+            changes: [
+                ChangelogItem(type: .new, description: "In App Rating System"),
+                ChangelogItem(type: .improvement, description: "Overhaul Meals and Activities Feature"),
+                ChangelogItem(type: .new, description: "Cycle and Period Tracking Feature"),
+                ChangelogItem(type: .improvement, description: "UI Improvements")
+            ]
+        ),
+        ChangelogVersion(
             version: "1.4.0",
             date: "December 2025",
             changes: [

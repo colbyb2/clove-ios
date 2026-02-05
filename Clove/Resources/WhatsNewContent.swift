@@ -59,7 +59,33 @@ enum WhatsNewContent {
         version: "1.4.0"
     )
     
+    static let version_1_5_0 = Popup(
+        id: "whats_new_1_5_0",
+        type: .whatsNew,
+        icon: "sparkles",
+        title: "What's New",
+        message: "We've added some exciting new features and improvements to create a better experience!",
+        features: [
+            WhatsNewFeature(
+                icon: "fork.knife.circle",
+                title: "Overhauled Meals/Activities Features",
+                description: "Much more robust and easy to use meal/activity tracking!"
+            ),
+            WhatsNewFeature(
+                icon: "drop.circle.fill",
+                title: "Cycle",
+                description: "Track your period and cycle, view statistics, and see period predictions!"
+            ),
+            WhatsNewFeature(
+                icon: "ladybug.fill",
+                title: "Bug Fixes",
+                description: "Ensuring the best possible experience!"
+            ),
+        ],
+        version: "1.5.0"
+    )
+    
     static let allWhatsNewPopups: [Popup] = [
-        version_1_4_0
+        version_1_5_0
     ]
 }
