@@ -19,10 +19,22 @@ struct CycleEntrySheet: View {
         VStack(spacing: 0) {
             // MARK: - Header
             ZStack {
-                Text("Log Period")
-                    .font(.system(.headline, design: .rounded).weight(.bold))
-                    .foregroundStyle(CloveColors.primary)
-                
+                HStack(spacing: 6) {
+                    Text("Log Period")
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                        .foregroundStyle(CloveColors.primary)
+
+                    Text("BETA")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(Color.pink)
+                        )
+                }
+
                 HStack {
                     Spacer()
                     Button(action: { dismiss() }) {

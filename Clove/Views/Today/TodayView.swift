@@ -173,6 +173,17 @@ struct TodayView: View {
                                     .font(.system(size: 20))
                                 Text("Cycle")
                                     .font(.system(size: 18, weight: .semibold, design: .rounded))
+
+                                Text("BETA")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.pink)
+                                    )
+
                                 Spacer()
                             }
                             

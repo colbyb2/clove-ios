@@ -155,12 +155,25 @@ struct SettingsView: View {
                HStack {
                   Text("🩸")
                      .font(.system(size: 16))
-                  NavigationLink("Cycle Overview") {
-                     CycleOverviewView()
+                  NavigationLink(destination: CycleOverviewView()) {
+                     HStack(spacing: 8) {
+                        Text("Cycle Overview")
+                           .foregroundStyle(CloveColors.primaryText)
+
+                        Text("BETA")
+                           .font(.system(size: 10, weight: .bold))
+                           .foregroundStyle(.white)
+                           .padding(.horizontal, 6)
+                           .padding(.vertical, 2)
+                           .background(
+                              Capsule()
+                                 .fill(Color.pink)
+                           )
+                     }
                   }
                }
-               .accessibilityLabel("Cycle overview")
-               .accessibilityHint("View cycle history and predictions")
+               .accessibilityLabel("Cycle overview - Beta feature")
+               .accessibilityHint("View cycle history and predictions - This feature is in beta")
             }
 
             Section(header: Text("Food & Activities")) {

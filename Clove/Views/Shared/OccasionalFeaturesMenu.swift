@@ -103,15 +103,29 @@ struct FeatureCardContent: View {
                 Circle()
                     .fill(info.color.opacity(0.15))
                     .frame(width: 48, height: 48)
-                
+
                 Image(systemName: info.icon)
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(info.color)
             }
 
-            Text(info.title)
-                .font(.system(.body, design: .rounded).weight(.medium))
-                .foregroundStyle(CloveColors.primary)
+            HStack(spacing: 6) {
+                Text(info.title)
+                    .font(.system(.body, design: .rounded).weight(.medium))
+                    .foregroundStyle(CloveColors.primary)
+
+                if feature == .cycle {
+                    Text("BETA")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(Color.pink)
+                        )
+                }
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)
