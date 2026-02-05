@@ -151,6 +151,18 @@ struct SettingsView: View {
                .accessibilityHint("Add, edit, or remove symptoms for daily tracking")
             }
 
+            Section(header: Text("Cycle")) {
+               HStack {
+                  Text("🩸")
+                     .font(.system(size: 16))
+                  NavigationLink("Cycle Overview") {
+                     CycleOverviewView()
+                  }
+               }
+               .accessibilityLabel("Cycle overview")
+               .accessibilityHint("View cycle history and predictions")
+            }
+
             Section(header: Text("Food & Activities")) {
                HStack {
                   Image(systemName: "fork.knife")
