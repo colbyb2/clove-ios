@@ -6,54 +6,43 @@ struct CycleOverviewView: View {
     @State private var selectedPeriod: Period? = nil
     @State private var showPredictionDisclaimer: Bool = false
 
+    // Assuming these exist in your project based on context
     private let cycleRepo = CycleRepo.shared
     private let cycleManager = CycleManager()
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color.pink.opacity(0.02),
-                    CloveColors.background,
-                    Color.pink.opacity(0.01)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // cleaner, flat background matching the dashboard
+            CloveColors.background
+                .ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: CloveSpacing.large) {
-                    // Prediction Card
+                VStack(spacing: 24) {
+                    // Prediction Card (Hero)
                     predictionCard
-                        .padding(.horizontal, CloveSpacing.large)
-                        .padding(.top, CloveSpacing.medium)
+                        .padding(.horizontal)
+                        .padding(.top, 10)
 
                     // Period History
                     if periods.isEmpty {
                         emptyStateView
-                            .padding(.horizontal, CloveSpacing.large)
+                            .padding(.horizontal)
                     } else {
-                        VStack(spacing: CloveSpacing.medium) {
+                        VStack(spacing: 16) {
                             // Section header
                             HStack {
-                                Text("Period History")
-                                    .font(.system(.title3, design: .rounded, weight: .semibold))
+                                Text("History")
+                                    .font(.system(.title3, design: .rounded, weight: .bold))
                                     .foregroundStyle(CloveColors.primaryText)
 
                                 Spacer()
-
-                                Text("\(periods.count)")
-                                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                                    .foregroundStyle(Color.pink)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        Capsule()
-                                            .fill(Color.pink.opacity(0.1))
-                                    )
+                                
+                                // Subtle count badge
+                                Text("\(periods.count) Cycles")
+                                    .font(.system(.caption, weight: .medium))
+                                    .foregroundStyle(CloveColors.secondaryText)
                             }
-                            .padding(.horizontal, CloveSpacing.large)
+                            .padding(.horizontal)
 
                             // Period cards
                             ForEach(periods) { period in
@@ -62,17 +51,17 @@ struct CycleOverviewView: View {
                                     let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                                     impactFeedback.impactOccurred()
                                 }
-                                .padding(.horizontal, CloveSpacing.large)
+                                .padding(.horizontal)
                             }
                         }
-                        .padding(.vertical, CloveSpacing.medium)
+                        .padding(.vertical)
                     }
                 }
-                .padding(.bottom, CloveSpacing.xlarge)
+                .padding(.bottom, 40)
             }
         }
-        .navigationTitle("Cycle Overview")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle("Cycle")
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             loadData()
         }
@@ -82,201 +71,149 @@ struct CycleOverviewView: View {
         .alert("Period Prediction", isPresented: $showPredictionDisclaimer) {
             Button("OK", role: .cancel) { }
         } message: {
-            Text("Period predictions are estimates based on your past cycle patterns and are not medical advice. Actual cycle timing can vary due to stress, health changes, and other factors. Consult a healthcare professional for medical concerns.")
+            Text("Predictions are estimates based on your past cycle patterns. This is not medical advice.")
         }
     }
 
+    // MARK: - Hero Card
     private var predictionCard: some View {
-        VStack(spacing: CloveSpacing.medium) {
+        VStack(spacing: 0) {
+            // Header
             HStack {
-                HStack(spacing: CloveSpacing.small) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.pink.opacity(0.1))
-                            .frame(width: 40, height: 40)
-
-                        Image(systemName: "calendar.badge.clock")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundStyle(Color.pink)
-                    }
-
-                    Text("Next Period")
-                        .font(.system(.title3, design: .rounded, weight: .semibold))
-                        .foregroundStyle(CloveColors.primaryText)
-                }
-
-                Spacer()
-
-                Button(action: {
-                    showPredictionDisclaimer = true
-                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                    impactFeedback.impactOccurred()
-                }) {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 18, weight: .medium))
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.purple)
+                    
+                    Text("Forecast")
+                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
                         .foregroundStyle(CloveColors.secondaryText)
                 }
+                
+                Spacer()
+                
+                Button(action: { showPredictionDisclaimer = true }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 16))
+                        .foregroundStyle(CloveColors.secondaryText.opacity(0.5))
+                }
             }
+            .padding([.horizontal, .top], 16)
+            
+            Divider().padding(.top, 16).opacity(0) // Spacer
 
             if let prediction = cyclePrediction {
-                VStack(alignment: .leading, spacing: CloveSpacing.small) {
-                    HStack(spacing: CloveSpacing.small) {
-                        Image(systemName: "calendar")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color.pink)
-
-                        Text("Predicted Start:")
-                            .font(.system(.subheadline, design: .rounded, weight: .medium))
-                            .foregroundStyle(CloveColors.secondaryText)
-
-                        Text(formatDate(prediction.startDate))
-                            .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                            .foregroundStyle(CloveColors.primaryText)
-                    }
-
-                    HStack(spacing: CloveSpacing.small) {
-                        Image(systemName: "clock")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color.pink)
-
-                        Text("Expected Duration:")
-                            .font(.system(.subheadline, design: .rounded, weight: .medium))
-                            .foregroundStyle(CloveColors.secondaryText)
-
-                        Text("\(prediction.length) days")
-                            .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                            .foregroundStyle(CloveColors.primaryText)
-                    }
-
-                    // Days until
-                    if let daysUntil = daysUntilPrediction(prediction.startDate) {
-                        HStack(spacing: CloveSpacing.small) {
-                            Image(systemName: "hourglass")
-                                .font(.system(size: 14, weight: .medium))
+                HStack(alignment: .bottom) {
+                    // Big Countdown
+                    VStack(alignment: .leading, spacing: 4) {
+                        let days = daysUntilPrediction(prediction.startDate) ?? 0
+                        
+                        if days > 0 {
+                            Text("In \(days) Days")
+                                .font(.system(size: 34, weight: .bold, design: .rounded))
+                                .foregroundStyle(CloveColors.primaryText)
+                        } else if days == 0 {
+                            Text("Expected Today")
+                                .font(.system(size: 34, weight: .bold, design: .rounded))
                                 .foregroundStyle(Color.pink)
-
-                            if daysUntil == 0 {
-                                Text("Expected to start today")
-                                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                                    .foregroundStyle(Color.pink)
-                            } else if daysUntil > 0 {
-                                Text("In \(daysUntil) day\(daysUntil == 1 ? "" : "s")")
-                                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                                    .foregroundStyle(Color.pink)
-                            } else {
-                                Text("\(-daysUntil) day\(daysUntil == -1 ? "" : "s") overdue")
-                                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                                    .foregroundStyle(CloveColors.error)
-                            }
+                        } else {
+                            Text("\(-days) Days Late")
+                                .font(.system(size: 34, weight: .bold, design: .rounded))
+                                .foregroundStyle(CloveColors.error)
                         }
+                        
+                        Text(formatDate(prediction.startDate))
+                            .font(.system(.body, design: .rounded))
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
+                    
+                    Spacer()
+                    
+                    // Stat Pill
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text("Duration")
+                            .font(.system(.caption, weight: .medium))
+                            .foregroundStyle(CloveColors.secondaryText)
+                        
+                        Text("~ \(prediction.length) Days")
+                            .font(.system(.headline, design: .rounded, weight: .semibold))
+                            .foregroundStyle(CloveColors.primaryText)
                     }
                 }
-                .padding(CloveSpacing.medium)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .fill(Color.pink.opacity(0.05))
-                )
+                .padding(20)
+                
             } else {
-                VStack(spacing: CloveSpacing.small) {
-                    Image(systemName: "chart.line.uptrend.xyaxis")
-                        .font(.system(size: 24, weight: .light))
-                        .foregroundStyle(CloveColors.secondaryText.opacity(0.5))
-
-                    Text("Not enough data yet")
-                        .font(.system(.body, design: .rounded, weight: .medium))
+                // Not enough data state
+                VStack(spacing: 12) {
+                    Text("Not Enough Data")
+                        .font(.system(.headline, design: .rounded))
                         .foregroundStyle(CloveColors.primaryText)
-
-                    Text("Track at least 2 periods to see predictions")
-                        .font(.system(.caption, design: .rounded))
+                    
+                    Text("Log at least 2 full cycles to unlock predictions.")
+                        .font(.system(.caption))
                         .foregroundStyle(CloveColors.secondaryText)
                         .multilineTextAlignment(.center)
                 }
-                .padding(CloveSpacing.large)
+                .padding(30)
                 .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .fill(CloveColors.secondaryText.opacity(0.05))
-                )
             }
         }
-        .padding(CloveSpacing.large)
         .background(
-            RoundedRectangle(cornerRadius: CloveCorners.large)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(CloveColors.card)
-                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
+                // Subtle border instead of pink fill
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
         )
     }
 
     private var emptyStateView: some View {
-        VStack(spacing: CloveSpacing.xlarge) {
-            VStack(spacing: CloveSpacing.large) {
-                ZStack {
-                    Circle()
-                        .fill(Color.pink.opacity(0.1))
-                        .frame(width: 120, height: 120)
+        VStack(spacing: 16) {
+            Image(systemName: "drop.degreesign.slash") // More abstract icon
+                .font(.system(size: 40))
+                .foregroundStyle(CloveColors.secondaryText.opacity(0.3))
+                .padding(.bottom, 8)
 
-                    Circle()
-                        .fill(Color.pink.opacity(0.05))
-                        .frame(width: 100, height: 100)
+            Text("No History Yet")
+                .font(.system(.headline, design: .rounded))
+                .foregroundStyle(CloveColors.primaryText)
 
-                    Text("🩸")
-                        .font(.system(size: 48))
-                }
-
-                VStack(spacing: CloveSpacing.medium) {
-                    Text("No Period History")
-                        .font(.system(.title2, design: .rounded, weight: .bold))
-                        .foregroundStyle(CloveColors.primaryText)
-
-                    VStack(spacing: CloveSpacing.small) {
-                        Text("Your period history will appear here")
-                            .font(.system(.body, design: .rounded))
-                            .foregroundStyle(CloveColors.secondaryText)
-
-                        Text("Start tracking in the Today tab to build your cycle history")
-                            .font(.system(.subheadline, design: .rounded))
-                            .foregroundStyle(CloveColors.secondaryText.opacity(0.8))
-                    }
-                    .multilineTextAlignment(.center)
-                }
-            }
-            .padding(.horizontal, CloveSpacing.xlarge)
+            Text("Logs from the Today view will appear here.")
+                .font(.system(.subheadline))
+                .foregroundStyle(CloveColors.secondaryText)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, CloveSpacing.xlarge)
+        .padding(.vertical, 40)
         .background(
-            RoundedRectangle(cornerRadius: CloveCorners.large)
+            RoundedRectangle(cornerRadius: 20)
                 .fill(CloveColors.card)
-                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                )
         )
     }
 
     private func loadData() {
-        // Load all cycles
         let allCycles = cycleRepo.getAllCycles()
-
-        // Group into periods
         periods = groupIntoPeriods(allCycles)
-
-        // Load prediction
         cyclePrediction = cycleManager.getNextCycle()
     }
 
     private func groupIntoPeriods(_ cycles: [Cycle]) -> [Period] {
         guard !cycles.isEmpty else { return [] }
-
         let calendar = Calendar.current
         let sortedCycles = cycles.sorted { $0.date < $1.date }
-
         var periods: [Period] = []
         var currentPeriodEntries: [Cycle] = []
         var lastDate: Date? = nil
 
         for cycle in sortedCycles {
             let cycleDate = calendar.startOfDay(for: cycle.date)
-
-            // Check if this is a new period (either isStartOfCycle or gap in dates)
             let isNewPeriod: Bool
             if let last = lastDate {
                 let daysBetween = calendar.dateComponents([.day], from: last, to: cycleDate).day ?? 0
@@ -286,7 +223,6 @@ struct CycleOverviewView: View {
             }
 
             if isNewPeriod && !currentPeriodEntries.isEmpty {
-                // Save the current period
                 if let firstEntry = currentPeriodEntries.first {
                     periods.append(Period(
                         startDate: firstEntry.date,
@@ -296,12 +232,9 @@ struct CycleOverviewView: View {
                 }
                 currentPeriodEntries = []
             }
-
             currentPeriodEntries.append(cycle)
             lastDate = cycleDate
         }
-
-        // Add the last period
         if !currentPeriodEntries.isEmpty, let firstEntry = currentPeriodEntries.first {
             periods.append(Period(
                 startDate: firstEntry.date,
@@ -309,14 +242,12 @@ struct CycleOverviewView: View {
                 entries: currentPeriodEntries
             ))
         }
-
-        // Sort periods by start date descending (most recent first)
         return periods.sorted { $0.startDate > $1.startDate }
     }
 
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateStyle = .medium
+        formatter.dateFormat = "MMM d, yyyy"
         return formatter.string(from: date)
     }
 
@@ -329,7 +260,7 @@ struct CycleOverviewView: View {
 }
 
 // MARK: - Period Model
-
+// (Kept identical to ensure no breaking changes)
 struct Period: Identifiable {
     let id = UUID()
     let startDate: Date
@@ -339,11 +270,9 @@ struct Period: Identifiable {
     var endDate: Date {
         Calendar.current.date(byAdding: .day, value: duration - 1, to: startDate) ?? startDate
     }
-
     var hasCramps: Bool {
         entries.contains { $0.hasCramps }
     }
-
     var averageFlow: Double {
         let flowValues = entries.map { $0.flow.numericValue }
         guard !flowValues.isEmpty else { return 0 }
@@ -351,7 +280,7 @@ struct Period: Identifiable {
     }
 }
 
-// MARK: - Period Card
+// MARK: - Refined Period Card
 
 struct PeriodCard: View {
     let period: Period
@@ -359,63 +288,58 @@ struct PeriodCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(spacing: CloveSpacing.medium) {
-                HStack {
-                    // Date and duration
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(formatDateRange())
-                            .font(.system(.body, design: .rounded, weight: .semibold))
-                            .foregroundStyle(CloveColors.primaryText)
+            HStack(spacing: 16) {
+                // 1. Flow Icon (The only "Pink" part)
+                ZStack {
+                    Circle()
+                        .fill(averageFlowColor().opacity(0.15))
+                        .frame(width: 44, height: 44)
 
-                        Text("\(period.duration) day\(period.duration == 1 ? "" : "s")")
-                            .font(.system(.subheadline, design: .rounded))
+                    Image(systemName: "drop.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(averageFlowColor())
+                }
+
+                // 2. Main Info
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(formatDateRange())
+                        .font(.system(.body, design: .rounded, weight: .bold))
+                        .foregroundStyle(CloveColors.primaryText)
+
+                    HStack(spacing: 8) {
+                        Text("\(period.duration) Days")
+                            .font(.system(.caption, weight: .medium))
                             .foregroundStyle(CloveColors.secondaryText)
-                    }
-
-                    Spacer()
-
-                    // Flow indicator
-                    HStack(spacing: CloveSpacing.small) {
-                        ZStack {
-                            Circle()
-                                .fill(averageFlowColor().opacity(0.1))
-                                .frame(width: 36, height: 36)
-
-                            Image(systemName: "drop.fill")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(averageFlowColor())
-                        }
-
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(CloveColors.secondaryText.opacity(0.5))
-                    }
-                }
-
-                // Badges
-                if period.hasCramps || period.entries.first?.isStartOfCycle == true {
-                    HStack(spacing: CloveSpacing.small) {
-                        if period.entries.first?.isStartOfCycle == true {
-                            Badge(text: "Day 1", color: Color.pink)
-                        }
-
+                        
+                        // Small dot separator
                         if period.hasCramps {
-                            Badge(text: "Cramps", color: CloveColors.error)
+                            Circle().fill(CloveColors.secondaryText.opacity(0.4)).frame(width: 3, height: 3)
+                            
+                            // Subtle text indicator instead of a loud badge
+                            HStack(spacing: 2) {
+                                Image(systemName: "bolt.heart.fill")
+                                    .font(.system(size: 10))
+                                Text("Cramps")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundStyle(CloveColors.error.opacity(0.8))
                         }
-
-                        Spacer()
                     }
                 }
+
+                Spacer()
+
+                // 3. Chevron
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(CloveColors.secondaryText.opacity(0.3))
             }
-            .padding(CloveSpacing.medium)
+            .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(CloveColors.card)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CloveCorners.medium)
-                            .stroke(Color.pink.opacity(0.1), lineWidth: 1)
-                    )
-                    .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
+                    // No pink borders, just clean depth
+                    .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
             )
         }
         .buttonStyle(.plain)
@@ -424,9 +348,7 @@ struct PeriodCard: View {
     private func formatDateRange() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d"
-
         if period.duration == 1 {
-            formatter.dateStyle = .medium
             return formatter.string(from: period.startDate)
         } else {
             let start = formatter.string(from: period.startDate)
@@ -437,42 +359,15 @@ struct PeriodCard: View {
 
     private func averageFlowColor() -> Color {
         let avgFlow = period.averageFlow
-
-        if avgFlow <= 1.5 {
-            return .pink.opacity(0.6)
-        } else if avgFlow <= 2.5 {
-            return .pink
-        } else if avgFlow <= 3.5 {
-            return .red
-        } else if avgFlow <= 4.5 {
-            return .red.opacity(0.9)
-        } else {
-            return .purple
-        }
-    }
-}
-
-// MARK: - Badge
-
-struct Badge: View {
-    let text: String
-    let color: Color
-
-    var body: some View {
-        Text(text)
-            .font(.system(.caption2, design: .rounded, weight: .semibold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(
-                Capsule()
-                    .fill(color)
-            )
+        // Slightly tweaked colors for dark mode legibility
+        if avgFlow <= 1.5 { return .pink.opacity(0.5) }
+        else if avgFlow <= 2.5 { return .pink }
+        else if avgFlow <= 3.5 { return .red }
+        else if avgFlow <= 4.5 { return .red.opacity(0.9) }
+        else { return .purple }
     }
 }
 
 #Preview {
-    NavigationView {
-        CycleOverviewView()
-    }
+    CycleOverviewView()
 }
