@@ -56,8 +56,14 @@ struct CalendarView: View {
                                 .foregroundColor(textColor(for: record, isSelected: isSelected))
                                 .background {
                                     ZStack {
+                                        // Prediction background (shown behind everything)
+                                        if let record, record.isPredictedCycle {
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .fill(Color.pink.opacity(0.2))
+                                        }
+
                                         // Heatmap background
-                                        if let record {
+                                        if let record, !record.isPredictedCycle {
                                             RoundedRectangle(cornerRadius: 8)
                                                 .fill(record.color)
                                         }
@@ -82,10 +88,25 @@ struct CalendarView: View {
                                     Spacer()
                                     HStack {
                                         Spacer()
-                                        Text("🩸")
+                                        Image(systemName: "drop.fill")
                                             .font(.system(size: 10))
                                             .padding([.trailing, .bottom], 2)
+                                            .foregroundStyle(Color.pink)
                                     }
+                                }
+                            }
+
+                            // Prediction indicator
+                            if let record, record.isPredictedCycle {
+                                VStack {
+                                    HStack {
+                                        Spacer()
+                                        Image(systemName: "drop")
+                                            .font(.system(size: 8, weight: .bold))
+                                            .foregroundStyle(Color.pink.opacity(0.6))
+                                            .padding([.trailing, .top], 3)
+                                    }
+                                    Spacer()
                                 }
                             }
                         }
@@ -177,6 +198,7 @@ struct CalendarRecord {
     let color: Color
     var icon: String?
     var hasCycleEntry: Bool = false
+    var isPredictedCycle: Bool = false
 }
 
 extension CalendarTheme {
@@ -189,7 +211,7 @@ extension CalendarTheme {
     )
 }
 
-#Preview {
+#Preview("Empty") {
     struct PreviewWrapper: View {
         @State private var selectedDate = Date()
         
@@ -198,5 +220,79 @@ extension CalendarTheme {
         }
     }
     
+    return PreviewWrapper()
+}
+
+#Preview("Cycle Data") {
+    struct PreviewWrapper: View {
+        @State private var selectedDate = Date()
+
+        var records: [Date: CalendarRecord] {
+            let calendar = Calendar.current
+            var recordsDict: [Date: CalendarRecord] = [:]
+
+            // Add some regular log data (past days)
+            for dayOffset in -15...(-1) {
+                if let date = calendar.date(byAdding: .day, value: dayOffset, to: Date()) {
+                    let normalizedDate = calendar.startOfDay(for: date)
+                    // Every few days has some data
+                    if dayOffset % 3 == 0 {
+                        recordsDict[normalizedDate] = CalendarRecord(
+                            color: CloveColors.blue.opacity(0.6),
+                            icon: nil,
+                            hasCycleEntry: false,
+                            isPredictedCycle: false
+                        )
+                    }
+                }
+            }
+
+            // Add actual cycle entries (3 days, starting 10 days ago)
+            for dayOffset in -10...(-8) {
+                if let date = calendar.date(byAdding: .day, value: dayOffset, to: Date()) {
+                    let normalizedDate = calendar.startOfDay(for: date)
+                    recordsDict[normalizedDate] = CalendarRecord(
+                        color: .clear,
+                        icon: nil,
+                        hasCycleEntry: true,
+                        isPredictedCycle: false
+                    )
+                }
+            }
+
+            // Add predicted cycle entries (5 days, starting 5 days from now)
+            for dayOffset in 5...9 {
+                if let date = calendar.date(byAdding: .day, value: dayOffset, to: Date()) {
+                    let normalizedDate = calendar.startOfDay(for: date)
+                    recordsDict[normalizedDate] = CalendarRecord(
+                        color: .clear,
+                        icon: nil,
+                        hasCycleEntry: false,
+                        isPredictedCycle: true
+                    )
+                }
+            }
+
+            // Today has some data
+            let today = calendar.startOfDay(for: Date())
+            recordsDict[today] = CalendarRecord(
+                color: CloveColors.green.opacity(0.7),
+                icon: nil,
+                hasCycleEntry: false,
+                isPredictedCycle: false
+            )
+
+            return recordsDict
+        }
+
+        var body: some View {
+            CalendarView(
+                records: records,
+                selectedDate: $selectedDate
+            )
+            .padding()
+        }
+    }
+
     return PreviewWrapper()
 }

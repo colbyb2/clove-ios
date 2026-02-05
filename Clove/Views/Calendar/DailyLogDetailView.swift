@@ -8,6 +8,7 @@ struct DailyLogDetailView: View {
     @State private var bowelMovements: [BowelMovement] = []
     @State private var foodEntries: [FoodEntry] = []
     @State private var activityEntries: [ActivityEntry] = []
+    @State private var cycleEntry: Cycle? = nil
     @State private var userSettings: UserSettings?
     @State private var isFoodsExpanded: Bool = true
     @State private var isActivitiesExpanded: Bool = true
@@ -23,7 +24,12 @@ struct DailyLogDetailView: View {
                     if let weather = log.weather {
                         weatherSection(weather: weather)
                     }
-                    
+
+                    // Cycle section
+                    if let cycle = cycleEntry {
+                        cycleSection(cycle: cycle)
+                    }
+
                     // Mental & Physical Health section
                     if hasPhysicalMentalData {
                         physicalMentalSection
@@ -93,6 +99,7 @@ struct DailyLogDetailView: View {
             loadBowelMovements()
             loadFoodEntries()
             loadActivityEntries()
+            loadCycleEntry()
         }
     }
     
@@ -250,24 +257,24 @@ struct DailyLogDetailView: View {
     private func weatherSection(weather: String) -> some View {
         VStack(spacing: CloveSpacing.medium) {
             SectionHeaderView(title: "Weather", emoji: "🌤️")
-            
+
             HStack(spacing: CloveSpacing.medium) {
                 // Weather emoji display
                 Text(weatherEmoji(for: weather))
                     .font(.system(size: 48))
                     .scaleEffect(1.0)
                     .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(weather)
                         .font(.system(.title2, design: .rounded).weight(.semibold))
                         .foregroundStyle(CloveColors.primaryText)
-                    
+
                     Text("Weather conditions")
                         .font(CloveFonts.small())
                         .foregroundStyle(CloveColors.secondaryText)
                 }
-                
+
                 Spacer()
             }
             .padding(CloveSpacing.medium)
@@ -277,6 +284,74 @@ struct DailyLogDetailView: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: CloveCorners.medium)
                             .stroke(weatherBorderColor(for: weather), lineWidth: 1)
+                    )
+            )
+        }
+    }
+
+    // MARK: - Cycle Section
+    private func cycleSection(cycle: Cycle) -> some View {
+        VStack(spacing: CloveSpacing.medium) {
+            SectionHeaderView(title: "Cycle", emoji: "🩸")
+
+            HStack(spacing: CloveSpacing.small) {
+                // Flow icon
+                ZStack {
+                    Circle()
+                        .fill(flowColor(for: cycle.flow).opacity(0.15))
+                        .frame(width: 36, height: 36)
+
+                    Image(systemName: flowIcon(for: cycle.flow))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(flowColor(for: cycle.flow))
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(cycle.flow.displayName)
+                        .font(.system(.body, design: .rounded).weight(.semibold))
+                        .foregroundStyle(CloveColors.primaryText)
+
+                    // Badges for additional info
+                    HStack(spacing: 6) {
+                        if cycle.isStartOfCycle {
+                            HStack(spacing: 3) {
+                                Image(systemName: "arrow.counterclockwise")
+                                    .font(.system(size: 9, weight: .bold))
+                                Text("Day 1")
+                                    .font(.system(size: 10, weight: .semibold))
+                            }
+                            .foregroundStyle(.blue)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(.blue.opacity(0.1))
+                            .clipShape(Capsule())
+                        }
+
+                        if cycle.hasCramps {
+                            HStack(spacing: 3) {
+                                Image(systemName: "bolt.heart.fill")
+                                    .font(.system(size: 9, weight: .bold))
+                                Text("Cramps")
+                                    .font(.system(size: 10, weight: .semibold))
+                            }
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(.orange.opacity(0.1))
+                            .clipShape(Capsule())
+                        }
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(CloveSpacing.small)
+            .background(
+                RoundedRectangle(cornerRadius: CloveCorners.small)
+                    .fill(flowColor(for: cycle.flow).opacity(0.05))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CloveCorners.small)
+                            .stroke(flowColor(for: cycle.flow).opacity(0.2), lineWidth: 1)
                     )
             )
         }
@@ -381,9 +456,10 @@ struct DailyLogDetailView: View {
     }
     
     private var hasAnyData: Bool {
-        hasPhysicalMentalData || !log.symptomRatings.isEmpty || hasLifestyleData || 
+        hasPhysicalMentalData || !log.symptomRatings.isEmpty || hasLifestyleData ||
         (log.notes != nil && !log.notes!.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ||
-        log.isFlareDay || log.weather != nil || (userSettings?.trackBowelMovements ?? false && !bowelMovements.isEmpty)
+        log.isFlareDay || log.weather != nil || (userSettings?.trackBowelMovements ?? false && !bowelMovements.isEmpty) ||
+        cycleEntry != nil
     }
     
     // MARK: - Helper Functions
@@ -405,6 +481,11 @@ struct DailyLogDetailView: View {
 
     private func loadActivityEntries() {
         activityEntries = dependencies.activityEntryRepository.getEntriesForDate(log.date)
+    }
+
+    private func loadCycleEntry() {
+        let cycles = dependencies.cycleRepository.getCyclesForDate(log.date)
+        cycleEntry = cycles.first
     }
 
     private func editThisDay() {
@@ -490,6 +571,24 @@ struct DailyLogDetailView: View {
         case "Snow": return Color.cyan.opacity(0.3)
         case "Gloomy": return Color.gray.opacity(0.4)
         default: return Color.blue.opacity(0.2)
+        }
+    }
+
+    private func flowColor(for flow: FlowLevel) -> Color {
+        switch flow {
+        case .spotting: return .pink.opacity(0.6)
+        case .light: return .pink
+        case .medium: return .red
+        case .heavy: return .red.opacity(0.9)
+        case .veryHeavy: return .purple
+        }
+    }
+
+    private func flowIcon(for flow: FlowLevel) -> String {
+        switch flow {
+        case .spotting, .light: return "drop"
+        case .medium, .heavy: return "drop.fill"
+        case .veryHeavy: return "drop.triangle.fill"
         }
     }
 }

@@ -8,10 +8,12 @@ class HistoryCalendarViewModel {
    private let settingsRepository: UserSettingsRepositoryProtocol
    private let symptomsRepository: SymptomsRepositoryProtocol
    private let cycleRepository: CycleRepositoryProtocol
+   private let cycleManager: CycleManaging
 
    // MARK: - State
    var logsByDate: [Date: DailyLog] = [:]
    var cyclesByDate: [Date: Cycle] = [:]
+   var cyclePrediction: CyclePrediction? = nil
    var selectedDate: Date? = nil
    var selectedCategory: TrackingCategory = .allData
    var userSettings: UserSettings = .default
@@ -62,7 +64,8 @@ class HistoryCalendarViewModel {
          logsRepository: LogsRepo.shared,
          settingsRepository: UserSettingsRepo.shared,
          symptomsRepository: SymptomsRepo.shared,
-         cycleRepository: CycleRepo.shared
+         cycleRepository: CycleRepo.shared,
+         cycleManager: CycleManager()
       )
    }
 
@@ -71,12 +74,14 @@ class HistoryCalendarViewModel {
       logsRepository: LogsRepositoryProtocol,
       settingsRepository: UserSettingsRepositoryProtocol,
       symptomsRepository: SymptomsRepositoryProtocol,
-      cycleRepository: CycleRepositoryProtocol
+      cycleRepository: CycleRepositoryProtocol,
+      cycleManager: CycleManaging
    ) {
       self.logsRepository = logsRepository
       self.settingsRepository = settingsRepository
       self.symptomsRepository = symptomsRepository
       self.cycleRepository = cycleRepository
+      self.cycleManager = cycleManager
       loadData()
    }
 
@@ -90,7 +95,8 @@ class HistoryCalendarViewModel {
          logsRepository: container.logsRepository,
          settingsRepository: container.settingsRepository,
          symptomsRepository: container.symptomsRepository,
-         cycleRepository: container.cycleRepository
+         cycleRepository: container.cycleRepository,
+         cycleManager: MockCycleManager()
       )
    }
    
@@ -99,6 +105,7 @@ class HistoryCalendarViewModel {
       loadCycles()
       loadUserSettings()
       loadTrackedSymptoms()
+      loadCyclePrediction()
    }
 
    func loadLogs() {
@@ -119,6 +126,15 @@ class HistoryCalendarViewModel {
 
    func loadTrackedSymptoms() {
       self.trackedSymptoms = symptomsRepository.getTrackedSymptoms()
+   }
+
+   func loadCyclePrediction() {
+      // Only load prediction if cycle tracking is enabled
+      if userSettings.trackCycle {
+         self.cyclePrediction = cycleManager.getNextCycle()
+      } else {
+         self.cyclePrediction = nil
+      }
    }
    
    func log(for date: Date) -> DailyLog? {
