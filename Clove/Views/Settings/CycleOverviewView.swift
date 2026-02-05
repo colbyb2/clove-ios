@@ -5,6 +5,7 @@ struct CycleOverviewView: View {
     @State private var cyclePrediction: CyclePrediction? = nil
     @State private var selectedPeriod: Period? = nil
     @State private var showPredictionDisclaimer: Bool = false
+    @State private var cycleStatistics: CycleStatistics? = nil
 
     // Assuming these exist in your project based on context
     private let cycleRepo = CycleRepo.shared
@@ -22,6 +23,12 @@ struct CycleOverviewView: View {
                     predictionCard
                         .padding(.horizontal)
                         .padding(.top, 10)
+
+                    // Cycle Statistics Card
+                    if cycleStatistics != nil {
+                        statisticsCard
+                            .padding(.horizontal)
+                    }
 
                     // Period History
                     if periods.isEmpty {
@@ -202,6 +209,19 @@ struct CycleOverviewView: View {
         let allCycles = cycleRepo.getAllCycles()
         periods = groupIntoPeriods(allCycles)
         cyclePrediction = cycleManager.getNextCycle()
+
+        // Load cycle statistics
+        if let avgCycleLength = cycleManager.getAverageCycleLength(),
+           let avgPeriodDuration = cycleManager.getAveragePeriodDuration(),
+           let regularity = cycleManager.getCycleRegularity() {
+            cycleStatistics = CycleStatistics(
+                averageCycleLength: avgCycleLength,
+                averagePeriodDuration: avgPeriodDuration,
+                regularity: regularity
+            )
+        } else {
+            cycleStatistics = nil
+        }
     }
 
     private func groupIntoPeriods(_ cycles: [Cycle]) -> [Period] {
@@ -256,6 +276,69 @@ struct CycleOverviewView: View {
         let today = calendar.startOfDay(for: Date())
         let predictionDate = calendar.startOfDay(for: date)
         return calendar.dateComponents([.day], from: today, to: predictionDate).day
+    }
+
+    // MARK: - Statistics Card
+
+    private var statisticsCard: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "chart.bar.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.blue)
+
+                    Text("Cycle Insights")
+                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+
+                Spacer()
+            }
+            .padding([.horizontal, .top], 16)
+
+            if let stats = cycleStatistics {
+                VStack(spacing: 16) {
+                    // Stats grid
+                    HStack(spacing: 12) {
+                        // Average Cycle Length
+                        StatCard(
+                            title: "Avg Cycle",
+                            value: String(format: "%.0f days", stats.averageCycleLength),
+                            icon: "arrow.triangle.2.circlepath",
+                            color: .blue
+                        )
+
+                        // Average Period Duration
+                        StatCard(
+                            title: "Avg Period",
+                            value: String(format: "%.0f days", stats.averagePeriodDuration),
+                            icon: "timer",
+                            color: .pink
+                        )
+
+                        // Regularity
+                        StatCard(
+                            title: "Regularity",
+                            value: stats.regularity.displayName,
+                            icon: "waveform.path.ecg",
+                            color: stats.regularity.color
+                        )
+                    }
+                }
+                .padding(16)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(CloveColors.card)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+        )
     }
 }
 
@@ -365,6 +448,55 @@ struct PeriodCard: View {
         else if avgFlow <= 3.5 { return .red }
         else if avgFlow <= 4.5 { return .red.opacity(0.9) }
         else { return .purple }
+    }
+}
+
+// MARK: - Cycle Statistics Model
+
+struct CycleStatistics {
+    let averageCycleLength: Double
+    let averagePeriodDuration: Double
+    let regularity: CycleRegularity
+}
+
+// MARK: - Stat Card Component
+
+struct StatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.15))
+                    .frame(width: 40, height: 40)
+
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(color)
+            }
+
+            VStack(spacing: 2) {
+                Text(title)
+                    .font(.system(.caption2, weight: .medium))
+                    .foregroundStyle(CloveColors.secondaryText)
+
+                Text(value)
+                    .font(.system(.caption, design: .rounded, weight: .bold))
+                    .foregroundStyle(CloveColors.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(CloveColors.background.opacity(0.5))
+        )
     }
 }
 
