@@ -43,7 +43,7 @@ struct CycleOverviewView: View {
                                     .foregroundStyle(CloveColors.primaryText)
 
                                 Spacer()
-                                
+
                                 // Subtle count badge
                                 Text("\(periods.count) Cycles")
                                     .font(.system(.caption, weight: .medium))
@@ -74,16 +74,6 @@ struct CycleOverviewView: View {
                 HStack(spacing: 6) {
                     Text("Cycle")
                         .font(.headline)
-
-                    Text("BETA")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule()
-                                .fill(Color.pink)
-                        )
                 }
             }
         }
@@ -94,9 +84,11 @@ struct CycleOverviewView: View {
             PeriodDetailSheet(period: period)
         }
         .alert("Period Prediction", isPresented: $showPredictionDisclaimer) {
-            Button("OK", role: .cancel) { }
+            Button("OK", role: .cancel) {}
         } message: {
-            Text("Predictions are estimates based on your past cycle patterns. This is not medical advice.")
+            Text(
+                "Predictions are estimates based on your past cycle patterns. This is not medical advice."
+            )
         }
     }
 
@@ -109,14 +101,14 @@ struct CycleOverviewView: View {
                     Image(systemName: "sparkles")
                         .font(.system(size: 14))
                         .foregroundStyle(Color.purple)
-                    
+
                     Text("Forecast")
                         .font(.system(.subheadline, design: .rounded, weight: .semibold))
                         .foregroundStyle(CloveColors.secondaryText)
                 }
-                
+
                 Spacer()
-                
+
                 Button(action: { showPredictionDisclaimer = true }) {
                     Image(systemName: "info.circle")
                         .font(.system(size: 16))
@@ -124,15 +116,15 @@ struct CycleOverviewView: View {
                 }
             }
             .padding([.horizontal, .top], 16)
-            
-            Divider().padding(.top, 16).opacity(0) // Spacer
+
+            Divider().padding(.top, 16).opacity(0)  // Spacer
 
             if let prediction = cyclePrediction {
                 HStack(alignment: .bottom) {
                     // Big Countdown
                     VStack(alignment: .leading, spacing: 4) {
                         let days = daysUntilPrediction(prediction.startDate) ?? 0
-                        
+
                         if days > 0 {
                             Text("In \(days) Days")
                                 .font(.system(size: 34, weight: .bold, design: .rounded))
@@ -146,34 +138,34 @@ struct CycleOverviewView: View {
                                 .font(.system(size: 34, weight: .bold, design: .rounded))
                                 .foregroundStyle(CloveColors.error)
                         }
-                        
+
                         Text(formatDate(prediction.startDate))
                             .font(.system(.body, design: .rounded))
                             .foregroundStyle(CloveColors.secondaryText)
                     }
-                    
+
                     Spacer()
-                    
+
                     // Stat Pill
                     VStack(alignment: .trailing, spacing: 4) {
                         Text("Duration")
                             .font(.system(.caption, weight: .medium))
                             .foregroundStyle(CloveColors.secondaryText)
-                        
+
                         Text("~ \(prediction.length) Days")
                             .font(.system(.headline, design: .rounded, weight: .semibold))
                             .foregroundStyle(CloveColors.primaryText)
                     }
                 }
                 .padding(20)
-                
+
             } else {
                 // Not enough data state
                 VStack(spacing: 12) {
                     Text("Not Enough Data")
                         .font(.system(.headline, design: .rounded))
                         .foregroundStyle(CloveColors.primaryText)
-                    
+
                     Text("Log at least 2 full cycles to unlock predictions.")
                         .font(.system(.caption))
                         .foregroundStyle(CloveColors.secondaryText)
@@ -197,7 +189,7 @@ struct CycleOverviewView: View {
 
     private var emptyStateView: some View {
         VStack(spacing: 16) {
-            Image(systemName: "drop.degreesign.slash") // More abstract icon
+            Image(systemName: "drop.degreesign.slash")  // More abstract icon
                 .font(.system(size: 40))
                 .foregroundStyle(CloveColors.secondaryText.opacity(0.3))
                 .padding(.bottom, 8)
@@ -230,8 +222,9 @@ struct CycleOverviewView: View {
 
         // Load cycle statistics
         if let avgCycleLength = cycleManager.getAverageCycleLength(),
-           let avgPeriodDuration = cycleManager.getAveragePeriodDuration(),
-           let regularity = cycleManager.getCycleRegularity() {
+            let avgPeriodDuration = cycleManager.getAveragePeriodDuration(),
+            let regularity = cycleManager.getCycleRegularity()
+        {
             cycleStatistics = CycleStatistics(
                 averageCycleLength: avgCycleLength,
                 averagePeriodDuration: avgPeriodDuration,
@@ -254,7 +247,8 @@ struct CycleOverviewView: View {
             let cycleDate = calendar.startOfDay(for: cycle.date)
             let isNewPeriod: Bool
             if let last = lastDate {
-                let daysBetween = calendar.dateComponents([.day], from: last, to: cycleDate).day ?? 0
+                let daysBetween =
+                    calendar.dateComponents([.day], from: last, to: cycleDate).day ?? 0
                 isNewPeriod = cycle.isStartOfCycle || daysBetween > 1
             } else {
                 isNewPeriod = true
@@ -262,11 +256,12 @@ struct CycleOverviewView: View {
 
             if isNewPeriod && !currentPeriodEntries.isEmpty {
                 if let firstEntry = currentPeriodEntries.first {
-                    periods.append(Period(
-                        startDate: firstEntry.date,
-                        duration: currentPeriodEntries.count,
-                        entries: currentPeriodEntries
-                    ))
+                    periods.append(
+                        Period(
+                            startDate: firstEntry.date,
+                            duration: currentPeriodEntries.count,
+                            entries: currentPeriodEntries
+                        ))
                 }
                 currentPeriodEntries = []
             }
@@ -274,11 +269,12 @@ struct CycleOverviewView: View {
             lastDate = cycleDate
         }
         if !currentPeriodEntries.isEmpty, let firstEntry = currentPeriodEntries.first {
-            periods.append(Period(
-                startDate: firstEntry.date,
-                duration: currentPeriodEntries.count,
-                entries: currentPeriodEntries
-            ))
+            periods.append(
+                Period(
+                    startDate: firstEntry.date,
+                    duration: currentPeriodEntries.count,
+                    entries: currentPeriodEntries
+                ))
         }
         return periods.sorted { $0.startDate > $1.startDate }
     }
@@ -411,11 +407,12 @@ struct PeriodCard: View {
                         Text("\(period.duration) Days")
                             .font(.system(.caption, weight: .medium))
                             .foregroundStyle(CloveColors.secondaryText)
-                        
+
                         // Small dot separator
                         if period.hasCramps {
-                            Circle().fill(CloveColors.secondaryText.opacity(0.4)).frame(width: 3, height: 3)
-                            
+                            Circle().fill(CloveColors.secondaryText.opacity(0.4)).frame(
+                                width: 3, height: 3)
+
                             // Subtle text indicator instead of a loud badge
                             HStack(spacing: 2) {
                                 Image(systemName: "bolt.heart.fill")
@@ -461,11 +458,17 @@ struct PeriodCard: View {
     private func averageFlowColor() -> Color {
         let avgFlow = period.averageFlow
         // Slightly tweaked colors for dark mode legibility
-        if avgFlow <= 1.5 { return .pink.opacity(0.5) }
-        else if avgFlow <= 2.5 { return .pink }
-        else if avgFlow <= 3.5 { return .red }
-        else if avgFlow <= 4.5 { return .red.opacity(0.9) }
-        else { return .purple }
+        if avgFlow <= 1.5 {
+            return .pink.opacity(0.5)
+        } else if avgFlow <= 2.5 {
+            return .pink
+        } else if avgFlow <= 3.5 {
+            return .red
+        } else if avgFlow <= 4.5 {
+            return .red.opacity(0.9)
+        } else {
+            return .purple
+        }
     }
 }
 

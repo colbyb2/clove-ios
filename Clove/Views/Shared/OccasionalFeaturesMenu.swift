@@ -30,7 +30,7 @@ struct OccasionalFeaturesMenu: View {
                     .fill(Color.gray.opacity(0.3))
                     .frame(width: 36, height: 5)
                     .padding(.bottom, 10)
-                
+
                 Text("Log Activity")
                     .font(.system(.title3, design: .rounded).weight(.bold))
                     .foregroundStyle(CloveColors.primary)
@@ -59,7 +59,7 @@ struct OccasionalFeaturesMenu: View {
                         }) {
                             FeatureCardContent(feature: feature)
                         }
-                        .buttonStyle(BouncyCardStyle()) // <--- The magic happens here
+                        .buttonStyle(BouncyCardStyle())  // <--- The magic happens here
                     }
                 }
                 .padding(.horizontal)
@@ -70,14 +70,14 @@ struct OccasionalFeaturesMenu: View {
             Spacer()
         }
         .padding(.top, 10)
-        .background(CloveColors.background) // Ensure contrast
+        .background(CloveColors.background)  // Ensure contrast
         .onAppear {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 animateIn = true
             }
         }
     }
-    
+
     private func triggerHaptic() {
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
@@ -113,18 +113,6 @@ struct FeatureCardContent: View {
                 Text(info.title)
                     .font(.system(.body, design: .rounded).weight(.medium))
                     .foregroundStyle(CloveColors.primary)
-
-                if feature == .cycle {
-                    Text("BETA")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule()
-                                .fill(Color.pink)
-                        )
-                }
             }
         }
         .frame(maxWidth: .infinity)

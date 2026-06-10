@@ -11,7 +11,7 @@ struct PeriodDetailSheet: View {
                     colors: [
                         Color.pink.opacity(0.02),
                         CloveColors.background,
-                        Color.pink.opacity(0.01)
+                        Color.pink.opacity(0.01),
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -36,7 +36,8 @@ struct PeriodDetailSheet: View {
                             }
                             .padding(.horizontal, CloveSpacing.large)
 
-                            ForEach(Array(period.entries.enumerated()), id: \.element.id) { index, entry in
+                            ForEach(Array(period.entries.enumerated()), id: \.element.id) {
+                                index, entry in
                                 DayDetailCard(entry: entry, dayNumber: index + 1)
                                     .padding(.horizontal, CloveSpacing.large)
                             }
@@ -53,16 +54,6 @@ struct PeriodDetailSheet: View {
                     HStack(spacing: 6) {
                         Text("Period Details")
                             .font(.headline)
-
-                        Text("BETA")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(
-                                Capsule()
-                                    .fill(Color.pink)
-                            )
                     }
                 }
 
@@ -136,9 +127,12 @@ struct PeriodDetailSheet: View {
                             .fill(CloveColors.error.opacity(0.1))
                             .frame(width: 50, height: 50)
 
-                        Image(systemName: crampsDays() > 0 ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundStyle(crampsDays() > 0 ? CloveColors.error : CloveColors.success)
+                        Image(
+                            systemName: crampsDays() > 0
+                                ? "exclamationmark.circle.fill" : "checkmark.circle.fill"
+                        )
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(crampsDays() > 0 ? CloveColors.error : CloveColors.success)
                     }
 
                     Text("Cramps")
@@ -233,7 +227,11 @@ struct PeriodDetailSheet: View {
     }
 
     private func heaviestDay() -> Int {
-        guard let heaviest = period.entries.enumerated().max(by: { $0.element.flow.numericValue < $1.element.flow.numericValue }) else {
+        guard
+            let heaviest = period.entries.enumerated().max(by: {
+                $0.element.flow.numericValue < $1.element.flow.numericValue
+            })
+        else {
             return 1
         }
         return heaviest.offset + 1
@@ -360,11 +358,21 @@ struct SmallBadge: View {
         startDate: Date().addingTimeInterval(-7 * 24 * 60 * 60),
         duration: 5,
         entries: [
-            Cycle(date: Date().addingTimeInterval(-7 * 24 * 60 * 60), flow: .medium, isStartOfCycle: true, hasCramps: true),
-            Cycle(date: Date().addingTimeInterval(-6 * 24 * 60 * 60), flow: .heavy, isStartOfCycle: false, hasCramps: true),
-            Cycle(date: Date().addingTimeInterval(-5 * 24 * 60 * 60), flow: .heavy, isStartOfCycle: false, hasCramps: false),
-            Cycle(date: Date().addingTimeInterval(-4 * 24 * 60 * 60), flow: .light, isStartOfCycle: false, hasCramps: false),
-            Cycle(date: Date().addingTimeInterval(-3 * 24 * 60 * 60), flow: .spotting, isStartOfCycle: false, hasCramps: false)
+            Cycle(
+                date: Date().addingTimeInterval(-7 * 24 * 60 * 60), flow: .medium,
+                isStartOfCycle: true, hasCramps: true),
+            Cycle(
+                date: Date().addingTimeInterval(-6 * 24 * 60 * 60), flow: .heavy,
+                isStartOfCycle: false, hasCramps: true),
+            Cycle(
+                date: Date().addingTimeInterval(-5 * 24 * 60 * 60), flow: .heavy,
+                isStartOfCycle: false, hasCramps: false),
+            Cycle(
+                date: Date().addingTimeInterval(-4 * 24 * 60 * 60), flow: .light,
+                isStartOfCycle: false, hasCramps: false),
+            Cycle(
+                date: Date().addingTimeInterval(-3 * 24 * 60 * 60), flow: .spotting,
+                isStartOfCycle: false, hasCramps: false),
         ]
     )
 

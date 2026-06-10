@@ -23,16 +23,6 @@ struct CycleEntrySheet: View {
                     Text("Log Period")
                         .font(.system(.headline, design: .rounded).weight(.bold))
                         .foregroundStyle(CloveColors.primary)
-
-                    Text("BETA")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule()
-                                .fill(Color.pink)
-                        )
                 }
 
                 HStack {
@@ -49,7 +39,7 @@ struct CycleEntrySheet: View {
 
             ScrollView {
                 VStack(spacing: 32) {
-                    
+
                     // MARK: - Date Display
                     HStack {
                         Image(systemName: "calendar")
@@ -60,7 +50,7 @@ struct CycleEntrySheet: View {
                     }
                     .padding(.top, 12)
                     .opacity(animateIn ? 1 : 0)
-                    
+
                     // MARK: - Flow Selector
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Flow Intensity")
@@ -68,7 +58,9 @@ struct CycleEntrySheet: View {
                             .foregroundStyle(CloveColors.secondaryText)
                             .padding(.horizontal)
 
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12
+                        ) {
                             ForEach(FlowLevel.allCases, id: \.self) { flow in
                                 FlowOptionCard(
                                     flow: flow,
@@ -90,7 +82,7 @@ struct CycleEntrySheet: View {
                             .font(.system(.subheadline, design: .rounded).weight(.semibold))
                             .foregroundStyle(CloveColors.secondaryText)
                             .padding(.horizontal)
-                        
+
                         VStack(spacing: 12) {
                             // Cycle Start Toggle
                             DetailSelectionRow(
@@ -103,7 +95,7 @@ struct CycleEntrySheet: View {
                                 triggerHaptic(style: .light)
                                 isStartOfCycle.toggle()
                             }
-                            
+
                             // Cramps Toggle
                             DetailSelectionRow(
                                 title: "Cramping",
@@ -121,9 +113,9 @@ struct CycleEntrySheet: View {
                     .opacity(animateIn ? 1 : 0)
                     .offset(y: animateIn ? 0 : 30)
                 }
-                .padding(.bottom, 100) // Space for button
+                .padding(.bottom, 100)  // Space for button
             }
-            
+
             // MARK: - Footer / Save
             VStack {
                 Divider()
@@ -155,7 +147,7 @@ struct CycleEntrySheet: View {
             }
         }
     }
-    
+
     private var isValid: Bool {
         selectedFlow != nil
     }
@@ -186,7 +178,7 @@ struct CycleEntrySheet: View {
             )
         }
     }
-    
+
     private func triggerHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
         let generator = UIImpactFeedbackGenerator(style: style)
         generator.impactOccurred()
@@ -199,15 +191,15 @@ struct FlowOptionCard: View {
     let flow: FlowLevel
     let isSelected: Bool
     let action: () -> Void
-    
+
     // Dynamic styling based on flow intensity
     var style: (icon: String, scale: CGFloat, color: Color) {
         switch flow {
         case .spotting: return ("drop", 0.8, .pink.opacity(0.6))
-        case .light:    return ("drop.fill", 0.8, .pink.opacity(0.8))
-        case .medium:   return ("drop.fill", 1.0, .pink)
-        case .heavy:    return ("drop.fill", 1.2, .red)
-        case .veryHeavy: return ("drop.triangle.fill", 1.1, .purple) // Or a deeper red
+        case .light: return ("drop.fill", 0.8, .pink.opacity(0.8))
+        case .medium: return ("drop.fill", 1.0, .pink)
+        case .heavy: return ("drop.fill", 1.2, .red)
+        case .veryHeavy: return ("drop.triangle.fill", 1.1, .purple)  // Or a deeper red
         }
     }
 
@@ -218,7 +210,7 @@ struct FlowOptionCard: View {
                     .font(.system(size: 28))
                     .foregroundStyle(isSelected ? .white : style.color)
                     .scaleEffect(style.scale)
-                
+
                 Text(flow.displayName)
                     .font(.system(.caption, design: .rounded).weight(.semibold))
                     .foregroundStyle(isSelected ? .white : CloveColors.primary)
@@ -229,7 +221,8 @@ struct FlowOptionCard: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(isSelected ? Theme.shared.accent : CloveColors.card)
                     .shadow(
-                        color: isSelected ? Theme.shared.accent.opacity(0.3) : Color.black.opacity(0.05),
+                        color: isSelected
+                            ? Theme.shared.accent.opacity(0.3) : Color.black.opacity(0.05),
                         radius: isSelected ? 8 : 4,
                         y: isSelected ? 4 : 2
                     )
@@ -250,7 +243,7 @@ struct DetailSelectionRow: View {
     let color: Color
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 16) {
@@ -259,24 +252,24 @@ struct DetailSelectionRow: View {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(isSelected ? color : Color.gray.opacity(0.1))
                         .frame(width: 44, height: 44)
-                    
+
                     Image(systemName: icon)
                         .foregroundStyle(isSelected ? .white : color)
                         .font(.system(size: 20))
                 }
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.system(.body, design: .rounded).weight(.semibold))
                         .foregroundStyle(CloveColors.primary)
-                    
+
                     Text(subtitle)
                         .font(.system(.caption))
                         .foregroundStyle(CloveColors.secondaryText)
                 }
-                
+
                 Spacer()
-                
+
                 // Custom Checkbox/Radio UI
                 Circle()
                     .strokeBorder(isSelected ? color : Color.gray.opacity(0.3), lineWidth: 2)
