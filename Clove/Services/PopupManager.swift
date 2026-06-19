@@ -10,6 +10,13 @@ class PopupManager {
    let defaults = UserDefaults.standard
    
    private init() {
+      // New installs haven't seen any previous versions, so pre-dismiss all
+      // "What's New" popups before checking — they should only show on updates.
+      if !defaults.bool(forKey: Constants.ONBOARDING_FLAG) {
+         WhatsNewContent.allWhatsNewPopups.forEach { popup in
+            defaults.set(true, forKey: popup.id)
+         }
+      }
       check()
    }
    
