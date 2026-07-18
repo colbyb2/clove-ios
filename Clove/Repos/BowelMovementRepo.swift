@@ -25,6 +25,19 @@ final class BowelMovementRepo {
             return false
         }
     }
+
+    func update(_ bowelMovement: BowelMovement) -> Bool {
+        guard bowelMovement.id != nil else { return false }
+        do {
+            try databaseManager.write { db in
+                try bowelMovement.update(db)
+            }
+            return true
+        } catch {
+            print("Error updating bowel movement: \(error)")
+            return false
+        }
+    }
     
     func delete(id: Int64) -> Bool {
         do {

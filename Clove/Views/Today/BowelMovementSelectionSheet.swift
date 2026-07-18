@@ -3,9 +3,12 @@ import SwiftUI
 struct BowelMovementSelectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     let date: Date
+    let existingMovement: BowelMovement?
     let onUpdate: () -> Void
     
     @State private var notes: String = ""
+    @State private var selectedType: BristolStoolType?
+    @State private var movementDate: Date = Date()
     @State private var animateIn = false
     
     private let repo = BowelMovementRepo.shared
@@ -38,6 +41,8 @@ struct BowelMovementSelectionSheet: View {
                         TextField("Add any additional notes...", text: $notes, axis: .vertical)
                             .textFieldStyle(.roundedBorder)
                             .lineLimit(3, reservesSpace: true)
+
+                        DatePicker("Time", selection: $movementDate, displayedComponents: .hourAndMinute)
                     }
                     .opacity(animateIn ? 1 : 0)
                     .offset(y: animateIn ? 0 : 10)
@@ -51,9 +56,13 @@ struct BowelMovementSelectionSheet: View {
                         ForEach(BristolStoolType.allCases, id: \.rawValue) { type in
                             BristolChartCard(
                                 type: type,
-                                isSelected: false
+                                isSelected: selectedType == type
                             ) {
-                                addBowelMovement(type: Double(type.rawValue))
+                                if existingMovement == nil {
+                                    saveBowelMovement(type: type)
+                                } else {
+                                    selectedType = type
+                                }
                             }
                         }
                     }
@@ -68,23 +77,30 @@ struct BowelMovementSelectionSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
+                    if existingMovement != nil {
+                        Button("Save") { saveEditedBowelMovement() }
+                            .fontWeight(.semibold)
+                            .disabled(selectedType == nil)
+                            .foregroundStyle(Theme.shared.accent)
+                    } else {
+                        Button("Done") { dismiss() }
+                            .foregroundStyle(Theme.shared.accent)
                     }
-                    .foregroundStyle(Theme.shared.accent)
                 }
             }
         }
         .onAppear {
-            notes = "" // Reset notes for new entry
+            notes = existingMovement?.notes ?? ""
+            selectedType = existingMovement?.bristolStoolType
+            movementDate = existingMovement?.date ?? date
             withAnimation(.easeOut(duration: 0.5).delay(0.1)) {
                 animateIn = true
             }
         }
     }
     
-    private func addBowelMovement(type: Double) {
-        let movement = BowelMovement(type: type, date: date, notes: notes.isEmpty ? nil : notes)
+    private func saveBowelMovement(type: BristolStoolType) {
+        let movement = BowelMovement(type: Double(type.rawValue), date: movementDate, notes: notes.emptyToNil)
         
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
@@ -103,8 +119,28 @@ struct BowelMovementSelectionSheet: View {
             }
         }
     }
+
+    private func saveEditedBowelMovement() {
+        guard var movement = existingMovement, let selectedType else { return }
+        movement.type = Double(selectedType.rawValue)
+        movement.notes = notes.emptyToNil
+        movement.date = movementDate
+
+        if repo.update(movement) {
+            onUpdate()
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            dismiss()
+        }
+    }
+}
+
+private extension String {
+    var emptyToNil: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
 }
 
 #Preview {
-    BowelMovementSelectionSheet(date: Date(), onUpdate: {})
+    BowelMovementSelectionSheet(date: Date(), existingMovement: nil, onUpdate: {})
 }

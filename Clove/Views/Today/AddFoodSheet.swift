@@ -378,14 +378,30 @@ struct AddCustomFoodSheet: View {
     let initialCategory: MealCategory
     let date: Date
     let onSave: () -> Void
+    let existingEntry: FoodEntry?
 
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = ""
     @State private var category: MealCategory = .snack
     @State private var notes: String = ""
     @State private var isFavorite: Bool = false
+    @State private var entryDate: Date = Date()
 
     private let repo = FoodEntryRepo.shared
+
+    init(
+        initialName: String,
+        initialCategory: MealCategory,
+        date: Date,
+        existingEntry: FoodEntry? = nil,
+        onSave: @escaping () -> Void
+    ) {
+        self.initialName = initialName
+        self.initialCategory = initialCategory
+        self.date = date
+        self.existingEntry = existingEntry
+        self.onSave = onSave
+    }
 
     var body: some View {
         NavigationView {
@@ -402,6 +418,8 @@ struct AddCustomFoodSheet: View {
                             .tag(cat)
                         }
                     }
+
+                    DatePicker("Time", selection: $entryDate, displayedComponents: .hourAndMinute)
                 }
 
                 Section("Additional Info") {
@@ -417,7 +435,7 @@ struct AddCustomFoodSheet: View {
                     }
                 }
             }
-            .navigationTitle("Add Food")
+            .navigationTitle(existingEntry == nil ? "Add Food" : "Edit Food")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -435,8 +453,11 @@ struct AddCustomFoodSheet: View {
                 }
             }
             .onAppear {
-                name = initialName
-                category = initialCategory
+                name = existingEntry?.name ?? initialName
+                category = existingEntry?.category ?? initialCategory
+                notes = existingEntry?.notes ?? ""
+                isFavorite = existingEntry?.isFavorite ?? false
+                entryDate = existingEntry?.date ?? date
             }
         }
     }
@@ -446,14 +467,16 @@ struct AddCustomFoodSheet: View {
         guard !trimmedName.isEmpty else { return }
 
         let entry = FoodEntry(
+            id: existingEntry?.id,
             name: trimmedName,
             category: category,
-            date: date,
+            date: entryDate,
             notes: notes.isEmpty ? nil : notes,
             isFavorite: isFavorite
         )
 
-        if repo.save(entry) != nil {
+        let saved = existingEntry == nil ? repo.save(entry) != nil : repo.update(entry)
+        if saved {
             // Haptic feedback
             let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
             impactFeedback.impactOccurred()

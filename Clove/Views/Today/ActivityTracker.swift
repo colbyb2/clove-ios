@@ -5,6 +5,7 @@ struct ActivityTracker: View {
 
     @State private var activityEntries: [ActivityEntry] = []
     @State private var showAddActivitySheet: Bool = false
+    @State private var editingActivity: ActivityEntry?
     @State private var isExpanded: Bool = true
 
     private let repo = ActivityEntryRepo.shared
@@ -67,9 +68,11 @@ struct ActivityTracker: View {
             if !activityEntries.isEmpty && isExpanded {
                 VStack(alignment: .leading, spacing: CloveSpacing.small) {
                     ForEach(activityEntries) { entry in
-                        ActivityEntryRow(entry: entry) {
-                            deleteActivityEntry(entry)
-                        }
+                        ActivityEntryRow(
+                            entry: entry,
+                            onEdit: { editingActivity = entry },
+                            onDelete: { deleteActivityEntry(entry) }
+                        )
                     }
 
                     // Total duration summary
@@ -95,6 +98,16 @@ struct ActivityTracker: View {
         }
         .sheet(isPresented: $showAddActivitySheet) {
             AddActivitySheet(date: date) {
+                loadActivityEntries()
+            }
+        }
+        .sheet(item: $editingActivity) { entry in
+            AddCustomActivitySheet(
+                initialName: entry.name,
+                initialCategory: entry.category,
+                date: entry.date,
+                existingEntry: entry
+            ) {
                 loadActivityEntries()
             }
         }
@@ -146,6 +159,7 @@ struct ActivityTracker: View {
 
 private struct ActivityEntryRow: View {
     let entry: ActivityEntry
+    let onEdit: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -214,11 +228,18 @@ private struct ActivityEntryRow: View {
 
             Spacer()
 
-            // Delete Button
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.red.opacity(0.7))
+            HStack(spacing: 14) {
+                Button(action: onEdit) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Theme.shared.accent)
+                }
+
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.red.opacity(0.7))
+                }
             }
             .buttonStyle(PlainButtonStyle())
         }

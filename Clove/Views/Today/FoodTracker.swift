@@ -5,6 +5,7 @@ struct FoodTracker: View {
 
     @State private var foodEntries: [FoodEntry] = []
     @State private var showAddFoodSheet: Bool = false
+    @State private var editingFood: FoodEntry?
     @State private var isExpanded: Bool = true
 
     private let repo = FoodEntryRepo.shared
@@ -67,9 +68,11 @@ struct FoodTracker: View {
             if !foodEntries.isEmpty && isExpanded {
                 VStack(alignment: .leading, spacing: CloveSpacing.small) {
                     ForEach(foodEntries) { entry in
-                        FoodEntryRow(entry: entry) {
-                            deleteFoodEntry(entry)
-                        }
+                        FoodEntryRow(
+                            entry: entry,
+                            onEdit: { editingFood = entry },
+                            onDelete: { deleteFoodEntry(entry) }
+                        )
                     }
                 }
                 .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
@@ -84,6 +87,16 @@ struct FoodTracker: View {
         }
         .sheet(isPresented: $showAddFoodSheet) {
             AddFoodSheet(date: date) {
+                loadFoodEntries()
+            }
+        }
+        .sheet(item: $editingFood) { entry in
+            AddCustomFoodSheet(
+                initialName: entry.name,
+                initialCategory: entry.category,
+                date: entry.date,
+                existingEntry: entry
+            ) {
                 loadFoodEntries()
             }
         }
@@ -117,6 +130,7 @@ struct FoodTracker: View {
 
 private struct FoodEntryRow: View {
     let entry: FoodEntry
+    let onEdit: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -173,11 +187,18 @@ private struct FoodEntryRow: View {
 
             Spacer()
 
-            // Delete Button
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.red.opacity(0.7))
+            HStack(spacing: 14) {
+                Button(action: onEdit) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Theme.shared.accent)
+                }
+
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.red.opacity(0.7))
+                }
             }
             .buttonStyle(PlainButtonStyle())
         }

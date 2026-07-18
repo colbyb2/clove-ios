@@ -16,6 +16,13 @@ final class MockBowelMovementRepository: BowelMovementRepositoryProtocol {
         return false
     }
 
+    func update(_ bowelMovement: BowelMovement) -> Bool {
+        guard shouldSucceed, let id = bowelMovement.id,
+              let index = movements.firstIndex(where: { $0.id == id }) else { return false }
+        movements[index] = bowelMovement
+        return true
+    }
+
     func delete(id: Int64) -> Bool {
         if shouldSucceed {
             movements.removeAll { $0.id == id }

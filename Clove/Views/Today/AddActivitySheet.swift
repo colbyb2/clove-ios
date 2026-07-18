@@ -405,6 +405,7 @@ struct AddCustomActivitySheet: View {
     let initialCategory: ActivityCategory
     let date: Date
     let onSave: () -> Void
+    let existingEntry: ActivityEntry?
 
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = ""
@@ -413,10 +414,25 @@ struct AddCustomActivitySheet: View {
     @State private var intensity: ActivityIntensity?
     @State private var notes: String = ""
     @State private var isFavorite: Bool = false
+    @State private var entryDate: Date = Date()
 
     @State private var durationText: String = ""
 
     private let repo = ActivityEntryRepo.shared
+
+    init(
+        initialName: String,
+        initialCategory: ActivityCategory,
+        date: Date,
+        existingEntry: ActivityEntry? = nil,
+        onSave: @escaping () -> Void
+    ) {
+        self.initialName = initialName
+        self.initialCategory = initialCategory
+        self.date = date
+        self.existingEntry = existingEntry
+        self.onSave = onSave
+    }
 
     var body: some View {
         NavigationView {
@@ -433,6 +449,8 @@ struct AddCustomActivitySheet: View {
                             .tag(cat)
                         }
                     }
+
+                    DatePicker("Time", selection: $entryDate, displayedComponents: .hourAndMinute)
                 }
 
                 Section("Duration & Intensity") {
@@ -475,7 +493,7 @@ struct AddCustomActivitySheet: View {
                     }
                 }
             }
-            .navigationTitle("Add Activity")
+            .navigationTitle(existingEntry == nil ? "Add Activity" : "Edit Activity")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -493,8 +511,14 @@ struct AddCustomActivitySheet: View {
                 }
             }
             .onAppear {
-                name = initialName
-                category = initialCategory
+                name = existingEntry?.name ?? initialName
+                category = existingEntry?.category ?? initialCategory
+                duration = existingEntry?.duration
+                durationText = existingEntry?.duration.map(String.init) ?? ""
+                intensity = existingEntry?.intensity
+                notes = existingEntry?.notes ?? ""
+                isFavorite = existingEntry?.isFavorite ?? false
+                entryDate = existingEntry?.date ?? date
             }
         }
     }
@@ -504,16 +528,18 @@ struct AddCustomActivitySheet: View {
         guard !trimmedName.isEmpty else { return }
 
         let entry = ActivityEntry(
+            id: existingEntry?.id,
             name: trimmedName,
             category: category,
-            date: date,
+            date: entryDate,
             duration: duration,
             intensity: intensity,
             notes: notes.isEmpty ? nil : notes,
             isFavorite: isFavorite
         )
 
-        if repo.save(entry) != nil {
+        let saved = existingEntry == nil ? repo.save(entry) != nil : repo.update(entry)
+        if saved {
             // Haptic feedback
             let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
             impactFeedback.impactOccurred()

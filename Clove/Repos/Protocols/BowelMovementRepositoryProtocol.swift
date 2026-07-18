@@ -7,6 +7,9 @@ protocol BowelMovementRepositoryProtocol {
     /// - Returns: True if successful, false otherwise
     func save(_ bowelMovements: [BowelMovement]) -> Bool
 
+    /// Updates an existing bowel movement.
+    func update(_ bowelMovement: BowelMovement) -> Bool
+
     /// Deletes a bowel movement
     /// - Parameter id: The ID of the bowel movement to delete
     /// - Returns: True if successful, false otherwise

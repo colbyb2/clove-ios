@@ -5,6 +5,7 @@ struct BowelMovementTracker: View {
     
     @State private var bowelMovements: [BowelMovement] = []
     @State private var showBowelMovementSelection: Bool = false
+    @State private var editingBowelMovement: BowelMovement?
     
     private let repo = BowelMovementRepo.shared
     
@@ -97,13 +98,22 @@ struct BowelMovementTracker: View {
                             
                             Spacer()
                             
-                            // Delete Button
-                            Button(action: {
-                                deleteBowelMovement(movement)
-                            }) {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.red.opacity(0.7))
+                            HStack(spacing: 14) {
+                                Button(action: {
+                                    editingBowelMovement = movement
+                                }) {
+                                    Image(systemName: "pencil")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(Theme.shared.accent)
+                                }
+
+                                Button(action: {
+                                    deleteBowelMovement(movement)
+                                }) {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.red.opacity(0.7))
+                                }
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
@@ -122,7 +132,12 @@ struct BowelMovementTracker: View {
             loadBowelMovements()
         }
         .sheet(isPresented: $showBowelMovementSelection) {
-            BowelMovementSelectionSheet(date: date) {
+            BowelMovementSelectionSheet(date: date, existingMovement: nil) {
+                loadBowelMovements()
+            }
+        }
+        .sheet(item: $editingBowelMovement) { movement in
+            BowelMovementSelectionSheet(date: movement.date, existingMovement: movement) {
                 loadBowelMovements()
             }
         }
