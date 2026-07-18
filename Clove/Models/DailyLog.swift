@@ -7,6 +7,7 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
     var mood: Int?
     var painLevel: Int?
     var energyLevel: Int?
+    var waterIntake: Int?
     var meals: [String]
     var activities: [String]
     var medicationsTaken: [String]
@@ -24,6 +25,7 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
         mood: Int? = nil,
         painLevel: Int? = nil,
         energyLevel: Int? = nil,
+        waterIntake: Int? = nil,
         meals: [String] = [],
         activities: [String] = [],
         medicationsTaken: [String] = [],
@@ -38,6 +40,7 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
         self.mood = mood
         self.painLevel = painLevel
         self.energyLevel = energyLevel
+        self.waterIntake = waterIntake
         self.meals = meals
         self.activities = activities
         self.medicationsTaken = medicationsTaken

@@ -8,6 +8,7 @@ class LogData {
     var mood: Double = 5
     var painLevel: Double = 5
     var energyLevel: Double = 5
+    var waterIntake: Int = 0
     var isFlareDay: Bool = false
     var weather: String? = nil
     var meals: [String] = []
@@ -43,6 +44,7 @@ class LogData {
         if let logEnergy = log.energyLevel {
             self.energyLevel = Double(logEnergy)
         }
+        self.waterIntake = log.waterIntake ?? 0
         self.isFlareDay = log.isFlareDay
         self.weather = log.weather
         self.meals = log.meals

@@ -118,6 +118,53 @@ struct EnergyLevelMetricProvider: MetricProvider {
     }
 }
 
+// MARK: - Hydration Metric Provider
+
+struct HydrationMetricProvider: MetricProvider {
+    let id = "hydration"
+    let displayName = "Hydration"
+    let description = "Daily water intake in fluid ounces"
+    let icon = "💧"
+    let category: MetricCategory = .coreHealth
+    let dataType: MetricDataType = .count
+    let chartType: MetricChartType = .bar
+    let valueRange: ClosedRange<Double>? = nil
+
+    private let dataLoader = OptimizedDataLoader.shared
+
+    func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
+        let logs = await dataLoader.filterSessionLogs(for: period)
+        return logs.compactMap { log in
+            guard let ounces = log.waterIntake, ounces > 0 else { return nil }
+            return MetricDataPoint(
+                date: log.date,
+                value: Double(ounces),
+                rawValue: ounces,
+                metricId: id
+            )
+        }
+    }
+
+    func getDataPointCount(for period: TimePeriod) async -> Int {
+        await dataLoader.getDataPointCount(for: period) { ($0.waterIntake ?? 0) > 0 }
+    }
+
+    func formatValue(_ value: Double) -> String {
+        "\(Int(value.rounded())) oz"
+    }
+
+    var chartConfiguration: MetricChartConfiguration {
+        MetricChartConfiguration(
+            chartType: .bar,
+            primaryColor: CloveColors.blue,
+            showGradient: true,
+            lineWidth: 2.5,
+            showDataPoints: true,
+            enableInteraction: true
+        )
+    }
+}
+
 // MARK: - Flare Day Metric Provider
 
 struct FlareDayMetricProvider: MetricProvider {

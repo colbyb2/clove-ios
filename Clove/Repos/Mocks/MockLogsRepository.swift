@@ -23,6 +23,17 @@ final class MockLogsRepository: LogsRepositoryProtocol {
         return false
     }
 
+    func saveWaterIntake(_ ounces: Int?, for date: Date) -> Bool {
+        guard shouldSucceed else { return false }
+
+        if let index = logs.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: date) }) {
+            logs[index].waterIntake = ounces
+        } else if let ounces {
+            logs.append(DailyLog(date: date, waterIntake: ounces))
+        }
+        return true
+    }
+
     func getLogs() -> [DailyLog] {
         return logs
     }

@@ -113,7 +113,7 @@ class DataManager {
         var headers: [String] = []
         
         // Add category headers in logical order
-        let orderedCategories: [ExportCategory] = [.date, .mood, .pain, .energy, .flareDay, .weather, .bowelMovements, .medications, .meals, .activities, .notes]
+        let orderedCategories: [ExportCategory] = [.date, .mood, .pain, .energy, .hydration, .flareDay, .weather, .bowelMovements, .medications, .meals, .activities, .notes]
         
         for category in orderedCategories {
             if categories.contains(category) {
@@ -133,7 +133,7 @@ class DataManager {
         var row: [String] = []
         
         // Add category data in same order as headers
-        let orderedCategories: [ExportCategory] = [.date, .mood, .pain, .energy, .flareDay, .weather, .bowelMovements, .medications, .meals, .activities, .notes]
+        let orderedCategories: [ExportCategory] = [.date, .mood, .pain, .energy, .hydration, .flareDay, .weather, .bowelMovements, .medications, .meals, .activities, .notes]
         
         for category in orderedCategories {
             if categories.contains(category) {
@@ -165,6 +165,8 @@ class DataManager {
             return log.painLevel.map { String($0) } ?? ""
         case .energy:
             return log.energyLevel.map { String($0) } ?? ""
+        case .hydration:
+            return log.waterIntake.map { String($0) } ?? ""
         case .flareDay:
             return log.isFlareDay ? "Yes" : "No"
         case .weather:

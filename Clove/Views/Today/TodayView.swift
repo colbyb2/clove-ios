@@ -67,6 +67,12 @@ struct TodayView: View {
                         )
                     }
 
+                    if viewModel.settings.trackHydration {
+                        HydrationTracker(ounces: $viewModel.logData.waterIntake) { _ in
+                            viewModel.saveHydration()
+                        }
+                    }
+
                     if viewModel.settings.trackSymptoms {
                         symptomsSection
                     }

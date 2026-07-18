@@ -222,6 +222,7 @@ class TodayViewModel {
          mood: settings.trackMood ? Int(logData.mood) : nil,
          painLevel: settings.trackPain ? Int(logData.painLevel) : nil,
          energyLevel: settings.trackEnergy ? Int(logData.energyLevel) : nil,
+         waterIntake: settings.trackHydration && logData.waterIntake > 0 ? logData.waterIntake : nil,
          meals: settings.trackMeals ? logData.meals : [],
          activities: settings.trackActivities ? logData.activities : [],
          medicationsTaken: medicationsTaken,
@@ -236,6 +237,7 @@ class TodayViewModel {
       isSaving = false
 
       if result {
+         MetricRegistry.shared.invalidateCache()
          let message = "Log saved successfully"
          toastManager.showToast(message: message, color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
 
@@ -247,6 +249,15 @@ class TodayViewModel {
          toastManager.showToast(message: "Hmm, something went wrong.", color: CloveColors.error)
       }
 
+   }
+
+   func saveHydration() {
+      let ounces = logData.waterIntake > 0 ? logData.waterIntake : nil
+      if logsRepository.saveWaterIntake(ounces, for: selectedDate) {
+         MetricRegistry.shared.invalidateCache()
+      } else {
+         toastManager.showToast(message: "Hydration couldn't be saved.", color: CloveColors.error)
+      }
    }
    
    // MARK: - Symptom Management

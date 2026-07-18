@@ -7,6 +7,9 @@ protocol LogsRepositoryProtocol {
     /// - Returns: True if successful, false otherwise
     func saveLog(_ log: DailyLog) -> Bool
 
+    /// Saves only hydration for a date without overwriting other daily-log fields.
+    func saveWaterIntake(_ ounces: Int?, for date: Date) -> Bool
+
     /// Retrieves all daily logs
     /// - Returns: Array of all daily logs
     func getLogs() -> [DailyLog]

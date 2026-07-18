@@ -35,6 +35,32 @@ class LogsRepo {
          return false
       }
    }
+
+   func saveWaterIntake(_ ounces: Int?, for date: Date) -> Bool {
+      do {
+         try databaseManager.write { db in
+            let calendar = Calendar.current
+            let startOfDay = calendar.startOfDay(for: date)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
+            if let existingLog = try DailyLog
+               .filter(Column("date") >= startOfDay && Column("date") < endOfDay)
+               .fetchOne(db) {
+               try db.execute(
+                  sql: "UPDATE dailyLog SET waterIntake = ? WHERE id = ?",
+                  arguments: [ounces, existingLog.id]
+               )
+            } else if let ounces {
+               let log = DailyLog(date: date, waterIntake: ounces)
+               try log.insert(db)
+            }
+         }
+         return true
+      } catch {
+         print("Error saving water intake: \(error)")
+         return false
+      }
+   }
    
    func getLogs() -> [DailyLog] {
       do {

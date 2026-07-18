@@ -13,13 +13,14 @@ struct CustomizeTrackerView: View {
     @State private var trackingOffset: CGFloat = 30
     @State private var inputOffset: CGFloat = 30
     @State private var buttonOffset: CGFloat = 30
-    @State private var trackingAnimations: [Bool] = Array(repeating: false, count: 12)
+    @State private var trackingAnimations: [Bool] = Array(repeating: false, count: 13)
     
     // Tracking options with icons and colors
     private let trackingOptions = [
         TrackingOption(key: "trackMood", title: "Mood", icon: "face.smiling", color: .blue, description: "Track your daily mood levels"),
         TrackingOption(key: "trackPain", title: "Pain", icon: "bandage", color: .red, description: "Monitor pain intensity"),
         TrackingOption(key: "trackEnergy", title: "Energy", icon: "bolt.fill", color: .yellow, description: "Log your energy levels"),
+        TrackingOption(key: "trackHydration", title: "Hydration", icon: "drop.fill", color: .blue, description: "Track daily water intake"),
         TrackingOption(key: "trackSymptoms", title: "Symptoms", icon: "stethoscope", color: .orange, description: "Track specific symptoms"),
         TrackingOption(key: "trackMeals", title: "Meals", icon: "fork.knife", color: .green, description: "Record your meals"),
         TrackingOption(key: "trackActivities", title: "Activities", icon: "figure.run", color: .cyan, description: "Log physical activities"),
@@ -323,6 +324,7 @@ struct CustomizeTrackerView: View {
         case "trackMood": return viewModel.settings.trackMood
         case "trackPain": return viewModel.settings.trackPain
         case "trackEnergy": return viewModel.settings.trackEnergy
+        case "trackHydration": return viewModel.settings.trackHydration
         case "trackSymptoms": return viewModel.settings.trackSymptoms
         case "trackMeals": return viewModel.settings.trackMeals
         case "trackActivities": return viewModel.settings.trackActivities
@@ -341,6 +343,7 @@ struct CustomizeTrackerView: View {
         case "trackMood": viewModel.settings.trackMood = value
         case "trackPain": viewModel.settings.trackPain = value
         case "trackEnergy": viewModel.settings.trackEnergy = value
+        case "trackHydration": viewModel.settings.trackHydration = value
         case "trackSymptoms": viewModel.settings.trackSymptoms = value
         case "trackMeals": viewModel.settings.trackMeals = value
         case "trackActivities": viewModel.settings.trackActivities = value

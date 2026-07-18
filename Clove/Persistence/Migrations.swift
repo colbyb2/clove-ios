@@ -18,7 +18,8 @@ enum Migrations {
         FoodActivityTablesMigration(),
         FoodActivityDataMigration(),
         CycleTableMigration(),
-        CycleSettingMigration()
+        CycleSettingMigration(),
+        HydrationMigration()
     ]
 }
 
@@ -465,6 +466,20 @@ struct CycleSettingMigration: Migration {
     func migrate(_ db: Database) throws {
         try db.alter(table: "userSettings") { t in
             t.add(column: "trackCycle", .boolean).notNull().defaults(to: false)
+        }
+    }
+}
+
+/// Adds opt-in daily hydration tracking in fluid ounces.
+struct HydrationMigration: Migration {
+    var identifier: String { "hydration_071726" }
+
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "dailyLog") { t in
+            t.add(column: "waterIntake", .integer)
+        }
+        try db.alter(table: "userSettings") { t in
+            t.add(column: "trackHydration", .boolean).notNull().defaults(to: false)
         }
     }
 }

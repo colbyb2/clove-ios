@@ -297,6 +297,7 @@ struct MetricCard: View {
                 trackMood: true,
                 trackPain: true,
                 trackEnergy: true,
+                trackHydration: true,
                 trackSymptoms: true,
                 trackMeals: false,
                 trackActivities: false,

@@ -34,6 +34,10 @@ struct DailyLogDetailView: View {
                     if hasPhysicalMentalData {
                         physicalMentalSection
                     }
+
+                    if let waterIntake = log.waterIntake, waterIntake > 0 {
+                        hydrationSection(ounces: waterIntake)
+                    }
                     
                     // Symptoms section
                     if !log.symptomRatings.isEmpty {
@@ -176,6 +180,30 @@ struct DailyLogDetailView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func hydrationSection(ounces: Int) -> some View {
+        VStack(spacing: CloveSpacing.medium) {
+            SectionHeaderView(title: "Hydration", emoji: "💧")
+
+            HStack {
+                Image(systemName: "drop.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(CloveColors.blue)
+                Text("Water intake")
+                    .font(CloveFonts.body())
+                    .foregroundStyle(CloveColors.primaryText)
+                Spacer()
+                Text("\(ounces) oz")
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .foregroundStyle(CloveColors.blue)
+            }
+            .padding(CloveSpacing.medium)
+            .background(
+                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                    .fill(CloveColors.card)
+            )
         }
     }
     
@@ -456,7 +484,7 @@ struct DailyLogDetailView: View {
     }
     
     private var hasAnyData: Bool {
-        hasPhysicalMentalData || !log.symptomRatings.isEmpty || hasLifestyleData ||
+        hasPhysicalMentalData || (log.waterIntake ?? 0) > 0 || !log.symptomRatings.isEmpty || hasLifestyleData ||
         (log.notes != nil && !log.notes!.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ||
         log.isFlareDay || log.weather != nil || (userSettings?.trackBowelMovements ?? false && !bowelMovements.isEmpty) ||
         cycleEntry != nil
