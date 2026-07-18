@@ -22,6 +22,12 @@ class TodayViewModel {
    var yesterdayLog: DailyLog? = nil
    var cycleEntry: Cycle? = nil
    var isSaving = false
+   private var autoSaveTask: Task<Void, Never>?
+   private var isLoadingLogData = false
+
+   private var isAutoSaveEnabled: Bool {
+      settingsRepository.getSettings()?.autoSaveEnabled ?? true
+   }
 
    // MARK: - Initialization
 
@@ -104,6 +110,9 @@ class TodayViewModel {
    }
    
    func loadLogData(for date: Date) {
+      autoSaveTask?.cancel()
+      isLoadingLogData = true
+      defer { isLoadingLogData = false }
       self.selectedDate = date
 
       // Load bowel movements for this date (externally, not in LogData)
@@ -206,9 +215,10 @@ class TodayViewModel {
       self.yesterdayLog = logsRepository.getLogForDate(yesterday)
    }
    
-   func saveLog() {
+   func saveLog(showFeedback: Bool = true) {
       // Prevent duplicate saves
       guard !isSaving else { return }
+      autoSaveTask?.cancel()
       isSaving = true
 
       // Extract medication names that were marked as taken
@@ -238,20 +248,37 @@ class TodayViewModel {
 
       if result {
          MetricRegistry.shared.invalidateCache()
-         let message = "Log saved successfully"
-         toastManager.showToast(message: message, color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
+         if showFeedback {
+            let message = "Log saved successfully"
+            toastManager.showToast(message: message, color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
+         }
 
          // Check for rating prompt opportunity
-         Task {
+         if showFeedback { Task {
             await AppReviewManager.shared.promptForReviewIfEligible()
-         }
-      } else {
+         } }
+      } else if showFeedback {
          toastManager.showToast(message: "Hmm, something went wrong.", color: CloveColors.error)
       }
 
    }
 
+   /// Schedules a single save after input settles, avoiding writes while a user drags or types.
+   func scheduleAutoSave() {
+      guard !isLoadingLogData, isAutoSaveEnabled else { return }
+
+      autoSaveTask?.cancel()
+      autoSaveTask = Task { [weak self] in
+         try? await Task.sleep(nanoseconds: 600_000_000)
+         guard !Task.isCancelled else { return }
+         self?.autoSaveTask = nil
+         guard self?.isAutoSaveEnabled == true else { return }
+         self?.saveLog(showFeedback: false)
+      }
+   }
+
    func saveHydration() {
+      guard isAutoSaveEnabled else { return }
       let ounces = logData.waterIntake > 0 ? logData.waterIntake : nil
       if logsRepository.saveWaterIntake(ounces, for: selectedDate) {
          MetricRegistry.shared.invalidateCache()

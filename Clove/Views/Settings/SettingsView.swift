@@ -33,6 +33,7 @@ struct SettingsView: View {
     }
 
     var body: some View {
+        @Bindable var bindableViewModel = viewModel
         ZStack {
             Form {
                 Section(header: Text("Customization")) {
@@ -73,6 +74,13 @@ struct SettingsView: View {
                             InsightsCustomizationView()
                         }
                     }
+                }
+
+                Section(header: Text("Logging")) {
+                    Toggle("Auto Save Daily Changes", isOn: $bindableViewModel.settings.autoSaveEnabled)
+                        .onChange(of: viewModel.settings.autoSaveEnabled) { _, _ in
+                            viewModel.save()
+                        }
                 }
 
                 Section(header: Text("Medication")) {

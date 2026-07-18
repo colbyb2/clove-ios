@@ -19,7 +19,8 @@ enum Migrations {
         FoodActivityDataMigration(),
         CycleTableMigration(),
         CycleSettingMigration(),
-        HydrationMigration()
+        HydrationMigration(),
+        AutoSaveSettingMigration()
     ]
 }
 
@@ -480,6 +481,17 @@ struct HydrationMigration: Migration {
         }
         try db.alter(table: "userSettings") { t in
             t.add(column: "trackHydration", .boolean).notNull().defaults(to: false)
+        }
+    }
+}
+
+/// Enables debounced automatic daily-log saves by default.
+struct AutoSaveSettingMigration: Migration {
+    var identifier: String { "autoSaveSetting_071726" }
+
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "userSettings") { t in
+            t.add(column: "autoSaveEnabled", .boolean).notNull().defaults(to: true)
         }
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-struct MedicationAdherence: Codable {
+struct MedicationAdherence: Codable, Equatable {
     var medicationId: Int64
     var medicationName: String
     var wasTaken: Bool

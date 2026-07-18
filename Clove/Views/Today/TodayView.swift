@@ -385,6 +385,14 @@ struct TodayView: View {
                 navigationCoordinator.clearTargetDate()
             }
         }
+        .onChange(of: viewModel.logData.mood) { _, _ in viewModel.scheduleAutoSave() }
+        .onChange(of: viewModel.logData.painLevel) { _, _ in viewModel.scheduleAutoSave() }
+        .onChange(of: viewModel.logData.energyLevel) { _, _ in viewModel.scheduleAutoSave() }
+        .onChange(of: viewModel.logData.isFlareDay) { _, _ in viewModel.scheduleAutoSave() }
+        .onChange(of: viewModel.logData.weather) { _, _ in viewModel.scheduleAutoSave() }
+        .onChange(of: viewModel.logData.notes) { _, _ in viewModel.scheduleAutoSave() }
+        .onChange(of: viewModel.logData.medicationAdherence) { _, _ in viewModel.scheduleAutoSave() }
+        .onChange(of: viewModel.logData.symptomRatings) { _, _ in viewModel.scheduleAutoSave() }
         .sheet(isPresented: $showEditSymptoms) {
             EditSymptomsSheet(
                 trackedSymptoms: SymptomsRepo.shared.getTrackedSymptoms(),

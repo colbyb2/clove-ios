@@ -7,6 +7,7 @@ struct UserSettings: Codable, FetchableRecord, PersistableRecord, Identifiable {
     var trackPain: Bool
     var trackEnergy: Bool
     var trackHydration: Bool
+    var autoSaveEnabled: Bool
     var trackSymptoms: Bool
     var trackMeals: Bool
     var trackActivities: Bool
@@ -25,6 +26,7 @@ extension UserSettings {
         trackPain: false,
         trackEnergy: true,
         trackHydration: false,
+        autoSaveEnabled: true,
         trackSymptoms: true,
         trackMeals: false,
         trackActivities: false,
@@ -42,6 +44,7 @@ extension UserSettings {
         trackPain: false,
         trackEnergy: false,
         trackHydration: false,
+        autoSaveEnabled: true,
         trackSymptoms: false,
         trackMeals: false,
         trackActivities: false,

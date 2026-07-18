@@ -1,6 +1,6 @@
 import Foundation
 
-struct SymptomRatingVM: Identifiable {
+struct SymptomRatingVM: Identifiable, Equatable {
     let id = UUID()
     var symptomId: Int64
     var symptomName: String
