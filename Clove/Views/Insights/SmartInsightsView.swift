@@ -58,7 +58,7 @@ struct SmartInsightsView: View {
                     .foregroundStyle(Theme.shared.accent)
                 
                 VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
-                    Text("AI-Powered Insights")
+                    Text("Evidence-Based Insights")
                         .font(.system(.title2, design: .rounded).weight(.bold))
                         .foregroundStyle(CloveColors.primaryText)
                     

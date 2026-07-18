@@ -186,7 +186,8 @@ class TimePeriodManager {
         if isUsingCustomRange, let range = customRange {
             let formatter = DateFormatter()
             formatter.dateStyle = .medium
-            return "\(formatter.string(from: range.start)) - \(formatter.string(from: range.end))"
+            let inclusiveEnd = Calendar.current.date(byAdding: .day, value: -1, to: range.end) ?? range.end
+            return "\(formatter.string(from: range.start)) - \(formatter.string(from: inclusiveEnd))"
         } else {
             return selectedPeriod.displayName
         }
@@ -309,12 +310,7 @@ class TimePeriodManager {
     
     private func calculatePreviousPeriodForCustomRange() -> DateInterval? {
         guard let currentRange = customRange else { return nil }
-        
-        let duration = currentRange.duration
-        let previousEnd = currentRange.start
-        let previousStart = previousEnd.addingTimeInterval(-duration)
-        
-        return DateInterval(start: previousStart, end: previousEnd)
+        return AnalyticsDateRangeFactory(calendar: .current).previous(equalTo: currentRange)
     }
 }
 

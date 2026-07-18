@@ -6,9 +6,14 @@ final class MedicationRepository {
     static let shared = MedicationRepository(databaseManager: DatabaseManager.shared)
 
     private let databaseManager: DatabaseManaging
+    private let analyticsRevisionSource: any AnalyticsRevisionProviding
 
-    init(databaseManager: DatabaseManaging) {
+    init(
+        databaseManager: DatabaseManaging,
+        analyticsRevisionSource: any AnalyticsRevisionProviding = AnalyticsRevisionSource.shared
+    ) {
         self.databaseManager = databaseManager
+        self.analyticsRevisionSource = analyticsRevisionSource
     }
     
     // MARK: - TrackedMedication Methods
@@ -27,8 +32,17 @@ final class MedicationRepository {
     func saveMedication(_ medication: TrackedMedication) -> Bool {
         do {
             try databaseManager.write { db in
-                try medication.save(db)
+                let saved = medication
+                try saved.save(db)
+                let id = saved.id ?? db.lastInsertedRowID
+                try DynamicMetricIdentityStore.registerAlias(
+                    family: .medication,
+                    sourceID: id,
+                    name: saved.name,
+                    in: db
+                )
             }
+            analyticsRevisionSource.bump(reason: .medication)
             return true
         } catch {
             print("Error saving medication: \(error)")
@@ -53,6 +67,12 @@ final class MedicationRepository {
                 var updatedMedication = medication
                 updatedMedication.id = id
                 try updatedMedication.update(db)
+                try DynamicMetricIdentityStore.registerAlias(
+                    family: .medication,
+                    sourceID: id,
+                    name: name,
+                    in: db
+                )
                 
                 // Create history entries for changes
                 try createUpdateHistoryEntries(
@@ -63,6 +83,7 @@ final class MedicationRepository {
                     updated: updatedMedication
                 )
             }
+            analyticsRevisionSource.bump(reason: .medication)
             return true
         } catch {
             print("Error updating medication: \(error)")
@@ -96,6 +117,7 @@ final class MedicationRepository {
                 // Delete the medication
                 try db.execute(sql: "DELETE FROM trackedMedication WHERE id = ?", arguments: [id])
             }
+            analyticsRevisionSource.bump(reason: .medication)
             return true
         } catch {
             print("Error deleting medication: \(error)")
@@ -125,6 +147,7 @@ final class MedicationRepository {
             try databaseManager.write { db in
                 try entry.save(db)
             }
+            analyticsRevisionSource.bump(reason: .medication)
             return true
         } catch {
             print("Error saving medication history entry: \(error)")
@@ -137,11 +160,19 @@ final class MedicationRepository {
     func saveMedicationWithHistory(_ medication: TrackedMedication, changeType: String, oldValue: String? = nil, newValue: String? = nil) -> Bool {
         do {
             try databaseManager.write { db in
-                try medication.save(db)
+                let saved = medication
+                try saved.save(db)
+                let id = saved.id ?? db.lastInsertedRowID
+                try DynamicMetricIdentityStore.registerAlias(
+                    family: .medication,
+                    sourceID: id,
+                    name: saved.name,
+                    in: db
+                )
                 
                 // Create history entry
                 let historyEntry = MedicationHistoryEntry(
-                    medicationId: medication.id ?? 0,
+                    medicationId: id,
                     medicationName: medication.name,
                     changeType: changeType,
                     oldValue: oldValue,
@@ -149,6 +180,7 @@ final class MedicationRepository {
                 )
                 try historyEntry.save(db)
             }
+            analyticsRevisionSource.bump(reason: .medication)
             return true
         } catch {
             print("Error saving medication with history: \(error)")

@@ -5,9 +5,14 @@ final class FoodEntryRepo {
     static let shared = FoodEntryRepo(databaseManager: DatabaseManager.shared)
 
     private let databaseManager: DatabaseManaging
+    private let analyticsRevisionSource: any AnalyticsRevisionProviding
 
-    init(databaseManager: DatabaseManaging) {
+    init(
+        databaseManager: DatabaseManaging,
+        analyticsRevisionSource: any AnalyticsRevisionProviding = AnalyticsRevisionSource.shared
+    ) {
         self.databaseManager = databaseManager
+        self.analyticsRevisionSource = analyticsRevisionSource
     }
 
     // MARK: - CRUD Operations
@@ -15,10 +20,18 @@ final class FoodEntryRepo {
     @discardableResult
     func save(_ entry: FoodEntry) -> FoodEntry? {
         do {
-            let newEntry = entry
+            var newEntry = entry
             try databaseManager.write { db in
+                if newEntry.analyticsIdentityID == nil {
+                    newEntry.analyticsIdentityID = try DynamicMetricIdentityStore.resolveID(
+                        family: .meal,
+                        name: newEntry.name,
+                        in: db
+                    )
+                }
                 try newEntry.insert(db)
             }
+            analyticsRevisionSource.bump(reason: .food)
             return newEntry
         } catch {
             print("Error saving food entry: \(error)")
@@ -30,9 +43,18 @@ final class FoodEntryRepo {
         do {
             try databaseManager.write { db -> Void in
                 for entry in entries {
-                    try entry.insert(db)
+                    var identifiedEntry = entry
+                    if identifiedEntry.analyticsIdentityID == nil {
+                        identifiedEntry.analyticsIdentityID = try DynamicMetricIdentityStore.resolveID(
+                            family: .meal,
+                            name: identifiedEntry.name,
+                            in: db
+                        )
+                    }
+                    try identifiedEntry.insert(db)
                 }
             }
+            analyticsRevisionSource.bump(reason: .food)
             return true
         } catch {
             print("Error saving food entries: \(error)")
@@ -44,8 +66,32 @@ final class FoodEntryRepo {
         guard entry.id != nil else { return false }
         do {
             try databaseManager.write { db in
-                try entry.update(db)
+                var identifiedEntry = entry
+                if identifiedEntry.analyticsIdentityID == nil, let entryID = identifiedEntry.id {
+                    identifiedEntry.analyticsIdentityID = try Int64.fetchOne(
+                        db,
+                        sql: "SELECT analyticsIdentityID FROM foodEntry WHERE id = ?",
+                        arguments: [entryID]
+                    )
+                }
+                if identifiedEntry.analyticsIdentityID == nil {
+                    identifiedEntry.analyticsIdentityID = try DynamicMetricIdentityStore.resolveID(
+                        family: .meal,
+                        name: identifiedEntry.name,
+                        in: db
+                    )
+                }
+                if let identityID = identifiedEntry.analyticsIdentityID {
+                    try DynamicMetricIdentityStore.updateDisplayName(
+                        family: .meal,
+                        sourceID: identityID,
+                        name: identifiedEntry.name,
+                        in: db
+                    )
+                }
+                try identifiedEntry.update(db)
             }
+            analyticsRevisionSource.bump(reason: .food)
             return true
         } catch {
             print("Error updating food entry: \(error)")
@@ -58,6 +104,7 @@ final class FoodEntryRepo {
             try databaseManager.write { db in
                 try db.execute(sql: "DELETE FROM foodEntry WHERE id = ?", arguments: [id])
             }
+            analyticsRevisionSource.bump(reason: .food)
             return true
         } catch {
             print("Error deleting food entry: \(error)")
@@ -165,6 +212,7 @@ final class FoodEntryRepo {
                     UPDATE foodEntry SET isFavorite = NOT isFavorite WHERE id = ?
                 """, arguments: [id])
             }
+            analyticsRevisionSource.bump(reason: .food)
             return true
         } catch {
             print("Error toggling favorite: \(error)")

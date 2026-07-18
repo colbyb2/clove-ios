@@ -5,9 +5,14 @@ class LogsRepo {
    static let shared = LogsRepo(databaseManager: DatabaseManager.shared)
 
    private let databaseManager: DatabaseManaging
+   private let analyticsRevisionSource: any AnalyticsRevisionProviding
 
-   init(databaseManager: DatabaseManaging) {
+   init(
+      databaseManager: DatabaseManaging,
+      analyticsRevisionSource: any AnalyticsRevisionProviding = AnalyticsRevisionSource.shared
+   ) {
       self.databaseManager = databaseManager
+      self.analyticsRevisionSource = analyticsRevisionSource
    }
    
    func saveLog(_ log: DailyLog) -> Bool {
@@ -29,6 +34,7 @@ class LogsRepo {
                try log.save(db)
             }
          }
+         analyticsRevisionSource.bump(reason: .dailyLog)
          return true
       } catch {
          print("Error saving log: \(error)")
@@ -55,6 +61,7 @@ class LogsRepo {
                try log.insert(db)
             }
          }
+         analyticsRevisionSource.bump(reason: .dailyLog)
          return true
       } catch {
          print("Error saving water intake: \(error)")

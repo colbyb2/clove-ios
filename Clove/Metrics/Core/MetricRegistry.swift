@@ -32,7 +32,16 @@ class MetricRegistry {
         FlowLevelMetricProvider()
     ]
     
-    private init() {}
+    private init() {
+#if DEBUG
+        MetricSemanticsContractChecks.assertAllPass()
+        MetricCatalogContractChecks.assertAllPass()
+        MetricObservationContractChecks.assertAllPass()
+        MetricObservationAdapterChecks.assertAllPass()
+        AnalyticsRepositoryContractChecks.assertAllPass()
+        MetricCatalogCompatibilityChecks.assertAllProvidersMapped(staticMetrics)
+#endif
+    }
     
     // MARK: - Public Methods
     
@@ -100,24 +109,32 @@ class MetricRegistry {
     
     private func refreshMetricSummaries() async {
         var summaries: [MetricSummary] = []
-        
-        // Get all available metrics
         let allMetrics = await getAllMetricProviders()
-        
-        // Create summaries efficiently (only count and last value, not full data)
+        let interval = AnalyticsDateRangeFactory().interval(for: TimePeriodManager.shared.selectedPeriod)
+        guard let dataset = try? await AnalyticsRepositoryContainer.shared.load(
+            AnalyticsRequest(interval: interval, includeRawEvents: false),
+            granularity: AnalyticsChartPipeline().granularity(for: interval)
+        ) else {
+            cachedSummaries = []
+            lastSummaryUpdate = Date()
+            return
+        }
+
         for metric in allMetrics {
-            let dataPointCount = await metric.getDataPointCount()
-            let lastValue = await metric.getLastValue()
-            
+            let observations = observations(for: metric, in: dataset).compactMap { observation -> Double? in
+                guard case .observed(let value) = observation.state else { return nil }
+                return value.numericValue
+            }
+            let lastValue = observations.last.map(metric.formatValue)
             let summary = MetricSummary(
                 id: metric.id,
                 displayName: metric.displayName,
                 description: metric.description,
                 icon: metric.icon,
                 category: metric.category,
-                dataPointCount: dataPointCount,
-                lastValue: lastValue?.formattedValue,
-                isAvailable: dataPointCount > 0,
+                dataPointCount: observations.count,
+                lastValue: lastValue,
+                isAvailable: !observations.isEmpty,
                 isActive: metric.category == .symptoms ? (metric as! SymptomMetricProvider).isActive : nil
             )
             
@@ -131,19 +148,34 @@ class MetricRegistry {
     
     private func refreshMetricCache() async {
         let allMetrics = await getAllMetricProviders()
-        
-        // Filter to only metrics that have data
+        let interval = AnalyticsDateRangeFactory().interval(for: .allTime)
+        guard let dataset = try? await AnalyticsRepositoryContainer.shared.load(
+            AnalyticsRequest(interval: interval, includeRawEvents: false), granularity: .monthly
+        ) else {
+            cachedMetrics = [:]
+            lastCacheUpdate = Date()
+            return
+        }
         var validMetrics: [String: any MetricProvider] = [:]
-        
         for metric in allMetrics {
-            let dataCount = await metric.getDataPointCount()
-            if dataCount > 0 {
+            if !observations(for: metric, in: dataset).isEmpty {
                 validMetrics[metric.id] = metric
             }
         }
         
         cachedMetrics = validMetrics
         lastCacheUpdate = Date()
+    }
+
+    private func observations(for provider: any MetricProvider, in dataset: AnalyticsDataset) -> [MetricObservation] {
+        if let definition = provider.catalogMetricDefinition {
+            let direct = dataset.observations(for: definition.id)
+            if !direct.isEmpty { return direct }
+        }
+        let direct = dataset.observations(for: MetricID(rawValue: provider.id))
+        if !direct.isEmpty { return direct }
+        guard let aliases = dataset.metricAliases[provider.id], aliases.count == 1, let canonical = aliases.first else { return [] }
+        return dataset.observations(for: canonical)
     }
     
     /// Get all possible metric providers (both static and dynamic)
@@ -156,6 +188,10 @@ class MetricRegistry {
         metrics.append(contentsOf: await generateMedicationMetrics())
         metrics.append(contentsOf: await generateActivityMetrics())
         metrics.append(contentsOf: await generateMealMetrics())
+
+#if DEBUG
+        MetricCatalogCompatibilityChecks.assertAllProvidersMapped(metrics)
+#endif
         
         return metrics
     }

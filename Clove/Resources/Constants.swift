@@ -9,6 +9,8 @@ enum Constants {
    static let INSIGHTS_SMART_INSIGHTS = "insightsSmartInsights"
    static let INSIGHTS_METRIC_CHARTS = "insightsMetricCharts"
    static let INSIGHTS_CORRELATIONS = "insightsCorrelations"
+   static let UNIFIED_ANALYTICS_ENABLED = "unifiedAnalyticsEnabled"
+   static let LOCAL_ANALYTICS_DIAGNOSTICS = "localAnalyticsDiagnosticsEnabled"
    
    // Input Method Preferences
    static let USE_SLIDER_INPUT = "useSliderInput"

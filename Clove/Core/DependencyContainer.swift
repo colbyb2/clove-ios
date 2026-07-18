@@ -21,7 +21,6 @@ protocol DependencyContaining: AnyObject {
     var tutorialManager: TutorialManaging { get }
     var metricRegistry: MetricRegistryProtocol { get }
     var timePeriodManager: TimePeriodManaging { get }
-    var appReviewManager: AppReviewManaging { get }
 
     // MARK: - Database
     var databaseManager: DatabaseManaging { get }
@@ -63,5 +62,4 @@ final class DependencyContainer: DependencyContaining {
     lazy var tutorialManager: TutorialManaging = TutorialManager.shared
     lazy var metricRegistry: MetricRegistryProtocol = MetricRegistry.shared
     lazy var timePeriodManager: TimePeriodManaging = TimePeriodManager.shared
-    lazy var appReviewManager: AppReviewManaging = AppReviewManager.shared
 }

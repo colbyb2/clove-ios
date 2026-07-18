@@ -8,10 +8,22 @@
 
 /* Begin PBXBuildFile section */
 		6FC7BE042E01E110009F0219 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 6FC7BE032E01E110009F0219 /* GRDB */; };
+		A10000000000000000000012 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 6FC7BE032E01E110009F0219 /* GRDB */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A10000000000000000000009 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6FC7BDDC2E01D9A5009F0219 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6FC7BDE32E01D9A5009F0219;
+			remoteInfo = Clove;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		6FC7BDE42E01D9A5009F0219 /* Clove.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Clove.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000001 /* CloveAnalyticsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CloveAnalyticsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -33,6 +45,11 @@
 			path = Clove;
 			sourceTree = "<group>";
 		};
+		A10000000000000000000002 /* CloveAnalyticsTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CloveAnalyticsTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +61,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000012 /* GRDB in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -51,6 +76,7 @@
 			isa = PBXGroup;
 			children = (
 				6FC7BDE62E01D9A5009F0219 /* Clove */,
+				A10000000000000000000002 /* CloveAnalyticsTests */,
 				6FC7BDE52E01D9A5009F0219 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -59,6 +85,7 @@
 			isa = PBXGroup;
 			children = (
 				6FC7BDE42E01D9A5009F0219 /* Clove.app */,
+				A10000000000000000000001 /* CloveAnalyticsTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -89,6 +116,30 @@
 			productReference = 6FC7BDE42E01D9A5009F0219 /* Clove.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A10000000000000000000004 /* CloveAnalyticsTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000005 /* Build configuration list for PBXNativeTarget "CloveAnalyticsTests" */;
+			buildPhases = (
+				A10000000000000000000006 /* Sources */,
+				A10000000000000000000003 /* Frameworks */,
+				A10000000000000000000007 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000000000000000000008 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A10000000000000000000002 /* CloveAnalyticsTests */,
+			);
+			name = CloveAnalyticsTests;
+			packageProductDependencies = (
+				6FC7BE032E01E110009F0219 /* GRDB */,
+			);
+			productName = CloveAnalyticsTests;
+			productReference = A10000000000000000000001 /* CloveAnalyticsTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -101,6 +152,10 @@
 				TargetAttributes = {
 					6FC7BDE32E01D9A5009F0219 = {
 						CreatedOnToolsVersion = 16.2;
+					};
+					A10000000000000000000004 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 6FC7BDE32E01D9A5009F0219;
 					};
 				};
 			};
@@ -122,12 +177,20 @@
 			projectRoot = "";
 			targets = (
 				6FC7BDE32E01D9A5009F0219 /* Clove */,
+				A10000000000000000000004 /* CloveAnalyticsTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		6FC7BDE22E01D9A5009F0219 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000007 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -144,7 +207,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000000000000000000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A10000000000000000000008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6FC7BDE32E01D9A5009F0219 /* Clove */;
+			targetProxy = A10000000000000000000009 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		6FC7BDF02E01D9A6009F0219 /* Debug */ = {
@@ -336,6 +414,40 @@
 			};
 			name = Release;
 		};
+		A10000000000000000000010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.colbybrown.CloveAnalyticsTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Clove.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Clove";
+			};
+			name = Debug;
+		};
+		A10000000000000000000011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.colbybrown.CloveAnalyticsTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Clove.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Clove";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -353,6 +465,15 @@
 			buildConfigurations = (
 				6FC7BDF32E01D9A6009F0219 /* Debug */,
 				6FC7BDF42E01D9A6009F0219 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000005 /* Build configuration list for PBXNativeTarget "CloveAnalyticsTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000010 /* Debug */,
+				A10000000000000000000011 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

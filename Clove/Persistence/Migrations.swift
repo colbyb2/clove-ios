@@ -20,8 +20,61 @@ enum Migrations {
         CycleTableMigration(),
         CycleSettingMigration(),
         HydrationMigration(),
-        AutoSaveSettingMigration()
+        AutoSaveSettingMigration(),
+        StableDynamicMetricIdentityMigration(),
+        SavedAnalysisMigration(),
+        AdvancedInsightsPersistenceMigration()
     ]
+}
+
+struct AdvancedInsightsPersistenceMigration: Migration {
+    var identifier: String { "advancedInsightsPersistence_071826" }
+
+    func migrate(_ db: Database) throws {
+        try db.create(table: "insightFeedback") { table in
+            table.column("insightID", .text).primaryKey()
+            table.column("rating", .text)
+            table.column("isSaved", .boolean).notNull().defaults(to: false)
+            table.column("dismissedUntil", .datetime)
+            table.column("createdAt", .datetime).notNull()
+            table.column("updatedAt", .datetime).notNull()
+        }
+        try db.create(index: "insightFeedback_saved", on: "insightFeedback", columns: ["isSaved", "updatedAt"])
+
+        try db.create(table: "savedHypothesis") { table in
+            table.autoIncrementedPrimaryKey("id")
+            table.column("title", .text).notNull()
+            table.column("factorMetricID", .text).notNull()
+            table.column("outcomeMetricID", .text).notNull()
+            table.column("notes", .text).notNull().defaults(to: "")
+            table.column("reviewIntervalDays", .integer).notNull().defaults(to: 7)
+            table.column("lastReviewedAt", .datetime)
+            table.column("createdAt", .datetime).notNull()
+            table.column("updatedAt", .datetime).notNull()
+        }
+        try db.create(index: "savedHypothesis_updatedAt", on: "savedHypothesis", columns: ["updatedAt"])
+    }
+}
+
+struct SavedAnalysisMigration: Migration {
+    var identifier: String { "savedAnalysis_071826" }
+
+    func migrate(_ db: Database) throws {
+        try db.create(table: "savedAnalysis") { table in
+            table.autoIncrementedPrimaryKey("id")
+            table.column("title", .text).notNull()
+            table.column("factorMetricID", .text).notNull()
+            table.column("outcomeMetricID", .text).notNull()
+            table.column("rangePolicy", .text).notNull()
+            table.column("method", .text)
+            table.column("lagDays", .integer).notNull().defaults(to: 0)
+            table.column("filtersJSON", .text).notNull().defaults(to: "{}")
+            table.column("displayOrder", .integer).notNull().defaults(to: 0)
+            table.column("createdAt", .datetime).notNull()
+            table.column("updatedAt", .datetime).notNull()
+        }
+        try db.create(index: "savedAnalysis_displayOrder", on: "savedAnalysis", columns: ["displayOrder", "id"])
+    }
 }
 
 /// The initial database migration that creates the core tables
@@ -492,6 +545,88 @@ struct AutoSaveSettingMigration: Migration {
     func migrate(_ db: Database) throws {
         try db.alter(table: "userSettings") { t in
             t.add(column: "autoSaveEnabled", .boolean).notNull().defaults(to: true)
+        }
+    }
+}
+
+/// Adds durable identities and compatibility aliases for dynamic analytics metrics.
+struct StableDynamicMetricIdentityMigration: Migration {
+    var identifier: String { "stableDynamicMetricIdentity_071826" }
+
+    func migrate(_ db: Database) throws {
+        try db.create(table: "dynamicMetricIdentity") { t in
+            t.autoIncrementedPrimaryKey("id")
+            t.column("family", .text).notNull()
+            t.column("displayName", .text).notNull()
+            t.column("normalizedName", .text).notNull()
+            t.column("isActive", .boolean).notNull().defaults(to: true)
+            t.column("createdAt", .datetime).notNull()
+            t.uniqueKey(["family", "normalizedName"])
+        }
+        try db.create(table: "metricIdentityAlias") { t in
+            t.column("aliasID", .text).notNull()
+            t.column("canonicalID", .text).notNull()
+            t.column("sourceName", .text).notNull()
+            t.primaryKey(["aliasID", "canonicalID"])
+        }
+        try db.alter(table: "foodEntry") { t in
+            t.add(column: "analyticsIdentityID", .integer)
+                .references("dynamicMetricIdentity", onDelete: .setNull)
+        }
+        try db.alter(table: "activityEntry") { t in
+            t.add(column: "analyticsIdentityID", .integer)
+                .references("dynamicMetricIdentity", onDelete: .setNull)
+        }
+        try db.create(index: "foodEntry_analyticsIdentityID", on: "foodEntry", columns: ["analyticsIdentityID"])
+        try db.create(index: "activityEntry_analyticsIdentityID", on: "activityEntry", columns: ["analyticsIdentityID"])
+
+        try migrateEventIdentities(family: .meal, table: "foodEntry", db: db)
+        try migrateEventIdentities(family: .activity, table: "activityEntry", db: db)
+
+        for symptom in try TrackedSymptom.fetchAll(db) {
+            guard let id = symptom.id else { continue }
+            try DynamicMetricIdentityStore.registerAlias(family: .symptom, sourceID: id, name: symptom.name, in: db)
+        }
+        for medication in try TrackedMedication.fetchAll(db) {
+            guard let id = medication.id else { continue }
+            try DynamicMetricIdentityStore.registerAlias(family: .medication, sourceID: id, name: medication.name, in: db)
+        }
+        for log in try DailyLog.fetchAll(db) {
+            for rating in log.symptomRatings where rating.symptomId > 0 {
+                try DynamicMetricIdentityStore.registerAlias(
+                    family: .symptom,
+                    sourceID: rating.symptomId,
+                    name: rating.symptomName,
+                    in: db
+                )
+            }
+            for adherence in log.medicationAdherence where adherence.medicationId > 0 {
+                try DynamicMetricIdentityStore.registerAlias(
+                    family: .medication,
+                    sourceID: adherence.medicationId,
+                    name: adherence.medicationName,
+                    in: db
+                )
+            }
+        }
+    }
+
+    private func migrateEventIdentities(
+        family: DynamicMetricFamily,
+        table: String,
+        db: Database
+    ) throws {
+        let rows = try Row.fetchAll(
+            db,
+            sql: "SELECT name FROM \(table) GROUP BY lower(trim(name)) ORDER BY min(id)"
+        )
+        for row in rows {
+            let name: String = row["name"]
+            let id = try DynamicMetricIdentityStore.resolveID(family: family, name: name, in: db)
+            try db.execute(
+                sql: "UPDATE \(table) SET analyticsIdentityID = ? WHERE lower(trim(name)) = ?",
+                arguments: [id, DynamicMetricIdentityStore.normalize(name)]
+            )
         }
     }
 }

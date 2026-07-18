@@ -12,6 +12,7 @@ import SwiftUI
 // MARK: - Protocol
 
 /// Protocol defining the contract for app review management
+@MainActor
 protocol AppReviewManaging: AnyObject {
     /// Tracks app launches, version updates, and initial install date
     func trackAppLaunch()
@@ -29,6 +30,7 @@ protocol AppReviewManaging: AnyObject {
 // MARK: - Implementation
 
 @Observable
+@MainActor
 class AppReviewManager: AppReviewManaging {
     static let shared = AppReviewManager()
 

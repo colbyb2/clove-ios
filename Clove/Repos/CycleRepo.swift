@@ -5,9 +5,14 @@ final class CycleRepo {
     static let shared = CycleRepo(databaseManager: DatabaseManager.shared)
 
     private let databaseManager: DatabaseManaging
+    private let analyticsRevisionSource: any AnalyticsRevisionProviding
 
-    init(databaseManager: DatabaseManaging) {
+    init(
+        databaseManager: DatabaseManaging,
+        analyticsRevisionSource: any AnalyticsRevisionProviding = AnalyticsRevisionSource.shared
+    ) {
         self.databaseManager = databaseManager
+        self.analyticsRevisionSource = analyticsRevisionSource
     }
 
     // MARK: - CRUD Operations
@@ -19,6 +24,7 @@ final class CycleRepo {
                     try cycle.save(db)
                 }
             }
+            analyticsRevisionSource.bump(reason: .cycle)
             return true
         } catch {
             print("Error saving cycle entries: \(error)")
@@ -31,6 +37,7 @@ final class CycleRepo {
             try databaseManager.write { db in
                 try db.execute(sql: "DELETE FROM cycle WHERE id = ?", arguments: [id])
             }
+            analyticsRevisionSource.bump(reason: .cycle)
             return true
         } catch {
             print("Error deleting cycle entry: \(error)")

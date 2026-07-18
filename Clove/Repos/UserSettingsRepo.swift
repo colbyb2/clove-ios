@@ -5,9 +5,14 @@ final class UserSettingsRepo {
     static let shared = UserSettingsRepo(databaseManager: DatabaseManager.shared)
 
     private let databaseManager: DatabaseManaging
+    private let analyticsRevisionSource: any AnalyticsRevisionProviding
 
-    init(databaseManager: DatabaseManaging) {
+    init(
+        databaseManager: DatabaseManaging,
+        analyticsRevisionSource: any AnalyticsRevisionProviding = AnalyticsRevisionSource.shared
+    ) {
         self.databaseManager = databaseManager
+        self.analyticsRevisionSource = analyticsRevisionSource
     }
 
     func getSettings() -> UserSettings? {
@@ -23,8 +28,14 @@ final class UserSettingsRepo {
 
     func saveSettings(_ settings: UserSettings) -> Bool {
         do {
+            let previous = try databaseManager.read { db in
+                try UserSettings.fetchOne(db)
+            }
             try databaseManager.write { db in
                 try settings.save(db)
+            }
+            if previous?.analyticsFingerprint != settings.analyticsFingerprint {
+                analyticsRevisionSource.bump(reason: .analyticSettings)
             }
             return true
         } catch {
@@ -36,3 +47,12 @@ final class UserSettingsRepo {
 
 // MARK: - Protocol Conformance
 extension UserSettingsRepo: UserSettingsRepositoryProtocol {}
+
+private extension UserSettings {
+    var analyticsFingerprint: [Bool] {
+        [
+            trackMood, trackPain, trackEnergy, trackHydration, trackSymptoms, trackMeals,
+            trackActivities, trackMeds, showFlareToggle, trackWeather, trackBowelMovements, trackCycle
+        ]
+    }
+}

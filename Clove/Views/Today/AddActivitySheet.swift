@@ -529,6 +529,7 @@ struct AddCustomActivitySheet: View {
 
         let entry = ActivityEntry(
             id: existingEntry?.id,
+            analyticsIdentityID: existingEntry?.analyticsIdentityID,
             name: trimmedName,
             category: category,
             date: entryDate,

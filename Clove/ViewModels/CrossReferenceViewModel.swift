@@ -1,379 +1,223 @@
+import Foundation
 import SwiftUI
 
+@MainActor
 @Observable
-class CrossReferenceViewModel {
-    // MARK: - Dependencies
+final class CrossReferenceViewModel {
     private let metricRegistry: MetricRegistryProtocol
     private let timePeriodManager: TimePeriodManaging
+    private let savedRepo: any SavedAnalysisRepository
 
-    // MARK: - State
     var primaryMetric: (any MetricProvider)?
     var secondaryMetric: (any MetricProvider)?
     var currentAnalysis: CorrelationAnalysis?
-    var isCalculating: Bool = false
-    var savedCorrelations: [MetricPair] = []
+    var isCalculating = false
+    var savedAnalyses: [SavedAnalysis] = []
     var suggestedPairs: [MetricPair] = []
     var availableMetrics: [any MetricProvider] = []
     var errorMessage: String?
     var calculationStep: String?
-    var currentCalculationStepIndex: Int = 0
+    var currentCalculationStepIndex = 0
+    var selectedLagDays = 0
 
-    // MARK: - Initialization
+    // Compatibility for older view components while the comparison screen is migrated.
+    var savedCorrelations: [MetricPair] { [] }
 
-    /// Convenience initializer using production singletons
     convenience init() {
-        self.init(
-            metricRegistry: MetricRegistry.shared,
-            timePeriodManager: TimePeriodManager.shared
-        )
+        self.init(metricRegistry: MetricRegistry.shared, timePeriodManager: TimePeriodManager.shared, savedRepo: SavedAnalysisRepo())
     }
 
-    /// Designated initializer with full dependency injection
-    init(
-        metricRegistry: MetricRegistryProtocol,
-        timePeriodManager: TimePeriodManaging
-    ) {
+    init(metricRegistry: MetricRegistryProtocol, timePeriodManager: TimePeriodManaging,
+         savedRepo: any SavedAnalysisRepository = SavedAnalysisRepo()) {
         self.metricRegistry = metricRegistry
         self.timePeriodManager = timePeriodManager
-
-        Task {
-            await loadAvailableMetrics()
-            await loadSuggestedCorrelations()
-        }
-        loadSavedCorrelations()
+        self.savedRepo = savedRepo
+        Task { await bootstrap() }
     }
 
-    /// Preview factory with mock dependencies
     static func preview() -> CrossReferenceViewModel {
-        return CrossReferenceViewModel(
-            metricRegistry: MockMetricRegistry(),
-            timePeriodManager: MockTimePeriodManager()
-        )
+        CrossReferenceViewModel(metricRegistry: MockMetricRegistry(), timePeriodManager: MockTimePeriodManager())
     }
-    
+
     func calculateCorrelation(primary: any MetricProvider, secondary: any MetricProvider) {
         guard primary.id != secondary.id else {
-            errorMessage = "Cannot analyze the same metric against itself. Please choose two different metrics to compare."
+            errorMessage = "Choose two different metrics to compare."
             return
         }
-
         isCalculating = true
         errorMessage = nil
-        currentCalculationStepIndex = 0
-        calculationStep = "Starting analysis..."
-
-        Task { @MainActor in
+        calculationStep = "Loading recorded days…"
+        Task {
             do {
-                let analysis = try await performCorrelationAnalysis(primary: primary, secondary: secondary)
-                self.currentAnalysis = analysis
-                self.primaryMetric = primary
-                self.secondaryMetric = secondary
+                let analysis = try await performAnalysis(primary: primary, secondary: secondary)
+                currentAnalysis = analysis
+                primaryMetric = primary
+                secondaryMetric = secondary
             } catch {
-                // Use the localized description from the error
-                if let localizedError = error as? LocalizedError,
-                   let description = localizedError.errorDescription {
-                    self.errorMessage = description
-                } else {
-                    self.errorMessage = error.localizedDescription
-                }
+                errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             }
-            self.isCalculating = false
-            self.calculationStep = nil
-            self.currentCalculationStepIndex = 0
+            isCalculating = false
+            calculationStep = nil
         }
     }
-    
+
     func selectMetric(id: String, isPrimary: Bool) async {
-        if let metric = await metricRegistry.getMetric(id: id) {
-            await MainActor.run {
-                if isPrimary {
-                    self.primaryMetric = metric
-                } else {
-                    self.secondaryMetric = metric
-                }
-                
-                // Auto-calculate if both metrics are selected
-                if let primary = self.primaryMetric, let secondary = self.secondaryMetric {
-                    self.calculateCorrelation(primary: primary, secondary: secondary)
-                }
-            }
-        } else {
-            await MainActor.run {
-                self.errorMessage = "Unable to load the selected metric. Please try again or choose a different metric."
-            }
+        guard let metric = await metricRegistry.getMetric(id: id) else {
+            errorMessage = "That metric is no longer available. Choose another metric or remove the saved analysis."
+            return
         }
+        if isPrimary { primaryMetric = metric } else { secondaryMetric = metric }
+        if let primaryMetric, let secondaryMetric { calculateCorrelation(primary: primaryMetric, secondary: secondaryMetric) }
     }
-    
+
     func saveCorrelation(_ analysis: CorrelationAnalysis) {
-        let pair = MetricPair(
-            primary: analysis.primaryMetric,
-            secondary: analysis.secondaryMetric,
-            correlationStrength: analysis.coefficient,
-            lastAnalyzed: Date()
+        do {
+            let title = "\(analysis.primaryMetric.displayName) → \(analysis.secondaryMetric.displayName)"
+            let saved = SavedAnalysis(
+                title: title,
+                factorMetricID: analysis.factorDefinition.id.rawValue,
+                outcomeMetricID: analysis.outcomeDefinition.id.rawValue,
+                rangePolicy: timePeriodManager.selectedPeriod.rawValue,
+                method: analysis.estimate?.method.rawValue,
+                lagDays: selectedLagDays,
+                displayOrder: savedAnalyses.count
+            )
+            _ = try savedRepo.save(saved)
+            loadSavedAnalyses()
+        } catch { errorMessage = "Could not save this analysis: \(error.localizedDescription)" }
+    }
+
+    func removeSavedAnalysis(_ saved: SavedAnalysis) {
+        guard let id = saved.id else { return }
+        do { try savedRepo.delete(id: id); loadSavedAnalyses() }
+        catch { errorMessage = "Could not delete the saved analysis." }
+    }
+
+    func renameSavedAnalysis(_ saved: SavedAnalysis, title: String) {
+        guard let id = saved.id, !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        do { try savedRepo.rename(id: id, title: title); loadSavedAnalyses() }
+        catch { errorMessage = "Could not rename the saved analysis." }
+    }
+
+    func loadSavedAnalysis(_ saved: SavedAnalysis) {
+        Task {
+            let factor = await resolveProvider(saved.factorMetricID)
+            let outcome = await resolveProvider(saved.outcomeMetricID)
+            guard let factor, let outcome else {
+                errorMessage = "One of these metrics is unavailable. You can keep, rename, or delete this saved analysis."
+                return
+            }
+            if let period = TimePeriod(rawValue: saved.rangePolicy) { timePeriodManager.selectedPeriod = period }
+            selectedLagDays = saved.lagDays
+            calculateCorrelation(primary: factor, secondary: outcome)
+        }
+    }
+
+    // Legacy callbacks retained for components still compiled elsewhere.
+    func removeSavedCorrelation(_ pair: MetricPair) {}
+    func loadSavedCorrelation(_ pair: MetricPair) { calculateCorrelation(primary: pair.primary, secondary: pair.secondary) }
+
+    private func bootstrap() async {
+        availableMetrics = await metricRegistry.getAllAvailableMetrics()
+        await loadSuggestedCorrelations()
+        loadSavedAnalyses()
+    }
+
+    private func performAnalysis(primary: any MetricProvider, secondary: any MetricProvider) async throws -> CorrelationAnalysis {
+        let interval = AnalyticsDateRangeFactory().interval(for: timePeriodManager.selectedPeriod)
+        let granularity = AnalyticsChartPipeline().granularity(for: interval)
+        let dataset = try await AnalyticsRepositoryContainer.shared.load(
+            AnalyticsRequest(interval: interval, includeRawEvents: true), granularity: granularity
         )
-        
-        // Remove existing pair if it exists
-        savedCorrelations.removeAll { $0.primary.id == pair.primary.id && $0.secondary.id == pair.secondary.id }
-        
-        // Add new pair
-        savedCorrelations.append(pair)
-        
-        // Save to UserDefaults
-        savePairsToUserDefaults()
-    }
-    
-    func removeSavedCorrelation(_ pair: MetricPair) {
-        savedCorrelations.removeAll { $0.id == pair.id }
-        savePairsToUserDefaults()
-    }
-    
-    func loadSavedCorrelation(_ pair: MetricPair) {
-        calculateCorrelation(primary: pair.primary, secondary: pair.secondary)
-    }
-    
-    private func loadAvailableMetrics() async {
-        let metrics = await metricRegistry.getAllAvailableMetrics()
-        let finalMetrics = metrics
-        await MainActor.run {
-            self.availableMetrics = finalMetrics
+        guard let factor = resolveDefinition(providerID: primary.id, dataset: dataset),
+              let outcome = resolveDefinition(providerID: secondary.id, dataset: dataset) else {
+            throw CorrelationError.calculationError
         }
-    }
-    
-    
-    private func performCorrelationAnalysis(primary: any MetricProvider, secondary: any MetricProvider) async throws -> CorrelationAnalysis {
-        let period = timePeriodManager.selectedPeriod
 
-        // Step 1: Fetching data
-        await updateCalculationStep(index: 0, message: "Fetching data for \(primary.displayName)...")
-        let primaryDataPoints = await primary.getDataPoints(for: period)
-
-        await updateCalculationStep(index: 0, message: "Fetching data for \(secondary.displayName)...")
-        let secondaryDataPoints = await secondary.getDataPoints(for: period)
-        
-        // Step 2: Processing data
-        await updateCalculationStep(index: 1, message: "Processing and aligning data points...")
-
-        // Pre-aggregate count-based metrics (like bowel movements) by day
-        let primaryData: [(Date, Double)]
-        if case .count = primary.dataType {
-            primaryData = aggregateCountData(primaryDataPoints)
+        calculationStep = "Aligning recorded days without filling gaps…"
+        let alignment = PairAlignmentEngine().align(factor: factor, outcome: outcome, dataset: dataset, lagDays: selectedLagDays)
+        let estimate: RelationshipEstimate?
+        let lagProfile: LagRelationshipProfile?
+        let eventOutcomes: [EventOutcomeResult]
+        if factor.measurementLevel == .event {
+            estimate = nil
+            lagProfile = nil
+            eventOutcomes = [0, 1].map { EventOutcomeEngine().analyze(event: factor, outcome: outcome, dataset: dataset, outcomeOffsetDays: $0) }
+            guard eventOutcomes.contains(where: { $0.exposedCount > 0 && $0.controlCount > 0 }) else { throw CorrelationError.insufficientData }
         } else {
-            primaryData = primaryDataPoints.map { ($0.date, $0.value) }
+            estimate = RelationshipStatisticsEngine().estimate(alignment: alignment, factor: factor, outcome: outcome)
+            lagProfile = LaggedRelationshipEngine().analyze(factor: factor, outcome: outcome, dataset: dataset)
+            eventOutcomes = []
         }
 
-        let secondaryData: [(Date, Double)]
-        if case .count = secondary.dataType {
-            secondaryData = aggregateCountData(secondaryDataPoints)
-        } else {
-            secondaryData = secondaryDataPoints.map { ($0.date, $0.value) }
+        let effect = estimate?.effect ?? eventOutcomes.first?.meanDifference ?? 0
+        let numericPoints = alignment.pairs.compactMap { pair -> (Date, Double, Double)? in
+            guard let lhs = pair.factor.numeric, let rhs = pair.outcome.numeric else { return nil }
+            return (pair.factorDay, lhs, rhs)
         }
-
-        // Align data points by date
-        let alignedData = alignDataPoints(primary: primaryData, secondary: secondaryData)
-        
-        guard alignedData.count >= 3 else {
-            throw CorrelationError.insufficientData
-        }
-
-        // Step 3: Calculating correlation
-        await updateCalculationStep(index: 2, message: "Calculating Pearson correlation coefficient...")
-
-        let coefficient = calculatePearsonCorrelation(alignedData)
-        let pValue = calculatePValue(alignedData, coefficient: coefficient)
-        let significance = 1 - pValue
-
-        // Step 4: Generating insights
-        await updateCalculationStep(index: 3, message: "Generating insights and patterns...")
-
-        let insights = generateCorrelationInsights(
-            primaryMetric: primary,
-            secondaryMetric: secondary,
-            coefficient: coefficient,
-            dataPoints: alignedData
-        )
-        
-        // Create time range
-        let dates = alignedData.map { $0.0 }
-        let timeRange = DateInterval(start: dates.min() ?? Date(), end: dates.max() ?? Date())
-        
+        let pValue = estimate?.pValue ?? 1
+        let intervalDates = alignment.pairs.map(\.factorDay)
+        let insights = explanation(factor: factor, outcome: outcome, estimate: estimate, eventOutcomes: eventOutcomes)
         return CorrelationAnalysis(
-            primaryMetric: primary,
-            secondaryMetric: secondary,
-            coefficient: coefficient,
-            significance: significance,
-            pValue: pValue,
-            dataPoints: alignedData,
-            timeRange: timeRange,
-            strengthDescription: getStrengthDescription(coefficient),
-            insights: insights
+            primaryMetric: primary, secondaryMetric: secondary,
+            factorDefinition: factor, outcomeDefinition: outcome,
+            alignment: alignment, estimate: estimate, lagProfile: lagProfile, eventOutcomes: eventOutcomes,
+            coefficient: effect, significance: 1 - pValue, pValue: pValue, dataPoints: numericPoints,
+            timeRange: DateInterval(start: intervalDates.min() ?? interval.start, end: intervalDates.max() ?? interval.end),
+            strengthDescription: estimate?.strength ?? "Event comparison", insights: insights
         )
     }
-    
-    
-    private func aggregateCountData(_ dataPoints: [MetricDataPoint]) -> [(Date, Double)] {
-        let calendar = Calendar.current
-        
-        // Group data points by day
-        let groupedByDay = Dictionary(grouping: dataPoints) { point in
-            calendar.startOfDay(for: point.date)
+
+    private func explanation(factor: MetricDefinition, outcome: MetricDefinition, estimate: RelationshipEstimate?,
+                             eventOutcomes: [EventOutcomeResult]) -> [String] {
+        if let estimate, let effect = estimate.effect {
+            let direction = estimate.method.signed ? (effect >= 0 ? "move in the same direction" : "move in opposite directions") : "vary together"
+            return ["On matching recorded days, \(factor.displayName) and \(outcome.displayName) tend to \(direction).",
+                    "The result uses \(estimate.method.displayName), selected for these metric types.",
+                    "This pattern is an association and does not show that one metric causes the other."]
         }
-        
-        // Count entries per day
-        return groupedByDay.map { (date, points) in
-            (date, Double(points.count))
-        }.sorted { $0.0 < $1.0 }
-    }
-    
-    private func alignDataPoints(primary: [(Date, Double)], secondary: [(Date, Double)]) -> [(Date, Double, Double)] {
-        var aligned: [(Date, Double, Double)] = []
-        let calendar = Calendar.current
-        
-        for (primaryDate, primaryValue) in primary {
-            // Find matching secondary value (same day)
-            if let secondaryItem = secondary.first(where: {
-                calendar.isDate($0.0, inSameDayAs: primaryDate)
-            }) {
-                aligned.append((primaryDate, primaryValue, secondaryItem.1))
-            }
+        if let event = eventOutcomes.first, let difference = event.meanDifference {
+            return ["On event days, \(outcome.displayName) averaged \(String(format: "%.1f", abs(difference))) \(difference >= 0 ? "higher" : "lower") than eligible control days.",
+                    "This event comparison describes an association, not causation."]
         }
-        
-        return aligned.sorted { $0.0 < $1.0 }
+        return ["More matching recorded days are needed before estimating this relationship."]
     }
-    
-    private func calculatePearsonCorrelation(_ data: [(Date, Double, Double)]) -> Double {
-        let n = Double(data.count)
-        guard n > 1 else { return 0 }
-        
-        let xValues = data.map { $0.1 }
-        let yValues = data.map { $0.2 }
-        
-        let xSum = xValues.reduce(0, +)
-        let ySum = yValues.reduce(0, +)
-        let xMean = xSum / n
-        let yMean = ySum / n
-        
-        let numerator = zip(xValues, yValues).map { (x, y) in
-            (x - xMean) * (y - yMean)
-        }.reduce(0, +)
-        
-        let xVariance = xValues.map { pow($0 - xMean, 2) }.reduce(0, +)
-        let yVariance = yValues.map { pow($0 - yMean, 2) }.reduce(0, +)
-        
-        let denominator = sqrt(xVariance * yVariance)
-        
-        guard denominator != 0 else { return 0 }
-        
-        return numerator / denominator
-    }
-    
-    private func calculatePValue(_ data: [(Date, Double, Double)], coefficient: Double) -> Double {
-        let n = Double(data.count)
-        guard n > 2 else { return 1.0 }
-        
-        let t = coefficient * sqrt((n - 2) / (1 - coefficient * coefficient))
-        
-        // Simplified p-value calculation (approximation)
-        // In a real implementation, you'd use a proper t-distribution function
-        let absT = abs(t)
-        if absT > 2.576 { return 0.01 }  // 99% confidence
-        if absT > 1.96 { return 0.05 }   // 95% confidence
-        if absT > 1.645 { return 0.10 }  // 90% confidence
-        return 0.20
-    }
-    
-    private func getStrengthDescription(_ coefficient: Double) -> String {
-        let absCoeff = abs(coefficient)
-        switch absCoeff {
-        case 0.8...1.0: return "Very Strong"
-        case 0.6..<0.8: return "Strong"
-        case 0.4..<0.6: return "Moderate"
-        case 0.2..<0.4: return "Weak"
-        default: return "Very Weak"
+
+    private func resolveDefinition(providerID: String, dataset: AnalyticsDataset) -> MetricDefinition? {
+        let id = MetricID(rawValue: providerID)
+        if let exact = dataset.definitions.first(where: { $0.id == id }) { return exact }
+        if let aliases = dataset.metricAliases[providerID], aliases.count == 1, let canonical = aliases.first {
+            return dataset.definitions.first { $0.id == canonical }
         }
+        return dataset.definitions.first { $0.displayName.caseInsensitiveCompare(providerID.replacingOccurrences(of: "_", with: " ")) == .orderedSame }
     }
-    
-    private func generateCorrelationInsights(
-        primaryMetric: any MetricProvider,
-        secondaryMetric: any MetricProvider,
-        coefficient: Double,
-        dataPoints: [(Date, Double, Double)]
-    ) -> [String] {
-        var insights: [String] = []
-        
-        let direction = coefficient > 0 ? "increase" : "decrease"
-        let strength = getStrengthDescription(coefficient)
-        let absCoeff = abs(coefficient)
-        
-        // Primary insight
-        if absCoeff > 0.3 {
-            insights.append("When \(primaryMetric.displayName) increases, \(secondaryMetric.displayName) tends to \(direction)")
+
+    private func resolveProvider(_ persistedID: String) async -> (any MetricProvider)? {
+        if let exact = await metricRegistry.getMetric(id: persistedID) { return exact }
+        if let canonicalProvider = availableMetrics.first(where: { $0.catalogMetricDefinition?.id.rawValue == persistedID }) {
+            return canonicalProvider
         }
-        
-        // Strength insight
-        if absCoeff > 0.5 {
-            insights.append("This \(strength.lowercased()) correlation suggests a meaningful relationship")
-        }
-        
-        // Data quality insight
-        insights.append("Analysis based on \(dataPoints.count) matching data points")
-        
-        // Actionable insight
-        if absCoeff > 0.4 {
-            if coefficient > 0 {
-                insights.append("Improving \(primaryMetric.displayName) may positively impact \(secondaryMetric.displayName)")
-            } else {
-                insights.append("Changes in \(primaryMetric.displayName) may inversely affect \(secondaryMetric.displayName)")
-            }
-        }
-        
-        return insights
+        let interval = AnalyticsDateRangeFactory().interval(for: timePeriodManager.selectedPeriod)
+        let granularity = AnalyticsChartPipeline().granularity(for: interval)
+        guard let dataset = try? await AnalyticsRepositoryContainer.shared.load(
+            AnalyticsRequest(interval: interval, includeRawEvents: false), granularity: granularity
+        ), let aliases = dataset.metricAliases[persistedID], aliases.count == 1, let canonicalID = aliases.first else { return nil }
+        return availableMetrics.first { $0.catalogMetricDefinition?.id == canonicalID }
     }
-    
+
+    private func loadSavedAnalyses() {
+        do { savedAnalyses = try savedRepo.fetchAll() }
+        catch { savedAnalyses = [] }
+    }
+
     private func loadSuggestedCorrelations() async {
-        // Generate suggested correlations based on common health patterns
-        let commonPairs = [
-            ("mood", "pain_level"),
-            ("energy_level", "mood"),
-            ("pain_level", "energy_level"),
-            ("medication_adherence", "mood"),
-            ("medication_adherence", "pain_level")
-        ]
-
+        let ids = [("mood", "pain_level"), ("energy_level", "mood"), ("pain_level", "energy_level")]
         var pairs: [MetricPair] = []
-
-        for (primaryId, secondaryId) in commonPairs {
-            if let primaryMetric = await metricRegistry.getMetric(id: primaryId),
-               let secondaryMetric = await metricRegistry.getMetric(id: secondaryId) {
-                let pair = MetricPair(
-                    primary: primaryMetric,
-                    secondary: secondaryMetric,
-                    correlationStrength: 0.0,
-                    lastAnalyzed: Date()
-                )
-                pairs.append(pair)
+        for ids in ids {
+            if let factor = await metricRegistry.getMetric(id: ids.0), let outcome = await metricRegistry.getMetric(id: ids.1) {
+                pairs.append(MetricPair(primary: factor, secondary: outcome, correlationStrength: 0, lastAnalyzed: Date()))
             }
         }
-
-        let finalPairs = pairs
-        await MainActor.run {
-            self.suggestedPairs = finalPairs
-        }
-    }
-    
-    private func loadSavedCorrelations() {
-        // Load from UserDefaults in a real implementation
-        savedCorrelations = []
-    }
-    
-    private func savePairsToUserDefaults() {
-        // Save to UserDefaults in a real implementation
-    }
-
-    @MainActor
-    private func updateCalculationStep(index: Int, message: String) async {
-        self.currentCalculationStepIndex = index
-        self.calculationStep = message
-        // Small delay to ensure UI updates and user can see the step
-        try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+        suggestedPairs = pairs
     }
 }

@@ -265,7 +265,7 @@ struct InsightsCustomizationView: View {
                 
                 EnhancedInsightToggleRow(
                     title: "Smart Insights",
-                    description: "AI-powered analysis and pattern recognition",
+                    description: "Evidence-based analysis and pattern recognition",
                     icon: "brain.head.profile",
                     color: .orange,
                     isEnabled: smartInsights,

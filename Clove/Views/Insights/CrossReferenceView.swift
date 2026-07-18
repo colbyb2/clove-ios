@@ -7,6 +7,12 @@ struct CorrelationAnalysis: Identifiable {
    let id = UUID()
    let primaryMetric: any MetricProvider
    let secondaryMetric: any MetricProvider
+   let factorDefinition: MetricDefinition
+   let outcomeDefinition: MetricDefinition
+   let alignment: PairAlignmentResult
+   let estimate: RelationshipEstimate?
+   let lagProfile: LagRelationshipProfile?
+   let eventOutcomes: [EventOutcomeResult]
    let coefficient: Double
    let significance: Double
    let pValue: Double
@@ -65,7 +71,7 @@ enum CorrelationError: Error, LocalizedError {
    var errorDescription: String? {
       switch self {
       case .insufficientData:
-         return "Not enough matching data points to calculate correlation. You need at least 3 days where both metrics were tracked."
+         return "Not enough matching recorded days for a reliable comparison. Most methods require at least 14 matching days."
       case .calculationError:
          return "Unable to calculate correlation coefficient. Please try different metrics."
       }
@@ -78,6 +84,8 @@ struct CrossReferenceView: View {
    @State private var viewModel = CrossReferenceViewModel()
    @State private var showingMetricSelector = false
    @State private var selectingPrimaryMetric = true
+   @State private var savedAnalysisToRename: SavedAnalysis?
+   @State private var savedAnalysisTitle = ""
    
    var body: some View {
       NavigationView {
@@ -98,10 +106,12 @@ struct CrossReferenceView: View {
                   },
                   onAnalyze: performAnalysis
                )
+
+               lagControl
                
                analysisContentSection
                
-               if !viewModel.savedCorrelations.isEmpty {
+               if !viewModel.savedAnalyses.isEmpty {
                   savedCorrelationsSection
                }
                
@@ -124,6 +134,17 @@ struct CrossReferenceView: View {
          }
          .presentationDragIndicator(.visible)
       }
+      .alert("Rename Saved Analysis", isPresented: Binding(
+         get: { savedAnalysisToRename != nil },
+         set: { if !$0 { savedAnalysisToRename = nil } }
+      )) {
+         TextField("Name", text: $savedAnalysisTitle)
+         Button("Cancel", role: .cancel) { savedAnalysisToRename = nil }
+         Button("Rename") {
+            if let savedAnalysisToRename { viewModel.renameSavedAnalysis(savedAnalysisToRename, title: savedAnalysisTitle) }
+            savedAnalysisToRename = nil
+         }
+      }
    }
    
    // MARK: - Analysis Section
@@ -133,7 +154,7 @@ struct CrossReferenceView: View {
          if let errorMessage = viewModel.errorMessage {
             errorMessageSection(errorMessage)
          } else if let analysis = viewModel.currentAnalysis {
-            AnalysisResultsView(analysis: analysis) {
+            RelationshipResultsView(analysis: analysis) {
                viewModel.saveCorrelation(analysis)
             }
          } else if viewModel.isCalculating {
@@ -149,13 +170,13 @@ struct CrossReferenceView: View {
    private var savedCorrelationsSection: some View {
       VStack(alignment: .leading, spacing: CloveSpacing.medium) {
          HStack {
-            Text("Saved Correlations")
+            Text("Saved Analyses")
                .font(.system(.title3, design: .rounded).weight(.bold))
                .foregroundStyle(CloveColors.primaryText)
 
             Spacer()
 
-            Text("\(viewModel.savedCorrelations.count)")
+            Text("\(viewModel.savedAnalyses.count)")
                .font(CloveFonts.small())
                .foregroundStyle(CloveColors.secondaryText)
                .fontWeight(.semibold)
@@ -167,18 +188,33 @@ struct CrossReferenceView: View {
                )
          }
 
-         let columns = [
-            GridItem(.flexible(), spacing: CloveSpacing.medium),
-            GridItem(.flexible(), spacing: CloveSpacing.medium)
-         ]
+         VStack(spacing: CloveSpacing.small) {
+            ForEach(viewModel.savedAnalyses) { saved in
+               HStack(spacing: CloveSpacing.small) {
+                  Button {
+                     viewModel.loadSavedAnalysis(saved)
+                  } label: {
+                     VStack(alignment: .leading, spacing: 3) {
+                        Text(saved.title).font(.headline).foregroundStyle(CloveColors.primaryText)
+                        Text("\(saved.rangePolicy) • \(saved.lagDays == 0 ? "same day" : "lag \(saved.lagDays)d")")
+                           .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                     }
+                     .frame(maxWidth: .infinity, alignment: .leading)
+                  }
+                  .buttonStyle(.plain)
 
-         LazyVGrid(columns: columns, spacing: CloveSpacing.medium) {
-            ForEach(viewModel.savedCorrelations) { pair in
-               SavedCorrelationCard(pair: pair) {
-                  viewModel.loadSavedCorrelation(pair)
-               } onDelete: {
-                  viewModel.removeSavedCorrelation(pair)
+                  Menu {
+                     Button("Rename", systemImage: "pencil") {
+                        savedAnalysisTitle = saved.title
+                        savedAnalysisToRename = saved
+                     }
+                     Button("Delete", systemImage: "trash", role: .destructive) { viewModel.removeSavedAnalysis(saved) }
+                  } label: {
+                     Image(systemName: "ellipsis.circle").foregroundStyle(Theme.shared.accent)
+                  }
                }
+               .padding(CloveSpacing.small)
+               .background(RoundedRectangle(cornerRadius: CloveCorners.small).fill(CloveColors.background))
             }
          }
       }
@@ -188,6 +224,30 @@ struct CrossReferenceView: View {
             .fill(CloveColors.card)
             .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
       )
+   }
+
+   private var lagControl: some View {
+      VStack(alignment: .leading, spacing: CloveSpacing.small) {
+         HStack {
+            Text("Timing").font(.headline).foregroundStyle(CloveColors.primaryText)
+            Spacer()
+            Text(viewModel.selectedLagDays == 0 ? "Same day" :
+                  (viewModel.selectedLagDays > 0 ? "Factor \(viewModel.selectedLagDays)d before outcome" : "Outcome \(-viewModel.selectedLagDays)d before factor"))
+               .font(.caption).foregroundStyle(CloveColors.secondaryText)
+         }
+         Slider(value: Binding(
+            get: { Double(viewModel.selectedLagDays) },
+            set: { viewModel.selectedLagDays = Int($0.rounded()) }
+         ), in: -7...7, step: 1)
+         .tint(Theme.shared.accent)
+         .accessibilityLabel("Timing offset in days")
+         .accessibilityValue("\(viewModel.selectedLagDays) days")
+         .onChange(of: viewModel.selectedLagDays) { _, _ in performAnalysis() }
+         Text("Positive values mean the factor was recorded before the outcome. Lag results are exploratory.")
+            .font(.caption2).foregroundStyle(CloveColors.secondaryText)
+      }
+      .padding(CloveSpacing.medium)
+      .background(RoundedRectangle(cornerRadius: CloveCorners.medium).fill(CloveColors.card))
    }
    
    // MARK: - Suggested Correlations Section
@@ -785,8 +845,16 @@ struct MetricPairSelector: View {
          return
       }
 
-      // Get last 30 days of data using TimePeriod
-      let dataPoints = await metric.getDataPoints(for: .month)
+      let interval = AnalyticsDateRangeFactory().interval(for: .month)
+      let dataset = try? await AnalyticsRepositoryContainer.shared.load(
+         AnalyticsRequest(interval: interval, includeRawEvents: false), granularity: .daily
+      )
+      let metricID = metric.catalogMetricDefinition?.id ?? MetricID(rawValue: metric.id)
+      let observations = dataset?.observations(for: metricID) ?? []
+      let dataPoints = observations.compactMap { observation -> MetricDataPoint? in
+         guard case .observed(let value) = observation.state, let number = value.numericValue else { return nil }
+         return MetricDataPoint(date: observation.day, value: number, metricId: metric.id)
+      }
 
       await MainActor.run {
          // Take last 14 points for the preview

@@ -47,7 +47,7 @@ struct TrendOverviewWidget: View {
                         .font(.system(size: 20))
                     
                     if let current = summary.currentValue {
-                        Text(formatValue(current, for: summary.metric))
+                        Text(summary.formattedValue(current))
                             .font(.system(.callout, design: .rounded).weight(.bold))
                             .foregroundStyle(CloveColors.primaryText)
                     }
@@ -64,7 +64,7 @@ struct TrendOverviewWidget: View {
                         }
                     }
                     
-                    Text(summary.metric.displayName)
+                    Text(summary.definition.displayName)
                         .font(.system(.caption2))
                         .foregroundStyle(CloveColors.secondaryText)
                         .lineLimit(1)
@@ -72,17 +72,6 @@ struct TrendOverviewWidget: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-        }
-    }
-    
-    private func formatValue(_ value: Double, for metric: MetricType) -> String {
-        switch metric {
-        case .mood, .painLevel, .energyLevel:
-            return String(format: "%.1f", value)
-        case .medicationAdherence:
-            return String(format: "%.0f%%", value)
-        default:
-            return String(format: "%.0f", value)
         }
     }
     

@@ -1,6 +1,29 @@
 import Foundation
 import SwiftUI
 
+enum MetricCategory: String, CaseIterable, Identifiable {
+    case coreHealth
+    case symptoms
+    case medications
+    case lifestyle
+    case environmental
+    case activities
+    case meals
+
+    var id: String { rawValue }
+    var displayName: String {
+        switch self {
+        case .coreHealth: return "Core Health"
+        case .symptoms: return "Symptoms"
+        case .medications: return "Medications"
+        case .lifestyle: return "Lifestyle"
+        case .environmental: return "Environmental"
+        case .activities: return "Activities"
+        case .meals: return "Meals"
+        }
+    }
+}
+
 // MARK: - Data Type Definitions
 
 /// Defines the type of data a metric represents

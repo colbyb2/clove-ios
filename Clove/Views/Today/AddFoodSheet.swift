@@ -468,6 +468,7 @@ struct AddCustomFoodSheet: View {
 
         let entry = FoodEntry(
             id: existingEntry?.id,
+            analyticsIdentityID: existingEntry?.analyticsIdentityID,
             name: trimmedName,
             category: category,
             date: entryDate,

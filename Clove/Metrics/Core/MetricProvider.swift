@@ -19,8 +19,6 @@ protocol MetricProvider: Identifiable {
     
     // MARK: - Data Access (Async for performance)
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint]
-    func getSmoothedData(for period: TimePeriod) async -> [MetricDataPoint]
-    func getAggregatedDataPoints(for period: TimePeriod, maxPoints: Int) async -> (data: [MetricDataPoint], info: AggregatedDataInfo)
     func getDataPointCount() async -> Int
     func getDataPointCount(for period: TimePeriod) async -> Int
     func getLastValue() async -> MetricValue?
@@ -102,23 +100,4 @@ extension MetricProvider {
         )
     }
     
-    func getSmoothedData(for period: TimePeriod) async -> [MetricDataPoint] {
-        let rawData = await getDataPoints(for: period)
-        let processedData = DataAggregationEngine.shared.processMetricData(points: rawData, period: period, metricType: dataType)
-        return processedData
-    }
-    
-    /// Default aggregated data points implementation
-    func getAggregatedDataPoints(for period: TimePeriod, maxPoints: Int) async -> (data: [MetricDataPoint], info: AggregatedDataInfo) {
-        let rawData = await getDataPoints(for: period)
-        let aggregator = ChartDataAggregator.shared
-        let config = aggregator.getOptimalConfig(for: dataType, dataCount: rawData.count)
-        let configWithMaxPoints = AggregationConfig(
-            maxDataPoints: maxPoints,
-            method: config.method,
-            preserveZeros: config.preserveZeros
-        )
-        
-        return aggregator.aggregateData(rawData, for: period, config: configWithMaxPoints)
-    }
 }

@@ -146,6 +146,7 @@ class DataImportManager {
 
             // Note: We don't clear symptoms or medications as they might be reused
         }
+        AnalyticsRevisionSource.shared.bump(reason: .dataImport)
     }
     
     private func createMissingSymptoms(_ symptomColumns: [String]) throws -> Int {

@@ -5,9 +5,14 @@ final class BowelMovementRepo {
     static let shared = BowelMovementRepo(databaseManager: DatabaseManager.shared)
 
     private let databaseManager: DatabaseManaging
+    private let analyticsRevisionSource: any AnalyticsRevisionProviding
 
-    init(databaseManager: DatabaseManaging) {
+    init(
+        databaseManager: DatabaseManaging,
+        analyticsRevisionSource: any AnalyticsRevisionProviding = AnalyticsRevisionSource.shared
+    ) {
         self.databaseManager = databaseManager
+        self.analyticsRevisionSource = analyticsRevisionSource
     }
     
     // MARK: - CRUD Operations
@@ -19,6 +24,7 @@ final class BowelMovementRepo {
                     try movement.save(db)
                 }
             }
+            analyticsRevisionSource.bump(reason: .bowelMovement)
             return true
         } catch {
             print("Error saving bowel movements: \(error)")
@@ -32,6 +38,7 @@ final class BowelMovementRepo {
             try databaseManager.write { db in
                 try bowelMovement.update(db)
             }
+            analyticsRevisionSource.bump(reason: .bowelMovement)
             return true
         } catch {
             print("Error updating bowel movement: \(error)")
@@ -44,6 +51,7 @@ final class BowelMovementRepo {
             try databaseManager.write { db in
                 try db.execute(sql: "DELETE FROM bowelMovement WHERE id = ?", arguments: [id])
             }
+            analyticsRevisionSource.bump(reason: .bowelMovement)
             return true
         } catch {
             print("Error deleting bowel movement: \(error)")

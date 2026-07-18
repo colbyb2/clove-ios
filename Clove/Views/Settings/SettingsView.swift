@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var showMedicationTimeline = false
     @State private var showSymptomsSheet = false
     @State private var trackedSymptoms: [TrackedSymptom] = []
+    @AppStorage(Constants.LOCAL_ANALYTICS_DIAGNOSTICS) private var localAnalyticsDiagnostics = true
 
     // Get app version from bundle
     private var appVersion: String {
@@ -73,6 +74,16 @@ struct SettingsView: View {
                         NavigationLink("Complexity") {
                             InsightsCustomizationView()
                         }
+                    }
+                    Toggle(isOn: $localAnalyticsDiagnostics) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Local Diagnostics")
+                            Text("Stores only aggregate reliability and speed counters on this device.")
+                                .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                        }
+                    }
+                    .onChange(of: localAnalyticsDiagnostics) { _, enabled in
+                        AnalyticsDiagnosticsRecorder.shared.isEnabled = enabled
                     }
                 }
 

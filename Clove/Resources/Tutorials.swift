@@ -55,7 +55,7 @@ enum Tutorials {
                    subtitle: "Visualize your health journey"),
       
       TutorialStep(id: 5, icon: "brain.head.profile", title: "Smart Insights",
-                   description: "AI-powered analysis identifies patterns you might miss. Discover correlations between your activities, symptoms, and feelings.",
+                   description: "Evidence-based analysis highlights patterns in your recorded data. Explore relationships between activities, symptoms, and feelings.",
                    subtitle: "Let technology help you understand your health"),
       
       TutorialStep(id: 6, icon: "chart.bar.xaxis", title: "Correlation Analysis",

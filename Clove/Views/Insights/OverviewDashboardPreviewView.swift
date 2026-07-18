@@ -287,17 +287,6 @@ struct PreviewWidgetCard: View {
     
     // MARK: - Helper Methods
     
-    private func formatValue(_ value: Double, for metric: MetricType) -> String {
-        switch metric {
-        case .mood, .painLevel, .energyLevel:
-            return String(format: "%.1f", value)
-        case .medicationAdherence:
-            return String(format: "%.0f%%", value)
-        default:
-            return String(format: "%.0f", value)
-        }
-    }
-    
     private func getScoreColor(_ score: Double) -> Color {
         switch score {
         case 80...100: return CloveColors.green

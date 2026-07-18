@@ -83,6 +83,7 @@ enum ActivityIntensity: String, Codable, CaseIterable, Identifiable {
 /// An activity entry representing a single activity logged at a specific time
 struct ActivityEntry: Codable, FetchableRecord, PersistableRecord, Identifiable {
     var id: Int64?
+    var analyticsIdentityID: Int64?
     var name: String
     var category: ActivityCategory
     var date: Date
@@ -94,6 +95,7 @@ struct ActivityEntry: Codable, FetchableRecord, PersistableRecord, Identifiable 
 
     init(
         id: Int64? = nil,
+        analyticsIdentityID: Int64? = nil,
         name: String,
         category: ActivityCategory,
         date: Date = Date(),
@@ -104,6 +106,7 @@ struct ActivityEntry: Codable, FetchableRecord, PersistableRecord, Identifiable 
         isFavorite: Bool = false
     ) {
         self.id = id
+        self.analyticsIdentityID = analyticsIdentityID
         self.name = name
         self.category = category
         self.date = date
@@ -120,6 +123,7 @@ struct ActivityEntry: Codable, FetchableRecord, PersistableRecord, Identifiable 
 
     enum Columns {
         static let id = Column(CodingKeys.id)
+        static let analyticsIdentityID = Column(CodingKeys.analyticsIdentityID)
         static let name = Column(CodingKeys.name)
         static let category = Column(CodingKeys.category)
         static let date = Column(CodingKeys.date)

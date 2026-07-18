@@ -45,6 +45,7 @@ enum MealCategory: String, Codable, CaseIterable, Identifiable {
 /// A food entry representing a single food/meal logged at a specific time
 struct FoodEntry: Codable, FetchableRecord, PersistableRecord, Identifiable {
     var id: Int64?
+    var analyticsIdentityID: Int64?
     var name: String
     var category: MealCategory
     var date: Date
@@ -54,6 +55,7 @@ struct FoodEntry: Codable, FetchableRecord, PersistableRecord, Identifiable {
 
     init(
         id: Int64? = nil,
+        analyticsIdentityID: Int64? = nil,
         name: String,
         category: MealCategory,
         date: Date = Date(),
@@ -62,6 +64,7 @@ struct FoodEntry: Codable, FetchableRecord, PersistableRecord, Identifiable {
         isFavorite: Bool = false
     ) {
         self.id = id
+        self.analyticsIdentityID = analyticsIdentityID
         self.name = name
         self.category = category
         self.date = date
@@ -76,6 +79,7 @@ struct FoodEntry: Codable, FetchableRecord, PersistableRecord, Identifiable {
 
     enum Columns {
         static let id = Column(CodingKeys.id)
+        static let analyticsIdentityID = Column(CodingKeys.analyticsIdentityID)
         static let name = Column(CodingKeys.name)
         static let category = Column(CodingKeys.category)
         static let date = Column(CodingKeys.date)
