@@ -353,48 +353,209 @@ private struct WellbeingSnapshotDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 16) {
                 if let snapshot, !snapshot.availableComponents.isEmpty {
-                    ForEach(snapshot.components) { component in
-                        HStack(spacing: 12) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(component.kind.rawValue).font(.headline)
-                                Text("\(component.observedDayCount)/\(component.possibleDayCount) days · \(component.weight.formatted(.percent.precision(.fractionLength(0)))) weight")
-                                    .font(.caption).foregroundStyle(CloveColors.secondaryText)
-                            }
-                            Spacer()
-                            if let value = component.currentValue {
-                                VStack(alignment: .trailing, spacing: 3) {
-                                    Text("\(value.formatted(.number.precision(.fractionLength(0...1)))) \(component.unitLabel)").bold()
-                                    if let change = component.change {
-                                        Text("\(change >= 0 ? "+" : "")\(change.formatted(.number.precision(.fractionLength(0...1)))) vs prior")
-                                            .font(.caption).foregroundStyle(component.favorability == .favorable ? .green : component.favorability == .unfavorable ? .orange : CloveColors.secondaryText)
-                                    }
-                                }
-                            } else {
-                                Text("Not recorded").foregroundStyle(CloveColors.secondaryText)
-                            }
+                    summaryCard(snapshot)
+
+                    Text("Area by area")
+                        .font(.title3.bold())
+                        .padding(.top, 4)
+
+                    VStack(spacing: 0) {
+                        ForEach(snapshot.availableComponents) { component in
+                            componentRow(component)
+                            if component.id != snapshot.availableComponents.last?.id { Divider() }
                         }
-                        .padding(.vertical, 14)
-                        if component.id != snapshot.components.last?.id { Divider() }
                     }
+                    .padding(.horizontal, 16)
+                    .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+
                     DisclosureGroup("How this is calculated") {
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Clove compares the average for each area in the selected period with the immediately preceding period of the same length.")
+                            Text("Higher mood, energy, and medication adherence are treated as positive. Lower pain and symptom burden are treated as positive.")
+                            Text("Symptoms combines the symptom ratings you recorded. Missing days are left out rather than counted as zero.")
                             ForEach(snapshot.limitations, id: \.self) { Text("• \($0)") }
-                        }.font(.caption).foregroundStyle(CloveColors.secondaryText).padding(.top, 8)
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .padding(.top, 10)
                     }
-                    .padding(.top, 18)
+                    .padding(16)
+                    .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
                 } else {
                     ContentUnavailableView("No Snapshot Yet", systemImage: "heart.text.square",
                         description: Text("Record mood, pain, energy, symptoms, or medication adherence."))
                 }
             }
             .padding(CloveSpacing.large)
-            .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
-            .padding(CloveSpacing.large)
+            .padding(.bottom, 80)
         }
         .background(CloveColors.background.ignoresSafeArea())
         .navigationTitle("Wellbeing Snapshot")
+    }
+
+    private func summaryCard(_ snapshot: WellbeingSnapshot) -> some View {
+        let comparable = snapshot.availableComponents.filter { $0.change != nil }
+        let improved = comparable.filter { effectiveFavorability($0) == .favorable }.count
+        let attention = comparable.filter { effectiveFavorability($0) == .unfavorable }.count
+        let steady = comparable.count - improved - attention
+
+        return VStack(alignment: .leading, spacing: 14) {
+            Label("Your recent wellbeing at a glance", systemImage: "heart.text.square.fill")
+                .font(.headline)
+                .foregroundStyle(.accent)
+
+            Text(summaryHeadline(improved: improved, attention: attention, comparable: comparable.count))
+                .font(.title2.bold())
+                .foregroundStyle(CloveColors.primaryText)
+
+            Text(comparisonDescription(snapshot))
+                .font(.subheadline)
+                .foregroundStyle(CloveColors.secondaryText)
+
+            if !comparable.isEmpty {
+                HStack(spacing: 8) {
+                    summaryPill("\(improved) improved", systemImage: "arrow.up.right", color: .green)
+                    summaryPill("\(attention) attention", systemImage: "exclamationmark", color: .orange)
+                    if steady > 0 {
+                        summaryPill("\(steady) steady", systemImage: "minus", color: CloveColors.secondaryText)
+                    }
+                }
+            }
+
+            Text("This is a comparison of what you recorded—not a medical score.")
+                .font(.caption)
+                .foregroundStyle(CloveColors.secondaryText)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+    }
+
+    private func componentRow(_ component: WellbeingSnapshotComponent) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon(for: component.kind))
+                .font(.body.bold())
+                .foregroundStyle(statusColor(component))
+                .frame(width: 34, height: 34)
+                .background(statusColor(component).opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(component.kind.rawValue).font(.headline)
+                    Spacer()
+                    statusLabel(component)
+                }
+
+                if let value = component.currentValue {
+                    Text(valueDescription(value, for: component.kind))
+                        .font(.subheadline)
+                        .foregroundStyle(CloveColors.primaryText)
+                }
+
+                if let change = component.change {
+                    Text(changeDescription(change, for: component.kind))
+                        .font(.caption)
+                        .foregroundStyle(CloveColors.secondaryText)
+                } else {
+                    Text("No previous period available for comparison")
+                        .font(.caption)
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+
+                if component.observedDayCount < component.possibleDayCount {
+                    Text("Based on \(component.observedDayCount) of \(component.possibleDayCount) days")
+                        .font(.caption2)
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+            }
+        }
+        .padding(.vertical, 14)
+    }
+
+    private func statusLabel(_ component: WellbeingSnapshotComponent) -> some View {
+        Text(statusText(component))
+            .font(.caption.bold())
+            .foregroundStyle(statusColor(component))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(statusColor(component).opacity(0.12), in: Capsule())
+    }
+
+    private func summaryPill(_ text: String, systemImage: String, color: Color) -> some View {
+        Label(text, systemImage: systemImage)
+            .font(.caption.bold())
+            .foregroundStyle(color)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(color.opacity(0.12), in: Capsule())
+    }
+
+    private func summaryHeadline(improved: Int, attention: Int, comparable: Int) -> String {
+        guard comparable > 0 else { return "Your recent averages" }
+        if improved > attention { return "More areas improved than worsened" }
+        if attention > improved { return "Some areas may need your attention" }
+        if improved == 0 { return "Your wellbeing was mostly steady" }
+        return "Your results were mixed"
+    }
+
+    private func comparisonDescription(_ snapshot: WellbeingSnapshot) -> String {
+        let days = max(1, Calendar.current.dateComponents([.day], from: snapshot.interval.start, to: snapshot.interval.end).day ?? 1)
+        guard snapshot.previousInterval != nil else {
+            return "A summary of the last \(days) days based on your recorded data."
+        }
+        return "The last \(days) days compared with the previous \(days) days."
+    }
+
+    private func valueDescription(_ value: Double, for kind: WellbeingComponentKind) -> String {
+        let formatted = value.formatted(.number.precision(.fractionLength(0...1)))
+        switch kind {
+        case .adherence: return "Medication taken \(formatted)% of the time"
+        case .symptoms: return "Average symptom burden: \(formatted) out of 10"
+        case .mood, .pain, .energy: return "Average: \(formatted) out of 10"
+        }
+    }
+
+    private func changeDescription(_ change: Double, for kind: WellbeingComponentKind) -> String {
+        if abs(change) < 0.05 { return "About the same as the previous period" }
+        let amount = abs(change).formatted(.number.precision(.fractionLength(0...1)))
+        let direction = change > 0 ? "higher" : "lower"
+        let unit = kind == .adherence ? "percentage points" : abs(change) == 1 ? "point" : "points"
+        return "\(amount) \(unit) \(direction) than the previous period"
+    }
+
+    private func statusText(_ component: WellbeingSnapshotComponent) -> String {
+        guard component.change != nil else { return "Current" }
+        return switch effectiveFavorability(component) {
+        case .favorable: "Improved"
+        case .unfavorable: "Needs attention"
+        case .neutral: "Steady"
+        }
+    }
+
+    private func statusColor(_ component: WellbeingSnapshotComponent) -> Color {
+        guard component.change != nil else { return Theme.shared.accent }
+        return switch effectiveFavorability(component) {
+        case .favorable: .green
+        case .unfavorable: .orange
+        case .neutral: CloveColors.secondaryText
+        }
+    }
+
+    private func effectiveFavorability(_ component: WellbeingSnapshotComponent) -> MetricChangeFavorability {
+        guard let change = component.change, abs(change) >= 0.05 else { return .neutral }
+        return component.favorability
+    }
+
+    private func icon(for kind: WellbeingComponentKind) -> String {
+        switch kind {
+        case .mood: "face.smiling"
+        case .pain: "bolt.heart"
+        case .energy: "bolt.fill"
+        case .adherence: "pills.fill"
+        case .symptoms: "cross.case.fill"
+        }
     }
 }
 

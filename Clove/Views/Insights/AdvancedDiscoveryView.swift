@@ -92,40 +92,53 @@ struct AdvancedDiscoveryView: View {
     }
 
     private var discoveryCaption: String {
-        guard let run = viewModel.discoveryRun else { return "Scanning recorded metrics" }
-        let budget = run.wasBudgetLimited ? " · limited to \(run.testBudget) tests" : ""
-        return "\(run.testedPairCount) eligible comparisons\(budget) · FDR \(run.falseDiscoveryRate.formatted(.percent))"
+        guard let run = viewModel.discoveryRun else { return "Looking for useful patterns in what you recorded" }
+        return "Clove checked \(run.testedPairCount) possible connections and only shows patterns that passed its reliability checks."
     }
 
     private func discoveryCard(_ discovery: AutomaticDiscovery) -> some View {
         let feedback = viewModel.feedback(for: discovery.id)
-        return VStack(alignment: .leading, spacing: 10) {
+        return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(discovery.title).font(.headline)
-                    Text("Exploratory · \(discovery.estimate.method.displayName)")
-                        .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                    Text(discovery.title)
+                        .font(.caption.bold())
+                        .foregroundStyle(Theme.shared.accent)
+                    Text(discoverySummary(discovery))
+                        .font(.headline)
                 }
                 Spacer()
                 if feedback.isSaved { Image(systemName: "bookmark.fill").foregroundStyle(Theme.shared.accent) }
             }
-            if let effect = discovery.estimate.effect {
-                HStack(spacing: 12) {
-                    stat(discovery.estimate.strength, label: "Strength")
-                    stat(effect.formatted(.number.precision(.fractionLength(2))), label: "Effect")
-                    stat("q \(discovery.qValue.formatted(.number.precision(.fractionLength(3))))", label: "Adjusted")
-                }
+
+            HStack(spacing: 8) {
+                plainBadge("\(discovery.estimate.strength) pattern", icon: "waveform.path", color: Theme.shared.accent)
+                plainBadge(coverageLabel(discovery.matchedCoverage), icon: "checkmark.circle", color: coverageColor(discovery.matchedCoverage))
             }
-            Text("Based on \(discovery.estimate.sampleCount) matching recorded days · \(discovery.matchedCoverage.formatted(.percent.precision(.fractionLength(0)))) coverage")
-                .font(.caption).foregroundStyle(CloveColors.secondaryText)
-            DisclosureGroup("Why this appeared") {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("The association passed the scan’s effect-size and false-discovery thresholds.")
+
+            Text("This pattern appeared across \(discovery.estimate.sampleCount) days when you recorded both items.")
+                .font(.subheadline)
+                .foregroundStyle(CloveColors.secondaryText)
+
+            DisclosureGroup("Why Clove is showing this") {
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("The two items moved together consistently enough to pass Clove’s safeguards against showing random coincidences.")
+                    Text("This is a clue worth watching—not proof that one item caused the other.")
                     ForEach(discovery.limitations, id: \.self) { Text("• \($0)") }
+
+                    Divider().padding(.vertical, 2)
+                    Text("Technical details").fontWeight(.semibold)
+                    Text("Method: \(discovery.estimate.method.displayName)")
+                    if let effect = discovery.estimate.effect {
+                        Text("Relationship score: \(effect.formatted(.number.precision(.fractionLength(2))))")
+                    }
+                    Text("Adjusted reliability value: \(adjustedValue(discovery.qValue))")
                 }
-                .font(.caption).foregroundStyle(CloveColors.secondaryText).padding(.top, 6)
+                .font(.caption)
+                .foregroundStyle(CloveColors.secondaryText)
+                .padding(.top, 8)
             }
-            .font(.caption.bold())
+            .font(.subheadline.bold())
             feedbackControls(id: discovery.id)
         }
         .cardStyle()
@@ -143,7 +156,7 @@ struct AdvancedDiscoveryView: View {
                 Spacer(minLength: 0)
             }
             if let evidence = insight.evidence {
-                Text("\(evidence.quality.rawValue) evidence · \(evidence.sampleCount) observations")
+                Text("Seen across \(evidence.sampleCount) recorded observations")
                     .font(.caption).foregroundStyle(CloveColors.secondaryText)
             }
             feedbackControls(id: feedbackID, allowsDismissal: false)
@@ -184,37 +197,35 @@ struct AdvancedDiscoveryView: View {
 
     @ViewBuilder private var context: some View {
         LazyVStack(alignment: .leading, spacing: 12) {
-            sectionHeading("Cycle context", caption: "Estimated only between dates marked as cycle starts")
+            sectionHeading("Patterns during your cycle", caption: "How your tracked metrics compared with your usual levels during each cycle phase")
             if let result = viewModel.contextAnalysis, !result.phaseSummaries.isEmpty {
                 ForEach(result.phaseSummaries.prefix(12)) { summary in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(summary.metricName).font(.subheadline.bold())
-                            Text("\(summary.phase.rawValue) · \(summary.observationCount) observations in \(summary.cycleCount) cycles")
-                                .font(.caption).foregroundStyle(CloveColors.secondaryText)
-                        }
-                        Spacer()
-                        signedValue(summary.differenceFromPersonalMean, suffix: " vs usual")
-                    }.cardStyle()
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text(summary.metricName).font(.headline)
+                        Text(cycleSummary(summary))
+                            .font(.subheadline)
+                        Text("Seen in \(summary.observationCount) recordings across \(summary.cycleCount) cycles")
+                            .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                    }
+                    .cardStyle()
                 }
             } else {
                 compactEmpty("Not enough repeated cycle data", icon: "calendar.badge.clock",
                     detail: "Mark at least three cycle starts and record the same metric during two complete cycles.")
             }
 
-            sectionHeading("Flare days", caption: "Explicitly marked flare days compared with other logged days")
+            sectionHeading("What was different on flare days", caption: "Flare days compared with your other logged days")
                 .padding(.top, 6)
             if let result = viewModel.contextAnalysis, !result.flareComparisons.isEmpty {
                 ForEach(result.flareComparisons.prefix(12)) { comparison in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(comparison.metricName).font(.subheadline.bold())
-                            Text("\(comparison.flareDayCount) flare · \(comparison.nonFlareDayCount) other logged days")
-                                .font(.caption).foregroundStyle(CloveColors.secondaryText)
-                        }
-                        Spacer()
-                        signedValue(comparison.difference, suffix: " difference")
-                    }.cardStyle()
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text(comparison.metricName).font(.headline)
+                        Text(flareSummary(comparison))
+                            .font(.subheadline)
+                        Text("Compared \(comparison.flareDayCount) flare days with \(comparison.nonFlareDayCount) other days")
+                            .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                    }
+                    .cardStyle()
                 }
             } else {
                 compactEmpty("Not enough flare comparisons", icon: "waveform.path.ecg",
@@ -227,7 +238,7 @@ struct AdvancedDiscoveryView: View {
 
     @ViewBuilder private var baselines: some View {
         LazyVStack(alignment: .leading, spacing: 12) {
-            sectionHeading("Your recent range", caption: "The latest 7 observations compared with robust personal history")
+            sectionHeading("Compared with your usual", caption: "Your latest seven recordings compared with your own recent history")
             if viewModel.baselines.isEmpty {
                 compactEmpty("No qualified baselines yet", icon: "scope",
                     detail: "A baseline needs 28 historical and 7 recent observations within the last 120 days.")
@@ -237,15 +248,15 @@ struct AdvancedDiscoveryView: View {
                         HStack {
                             Text(baseline.metricName).font(.headline)
                             Spacer()
-                            Text(baseline.position.rawValue.capitalized).font(.caption.bold())
-                                .foregroundStyle(baseline.position == .typical ? Color.green : Color.orange)
+                            Text(baselineStatus(baseline)).font(.caption.bold())
+                                .foregroundStyle(baseline.position == .typical ? Color.green : Theme.shared.accent)
+                                .padding(.horizontal, 9).padding(.vertical, 5)
+                                .background((baseline.position == .typical ? Color.green : Theme.shared.accent).opacity(0.12), in: Capsule())
                         }
-                        HStack(spacing: 12) {
-                            stat(baseline.recentValue.formatted(.number.precision(.fractionLength(0...1))), label: "Recent")
-                            stat(baseline.center.formatted(.number.precision(.fractionLength(0...1))), label: "Baseline")
-                            stat("\(baseline.difference >= 0 ? "+" : "")\(baseline.difference.formatted(.number.precision(.fractionLength(0...1))))", label: "Difference")
-                        }
-                        Text("\(baseline.baselineObservationCount) observations · \(baseline.baselineStart.formatted(date: .abbreviated, time: .omitted))–\(baseline.baselineEnd.formatted(date: .abbreviated, time: .omitted))")
+                        Text(baselineSummary(baseline)).font(.subheadline)
+                        Text("Recent: \(plainNumber(baseline.recentValue)) · Your usual: \(plainNumber(baseline.center))")
+                            .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                        Text("Your usual range is based on \(baseline.baselineObservationCount) earlier recordings")
                             .font(.caption).foregroundStyle(CloveColors.secondaryText)
                         if baseline.isQualifiedByGap {
                             Label("Includes a tracking gap longer than 30 days", systemImage: "exclamationmark.triangle")
@@ -254,7 +265,7 @@ struct AdvancedDiscoveryView: View {
                     }.cardStyle()
                 }
             }
-            Text("“Above” and “below” only mean different from your own recorded baseline—not medically better or worse.")
+            Text("Higher or lower only means different from your own usual pattern. It does not automatically mean better or worse.")
                 .font(.caption).foregroundStyle(CloveColors.secondaryText)
         }
     }
@@ -302,18 +313,88 @@ struct AdvancedDiscoveryView: View {
         viewModel.dataset?.definitions.first { $0.id.rawValue == id }?.displayName ?? id
     }
 
-    private func stat(_ value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value).font(.subheadline.bold()).lineLimit(1).minimumScaleFactor(0.8)
-            Text(label).font(.caption2).foregroundStyle(CloveColors.secondaryText)
-        }.frame(maxWidth: .infinity, alignment: .leading)
+    private func discoverySummary(_ discovery: AutomaticDiscovery) -> String {
+        guard let effect = discovery.estimate.effect else {
+            return "These two items showed a possible connection."
+        }
+        guard discovery.estimate.method.signed else {
+            return "These two items tended to vary together in your records."
+        }
+
+        let movesUp = effect > 0
+        if discovery.factor.measurementLevel == .binary {
+            let direction = movesUp ? "higher or more common" : "lower or less common"
+            return "On days when \(discovery.factor.displayName) was recorded, \(discovery.outcome.displayName) tended to be \(direction)."
+        }
+        if discovery.outcome.measurementLevel == .binary {
+            let frequency = movesUp ? "more" : "less"
+            return "When \(discovery.factor.displayName) was higher, \(discovery.outcome.displayName) was \(frequency) often recorded."
+        }
+        let direction = movesUp ? "higher" : "lower"
+        return "When \(discovery.factor.displayName) was higher, \(discovery.outcome.displayName) tended to be \(direction)."
     }
 
-    private func signedValue(_ value: Double, suffix: String) -> some View {
-        VStack(alignment: .trailing, spacing: 2) {
-            Text("\(value >= 0 ? "+" : "")\(value.formatted(.number.precision(.fractionLength(0...1))))").bold()
-            Text(suffix).font(.caption2).foregroundStyle(CloveColors.secondaryText)
+    private func plainBadge(_ text: String, icon: String, color: Color) -> some View {
+        Label(text, systemImage: icon)
+            .font(.caption.bold())
+            .foregroundStyle(color)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .background(color.opacity(0.12), in: Capsule())
+    }
+
+    private func coverageLabel(_ coverage: Double) -> String {
+        if coverage >= 0.8 { return "Good data match" }
+        if coverage >= 0.6 { return "Fair data match" }
+        return "Limited data match"
+    }
+
+    private func coverageColor(_ coverage: Double) -> Color {
+        coverage >= 0.8 ? .green : coverage >= 0.6 ? Theme.shared.accent : .orange
+    }
+
+    private func adjustedValue(_ value: Double) -> String {
+        value < 0.001 ? "<0.001" : value.formatted(.number.precision(.fractionLength(3)))
+    }
+
+    private func cycleSummary(_ summary: CyclePhaseSummary) -> String {
+        let difference = summary.differenceFromPersonalMean
+        if abs(difference) < 0.05 {
+            return "During the \(summary.phase.rawValue.lowercased()) phase, this was close to your usual level."
         }
+        let direction = difference > 0 ? "higher" : "lower"
+        return "During the \(summary.phase.rawValue.lowercased()) phase, this was typically \(plainNumber(abs(difference))) \(direction) than your overall average."
+    }
+
+    private func flareSummary(_ comparison: FlareComparison) -> String {
+        if abs(comparison.difference) < 0.05 {
+            return "This was about the same on flare days and other logged days."
+        }
+        let direction = comparison.difference > 0 ? "higher" : "lower"
+        return "On flare days, this was typically \(plainNumber(abs(comparison.difference))) \(direction) than on your other logged days."
+    }
+
+    private func baselineStatus(_ baseline: PersonalBaseline) -> String {
+        switch baseline.position {
+        case .typical: "Within usual range"
+        case .above: "Higher than usual"
+        case .below: "Lower than usual"
+        }
+    }
+
+    private func baselineSummary(_ baseline: PersonalBaseline) -> String {
+        switch baseline.position {
+        case .typical:
+            "Your latest recordings are close to your usual pattern."
+        case .above:
+            "Your latest recordings are \(plainNumber(abs(baseline.difference))) higher than your usual level."
+        case .below:
+            "Your latest recordings are \(plainNumber(abs(baseline.difference))) lower than your usual level."
+        }
+    }
+
+    private func plainNumber(_ value: Double) -> String {
+        value.formatted(.number.precision(.fractionLength(0...1)))
     }
 
     private func sectionHeading(_ title: String, caption: String) -> some View {

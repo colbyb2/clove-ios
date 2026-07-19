@@ -2,6 +2,8 @@ import Foundation
 
 /// Utility class for generating mock health tracking data for development and testing
 class MockDataGenerator {
+
+    private static let hydrationServingSize = 8
     
     /// Generates mock daily logs for a specified number of days starting from a given date
     /// - Parameters:
@@ -9,6 +11,8 @@ class MockDataGenerator {
     ///   - numberOfDays: Number of days to generate mock logs for
     /// - Returns: Array of DailyLog objects with randomized health data
     static func createMockLogs(startingFrom startDate: Date = Date(), numberOfDays: Int) -> [DailyLog] {
+        guard numberOfDays > 0 else { return [] }
+
         var mockLogs: [DailyLog] = []
         let calendar = Calendar.current
         
@@ -87,6 +91,7 @@ class MockDataGenerator {
             let mood = Int.random(in: 1...10)
             let painLevel = generateRealisticPainLevel()
             let energyLevel = generateRealisticEnergyLevel(basedOnMood: mood)
+            let waterIntake = generateRealisticWaterIntake()
             
             // Randomly select meals, activities, and medications
             let meals = sampleMeals.randomElement() ?? []
@@ -126,6 +131,7 @@ class MockDataGenerator {
                 mood: mood,
                 painLevel: painLevel,
                 energyLevel: energyLevel,
+                waterIntake: waterIntake,
                 meals: meals,
                 activities: activities,
                 medicationsTaken: medications,
@@ -140,6 +146,47 @@ class MockDataGenerator {
         }
         
         return mockLogs
+    }
+
+    /// Generates zero, one, or two realistic bowel-movement records per day.
+    /// Bowel movements are stored separately from `DailyLog`, so callers that
+    /// want a complete mock history should use `generateAndSaveMockLogs`.
+    static func createMockBowelMovements(
+        startingFrom startDate: Date = Date(),
+        numberOfDays: Int
+    ) -> [BowelMovement] {
+        guard numberOfDays > 0 else { return [] }
+
+        let calendar = Calendar.current
+        var bowelMovements: [BowelMovement] = []
+
+        for dayOffset in 0..<numberOfDays {
+            guard Double.random(in: 0...1) < 0.78,
+                  let day = calendar.date(byAdding: .day, value: -dayOffset, to: startDate) else {
+                continue
+            }
+
+            let movementCount = Double.random(in: 0...1) < 0.16 ? 2 : 1
+            for movementIndex in 0..<movementCount {
+                let hour = movementIndex == 0 ? Int.random(in: 7...12) : Int.random(in: 15...21)
+                let minute = Int.random(in: 0...59)
+                let date = calendar.date(
+                    bySettingHour: hour,
+                    minute: minute,
+                    second: 0,
+                    of: day
+                ) ?? day
+
+                bowelMovements.append(
+                    BowelMovement(
+                        type: Double(generateRealisticBristolType()),
+                        date: date
+                    )
+                )
+            }
+        }
+
+        return bowelMovements
     }
     
     /// Generates a realistic pain level with weighted distribution
@@ -164,6 +211,17 @@ class MockDataGenerator {
         // Energy tends to correlate with mood, but with some variance
         let baseEnergy = mood + Int.random(in: -2...2)
         return max(1, min(10, baseEnergy))
+    }
+
+    /// Returns a daily fluid-ounce total in common eight-ounce servings.
+    private static func generateRealisticWaterIntake() -> Int {
+        Int.random(in: 3...12) * hydrationServingSize
+    }
+
+    /// Produces Bristol types weighted toward the typical 3–5 range.
+    private static func generateRealisticBristolType() -> Int {
+        let weights = [0.05, 0.10, 0.20, 0.35, 0.17, 0.09, 0.04]
+        return weightedRandomSelection(weights: weights) + 1
     }
     
     /// Generates a rating correlated with a base value
@@ -211,6 +269,18 @@ class MockDataGenerator {
         print("Successfully saved \(savedCount) out of \(logs.count) mock logs to database")
         return savedCount
     }
+
+    /// Saves generated bowel movements to their dedicated table.
+    /// - Returns: Number of records saved, or zero if the batch failed.
+    @discardableResult
+    static func saveMockBowelMovementsToDatabase(_ bowelMovements: [BowelMovement]) -> Int {
+        guard !bowelMovements.isEmpty else { return 0 }
+
+        let saved = BowelMovementRepo.shared.save(bowelMovements)
+        let savedCount = saved ? bowelMovements.count : 0
+        print("Successfully saved \(savedCount) out of \(bowelMovements.count) mock bowel movements to database")
+        return savedCount
+    }
     
     /// Convenience method to generate and save mock logs in one call
     /// - Parameters:
@@ -219,7 +289,18 @@ class MockDataGenerator {
     /// - Returns: Number of successfully saved logs
     @discardableResult
     static func generateAndSaveMockLogs(startingFrom startDate: Date = Date(), numberOfDays: Int) -> Int {
+        guard numberOfDays > 0 else {
+            print("Mock data generation skipped because numberOfDays must be greater than zero")
+            return 0
+        }
+
         let mockLogs = createMockLogs(startingFrom: startDate, numberOfDays: numberOfDays)
-        return saveMockLogsToDatabase(mockLogs)
+        let bowelMovements = createMockBowelMovements(
+            startingFrom: startDate,
+            numberOfDays: numberOfDays
+        )
+        let savedLogCount = saveMockLogsToDatabase(mockLogs)
+        _ = saveMockBowelMovementsToDatabase(bowelMovements)
+        return savedLogCount
     }
 }

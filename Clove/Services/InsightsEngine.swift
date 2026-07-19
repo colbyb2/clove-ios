@@ -150,7 +150,7 @@ struct InsightGenerator {
             result.append(HealthInsight(type: favorability == .unfavorable ? .warning : .trend,
                 priority: favorability == .unfavorable ? .high : .medium,
                 title: "\(definition.displayName) has been trending \(trend.totalChange > 0 ? "up" : "down")",
-                description: "The robust trend changed by about \(format(abs(trend.totalChange), definition: definition)) across this period.",
+                description: "Across this period, the overall direction moved by about \(format(abs(trend.totalChange), definition: definition)).",
                 actionableText: nil, confidence: 0, relevancePeriod: dataset.interval,
                 associatedMetrics: [definition.id.rawValue], generatedAt: generatedAt, isActionable: false,
                 evidence: evidence, presentationHint: .change))
@@ -175,7 +175,7 @@ struct InsightGenerator {
                 limitations: commonLimitations(coverage: coverage))
             result.append(HealthInsight(type: .pattern, priority: .medium,
                 title: "\(definition.displayName) became more variable",
-                description: "Recorded values varied about \(volatility.ratio.formatted(.number.precision(.fractionLength(1))))× as much in the second half of this period.",
+                description: "Your recorded values changed more from day to day in the second half of this period.",
                 actionableText: "Open the metric to inspect when the variation changed.", confidence: 0,
                 relevancePeriod: dataset.interval, associatedMetrics: [definition.id.rawValue], generatedAt: generatedAt,
                 isActionable: true, evidence: evidence, presentationHint: .volatility))
