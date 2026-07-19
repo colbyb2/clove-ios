@@ -159,6 +159,14 @@ final class AnalyticsChartPipelineTests: XCTestCase {
         let data = dataset(definition: MetricCatalog.hydration, interval: interval, values: [.number(48), .number(64)])
         let result = AnalyticsChartPipeline(calendar: AnalyticsTestDates.calendar).build(definition: MetricCatalog.hydration, dataset: data, granularity: .daily)
         XCTAssertEqual(result.family, .hydrationProgress(goal: 64))
+
+        let personalized = AnalyticsChartPipeline(calendar: AnalyticsTestDates.calendar).build(
+            definition: MetricCatalog.hydration,
+            dataset: data,
+            granularity: .daily,
+            hydrationGoal: 80
+        )
+        XCTAssertEqual(personalized.family, .hydrationProgress(goal: 80))
     }
 
     func testPreviousRangeIsCalendarSafeAcrossDSTAndLeapDay() throws {

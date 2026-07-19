@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var showSymptomsSheet = false
     @State private var trackedSymptoms: [TrackedSymptom] = []
     @AppStorage(Constants.LOCAL_ANALYTICS_DIAGNOSTICS) private var localAnalyticsDiagnostics = true
+    @AppStorage(Constants.HYDRATION_GOAL_OUNCES) private var hydrationGoalOunces = 64
 
     // Get app version from bundle
     private var appVersion: String {
@@ -92,6 +93,28 @@ struct SettingsView: View {
                         .onChange(of: viewModel.settings.autoSaveEnabled) { _, _ in
                             viewModel.save()
                         }
+                }
+
+                Section(header: Text("Hydration")) {
+                    NavigationLink {
+                        HydrationSettingsView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "drop.fill")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(.blue)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Daily Water Goal")
+                                Text("Controls the goal line and chart colors")
+                                    .font(.caption)
+                                    .foregroundStyle(CloveColors.secondaryText)
+                            }
+                            Spacer()
+                            Text("\(hydrationGoalOunces) oz")
+                                .foregroundStyle(CloveColors.secondaryText)
+                        }
+                    }
+                    .accessibilityHint("Set your daily hydration goal")
                 }
 
                 Section(header: Text("Medication")) {
@@ -328,6 +351,66 @@ struct SettingsView: View {
                 loadTrackedSymptoms()  // Refresh symptoms list when sheet closes
             }
         }
+    }
+}
+
+private struct HydrationSettingsView: View {
+    @AppStorage(Constants.HYDRATION_GOAL_OUNCES) private var hydrationGoalOunces = 64
+    private let suggestedGoals = [48, 64, 80, 96]
+
+    var body: some View {
+        Form {
+            Section {
+                VStack(spacing: 8) {
+                    Image(systemName: "drop.fill")
+                        .font(.system(size: 34))
+                        .foregroundStyle(.blue)
+                    Text("\(hydrationGoalOunces) oz")
+                        .font(.system(.largeTitle, design: .rounded).bold())
+                    Text("per day")
+                        .font(.subheadline)
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+
+                Stepper(
+                    "Daily goal",
+                    value: $hydrationGoalOunces,
+                    in: 8...256,
+                    step: 8
+                )
+                .accessibilityValue("\(hydrationGoalOunces) fluid ounces per day")
+            } header: {
+                Text("Your Goal")
+            } footer: {
+                Text("Adjusts in eight-ounce increments. Changes are saved automatically.")
+            }
+
+            Section("Quick Choices") {
+                HStack(spacing: 8) {
+                    ForEach(suggestedGoals, id: \.self) { goal in
+                        Button("\(goal) oz") {
+                            hydrationGoalOunces = goal
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
+                        .tint(hydrationGoalOunces == goal ? Theme.shared.accent : CloveColors.card)
+                        .foregroundStyle(hydrationGoalOunces == goal ? Color.white : CloveColors.primaryText)
+                    }
+                }
+            }
+
+            Section("How It Is Used") {
+                Label("The dashed chart line shows this daily goal.", systemImage: "line.diagonal")
+                Label("Green bars meet or exceed it; purple bars are below it.", systemImage: "chart.bar.fill")
+                Text("This is a personal tracking target, not medical advice. Hydration needs vary by person and circumstance.")
+                    .font(.caption)
+                    .foregroundStyle(CloveColors.secondaryText)
+            }
+        }
+        .navigationTitle("Hydration")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

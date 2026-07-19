@@ -92,14 +92,15 @@ struct AnalyticsChartPipeline {
         definition: MetricDefinition,
         dataset: AnalyticsDataset,
         previousDataset: AnalyticsDataset? = nil,
-        granularity: AnalyticsGranularity
+        granularity: AnalyticsGranularity,
+        hydrationGoal: Double = 64
     ) -> AnalyticsChartResult {
         let summary = MetricAnalysisSummaryEngine().summarize(
             definition: definition,
             dataset: dataset,
             previousDataset: previousDataset
         )
-        let family = chartFamily(for: definition)
+        let family = chartFamily(for: definition, hydrationGoal: hydrationGoal)
         let current = points(for: definition, dataset: dataset, granularity: granularity, previous: false)
         let previous = previousDataset.map { points(for: definition, dataset: $0, granularity: granularity, previous: true) } ?? []
         let categories = categoryPoints(for: definition, dataset: dataset, previous: false)
@@ -128,8 +129,8 @@ struct AnalyticsChartPipeline {
         return .monthly
     }
 
-    private func chartFamily(for definition: MetricDefinition) -> AnalyticsChartFamily {
-        if definition.id == MetricCatalog.hydration.id { return .hydrationProgress(goal: 64) }
+    private func chartFamily(for definition: MetricDefinition, hydrationGoal: Double) -> AnalyticsChartFamily {
+        if definition.id == MetricCatalog.hydration.id { return .hydrationProgress(goal: hydrationGoal) }
         if definition.id == MetricCatalog.bristolStoolType.id { return .bristolDistribution }
         switch definition.measurementLevel {
         case .categorical:

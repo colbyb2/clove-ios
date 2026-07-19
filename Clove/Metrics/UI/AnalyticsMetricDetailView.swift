@@ -23,7 +23,8 @@ final class AnalyticsMetricDetailViewModel {
         providerID: String,
         interval: DateInterval,
         compare: Bool,
-        granularity: AnalyticsGranularity
+        granularity: AnalyticsGranularity,
+        hydrationGoal: Double
     ) async {
         loadGeneration += 1
         let generation = loadGeneration
@@ -51,7 +52,8 @@ final class AnalyticsMetricDetailViewModel {
                 definition: definition,
                 dataset: dataset,
                 previousDataset: previous,
-                granularity: granularity
+                granularity: granularity,
+                hydrationGoal: hydrationGoal
             )
             state = result.summary.value == nil ? .empty(definition) : .loaded(result)
         } catch is CancellationError {
@@ -78,6 +80,7 @@ struct AnalyticsMetricDetailView: View {
     @State private var displayMode: AnalyticsChartDisplayMode = .raw
     @State private var selectedDate: Date?
     @State private var selectedLog: DailyLog?
+    @AppStorage(Constants.HYDRATION_GOAL_OUNCES) private var hydrationGoalOunces = 64
 
     private var interval: DateInterval {
         timeManager.currentDateRange ?? AnalyticsDateRangeFactory().interval(for: .allTime)
@@ -88,7 +91,7 @@ struct AnalyticsMetricDetailView: View {
     }
 
     private var loadKey: String {
-        [metric.id, String(interval.start.timeIntervalSinceReferenceDate), String(interval.end.timeIntervalSinceReferenceDate), String(timeManager.isComparisonModeEnabled)].joined(separator: "|")
+        [metric.id, String(interval.start.timeIntervalSinceReferenceDate), String(interval.end.timeIntervalSinceReferenceDate), String(timeManager.isComparisonModeEnabled), String(hydrationGoalOunces)].joined(separator: "|")
     }
 
     var body: some View {
@@ -109,7 +112,8 @@ struct AnalyticsMetricDetailView: View {
                 providerID: metric.id,
                 interval: interval,
                 compare: timeManager.isComparisonModeEnabled && timeManager.selectedPeriod != .allTime,
-                granularity: granularity
+                granularity: granularity,
+                hydrationGoal: Double(hydrationGoalOunces)
             )
         }
         .sheet(item: $selectedLog) { log in
@@ -134,7 +138,7 @@ struct AnalyticsMetricDetailView: View {
             Text(message)
         } actions: {
             Button("Try Again") {
-                Task { await viewModel.load(providerID: metric.id, interval: interval, compare: timeManager.isComparisonModeEnabled, granularity: granularity) }
+                Task { await viewModel.load(providerID: metric.id, interval: interval, compare: timeManager.isComparisonModeEnabled, granularity: granularity, hydrationGoal: Double(hydrationGoalOunces)) }
             }
         }
         .frame(minHeight: 260)
@@ -229,6 +233,14 @@ struct AnalyticsMetricDetailView: View {
                 .accessibilityLabel("\(result.definition.displayName) chart")
                 .accessibilityValue(accessibleSummary(result))
 
+            if case .hydrationProgress(let goal) = result.family {
+                HStack(spacing: 14) {
+                    chartKey(color: CloveColors.success, text: "Met \(Int(goal)) oz goal")
+                    chartKey(color: Theme.shared.accent, text: "Below goal")
+                }
+                .accessibilityElement(children: .combine)
+            }
+
             if let point = selectedPoint(in: result) {
                 Text("\(point.date.formatted(date: .abbreviated, time: .omitted)): \(format(point.value, definition: result.definition)) · \(result.aggregationLabel)")
                     .font(.caption)
@@ -262,12 +274,19 @@ struct AnalyticsMetricDetailView: View {
             .chartXSelection(value: $selectedDate)
 
         case .hydrationProgress(let goal):
-            Chart(activePoints(result)) { point in
-                BarMark(x: .value("Date", point.date), y: .value("Fluid ounces", point.value))
-                    .foregroundStyle(point.value >= goal ? CloveColors.success : Theme.shared.accent)
+            Chart {
+                ForEach(activePoints(result)) { point in
+                    BarMark(x: .value("Date", point.date), y: .value("Fluid ounces", point.value))
+                        .foregroundStyle(point.value >= goal ? CloveColors.success : Theme.shared.accent)
+                }
                 RuleMark(y: .value("Daily goal", goal))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [5]))
                     .foregroundStyle(CloveColors.secondaryText)
+                    .annotation(position: .top, alignment: .trailing) {
+                        Text("\(Int(goal)) oz goal")
+                            .font(.caption2.bold())
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
             }
             .chartXSelection(value: $selectedDate)
 
@@ -296,6 +315,17 @@ struct AnalyticsMetricDetailView: View {
             }
             .chartYScale(domain: numericDomain(result.definition, result: result))
             .chartXSelection(value: $selectedDate)
+        }
+    }
+
+    private func chartKey(color: Color, text: String) -> some View {
+        HStack(spacing: 5) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(color)
+                .frame(width: 10, height: 10)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(CloveColors.secondaryText)
         }
     }
 

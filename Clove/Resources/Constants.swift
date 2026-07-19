@@ -11,6 +11,9 @@ enum Constants {
    static let INSIGHTS_CORRELATIONS = "insightsCorrelations"
    static let UNIFIED_ANALYTICS_ENABLED = "unifiedAnalyticsEnabled"
    static let LOCAL_ANALYTICS_DIAGNOSTICS = "localAnalyticsDiagnosticsEnabled"
+
+   // Hydration
+   static let HYDRATION_GOAL_OUNCES = "hydrationGoalOunces"
    
    // Input Method Preferences
    static let USE_SLIDER_INPUT = "useSliderInput"
