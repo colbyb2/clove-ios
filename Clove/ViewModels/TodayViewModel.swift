@@ -4,6 +4,17 @@ import GRDB
 
 @Observable
 class TodayViewModel {
+   enum AutoSaveField: Hashable {
+      case mood
+      case painLevel
+      case energyLevel
+      case isFlareDay
+      case weather
+      case notes
+      case medicationAdherence
+      case symptomRatings
+   }
+
    // MARK: - Dependencies
    private let logsRepository: LogsRepositoryProtocol
    private let symptomsRepository: SymptomsRepositoryProtocol
@@ -24,6 +35,8 @@ class TodayViewModel {
    var isSaving = false
    private var autoSaveTask: Task<Void, Never>?
    private var isLoadingLogData = false
+   private var autoSaveBaseline = AutoSaveSnapshot(logData: LogData())
+   private var modifiedAutoSaveFields: Set<AutoSaveField> = []
 
    private var isAutoSaveEnabled: Bool {
       settingsRepository.getSettings()?.autoSaveEnabled ?? true
@@ -121,6 +134,10 @@ class TodayViewModel {
 
       // Ensure medication adherence matches current tracked medications
       syncMedicationAdherenceWithTrackedMedications()
+
+      // Form defaults and tracked-item synchronization are display state, not user edits.
+      autoSaveBaseline = AutoSaveSnapshot(logData: logData)
+      modifiedAutoSaveFields.removeAll()
    }
    
    func loadSettings() {
@@ -232,6 +249,8 @@ class TodayViewModel {
 
       if result {
          MetricRegistry.shared.invalidateCache()
+         autoSaveBaseline = AutoSaveSnapshot(logData: logData)
+         modifiedAutoSaveFields.removeAll()
          if showFeedback {
             let message = "Log saved successfully"
             toastManager.showToast(message: message, color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
@@ -247,17 +266,68 @@ class TodayViewModel {
 
    }
 
-   /// Schedules a single save after input settles, avoiding writes while a user drags or types.
-   func scheduleAutoSave() {
+   /// Schedules a save for a field the user changed after input settles.
+   /// Loaded defaults are compared with the initial form snapshot and are never persisted by
+   /// merely opening the Today view.
+   func scheduleAutoSave(for field: AutoSaveField) {
       guard !isLoadingLogData, isAutoSaveEnabled else { return }
 
+      if autoSaveBaseline.matches(field, in: logData) {
+         modifiedAutoSaveFields.remove(field)
+      } else {
+         modifiedAutoSaveFields.insert(field)
+      }
+
       autoSaveTask?.cancel()
+      guard !modifiedAutoSaveFields.isEmpty else { return }
+
       autoSaveTask = Task { [weak self] in
          try? await Task.sleep(nanoseconds: 600_000_000)
          guard !Task.isCancelled else { return }
          self?.autoSaveTask = nil
          guard self?.isAutoSaveEnabled == true else { return }
-         self?.saveLog(showFeedback: false)
+         self?.saveModifiedFields()
+      }
+   }
+
+   private func saveModifiedFields() {
+      guard !isSaving, !modifiedAutoSaveFields.isEmpty else { return }
+      isSaving = true
+
+      let fieldsToSave = modifiedAutoSaveFields
+      var log = logsRepository.getLogForDate(selectedDate) ?? DailyLog(date: selectedDate)
+
+      for field in fieldsToSave {
+         switch field {
+         case .mood:
+            log.mood = settings.trackMood ? Int(logData.mood) : nil
+         case .painLevel:
+            log.painLevel = settings.trackPain ? Int(logData.painLevel) : nil
+         case .energyLevel:
+            log.energyLevel = settings.trackEnergy ? Int(logData.energyLevel) : nil
+         case .isFlareDay:
+            log.isFlareDay = logData.isFlareDay
+         case .weather:
+            log.weather = settings.trackWeather ? logData.weather : nil
+         case .notes:
+            log.notes = settings.trackNotes ? logData.notes : nil
+         case .medicationAdherence:
+            let adherence = settings.trackMeds ? logData.medicationAdherence : []
+            log.medicationAdherenceJSON = try! JSONEncoder().encode(adherence).toJSONString()
+            log.medicationsTaken = adherence.filter(\.wasTaken).map(\.medicationName)
+         case .symptomRatings:
+            let ratings = settings.trackSymptoms ? logData.symptomRatings.map { $0.toModel() } : []
+            log.symptomRatingsJSON = try! JSONEncoder().encode(ratings).toJSONString()
+         }
+      }
+
+      let result = logsRepository.saveLog(log)
+      isSaving = false
+
+      if result {
+         MetricRegistry.shared.invalidateCache()
+         autoSaveBaseline.update(fieldsToSave, from: logData)
+         modifiedAutoSaveFields.subtract(fieldsToSave)
       }
    }
 
@@ -346,6 +416,56 @@ class TodayViewModel {
             message: "Failed to delete cycle entry",
             color: CloveColors.error
          )
+      }
+   }
+}
+
+private struct AutoSaveSnapshot {
+   var mood: Double
+   var painLevel: Double
+   var energyLevel: Double
+   var isFlareDay: Bool
+   var weather: String?
+   var notes: String?
+   var medicationAdherence: [MedicationAdherence]
+   var symptomRatings: [SymptomRatingVM]
+
+   init(logData: LogData) {
+      mood = logData.mood
+      painLevel = logData.painLevel
+      energyLevel = logData.energyLevel
+      isFlareDay = logData.isFlareDay
+      weather = logData.weather
+      notes = logData.notes
+      medicationAdherence = logData.medicationAdherence
+      symptomRatings = logData.symptomRatings
+   }
+
+   func matches(_ field: TodayViewModel.AutoSaveField, in logData: LogData) -> Bool {
+      switch field {
+      case .mood: mood == logData.mood
+      case .painLevel: painLevel == logData.painLevel
+      case .energyLevel: energyLevel == logData.energyLevel
+      case .isFlareDay: isFlareDay == logData.isFlareDay
+      case .weather: weather == logData.weather
+      case .notes: notes == logData.notes
+      case .medicationAdherence: medicationAdherence == logData.medicationAdherence
+      case .symptomRatings: symptomRatings == logData.symptomRatings
+      }
+   }
+
+   mutating func update(_ fields: Set<TodayViewModel.AutoSaveField>, from logData: LogData) {
+      for field in fields {
+         switch field {
+         case .mood: mood = logData.mood
+         case .painLevel: painLevel = logData.painLevel
+         case .energyLevel: energyLevel = logData.energyLevel
+         case .isFlareDay: isFlareDay = logData.isFlareDay
+         case .weather: weather = logData.weather
+         case .notes: notes = logData.notes
+         case .medicationAdherence: medicationAdherence = logData.medicationAdherence
+         case .symptomRatings: symptomRatings = logData.symptomRatings
+         }
       }
    }
 }

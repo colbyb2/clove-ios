@@ -390,14 +390,14 @@ struct TodayView: View {
                 navigationCoordinator.clearTargetDate()
             }
         }
-        .onChange(of: viewModel.logData.mood) { _, _ in viewModel.scheduleAutoSave() }
-        .onChange(of: viewModel.logData.painLevel) { _, _ in viewModel.scheduleAutoSave() }
-        .onChange(of: viewModel.logData.energyLevel) { _, _ in viewModel.scheduleAutoSave() }
-        .onChange(of: viewModel.logData.isFlareDay) { _, _ in viewModel.scheduleAutoSave() }
-        .onChange(of: viewModel.logData.weather) { _, _ in viewModel.scheduleAutoSave() }
-        .onChange(of: viewModel.logData.notes) { _, _ in viewModel.scheduleAutoSave() }
-        .onChange(of: viewModel.logData.medicationAdherence) { _, _ in viewModel.scheduleAutoSave() }
-        .onChange(of: viewModel.logData.symptomRatings) { _, _ in viewModel.scheduleAutoSave() }
+        .onChange(of: viewModel.logData.mood) { _, _ in viewModel.scheduleAutoSave(for: .mood) }
+        .onChange(of: viewModel.logData.painLevel) { _, _ in viewModel.scheduleAutoSave(for: .painLevel) }
+        .onChange(of: viewModel.logData.energyLevel) { _, _ in viewModel.scheduleAutoSave(for: .energyLevel) }
+        .onChange(of: viewModel.logData.isFlareDay) { _, _ in viewModel.scheduleAutoSave(for: .isFlareDay) }
+        .onChange(of: viewModel.logData.weather) { _, _ in viewModel.scheduleAutoSave(for: .weather) }
+        .onChange(of: viewModel.logData.notes) { _, _ in viewModel.scheduleAutoSave(for: .notes) }
+        .onChange(of: viewModel.logData.medicationAdherence) { _, _ in viewModel.scheduleAutoSave(for: .medicationAdherence) }
+        .onChange(of: viewModel.logData.symptomRatings) { _, _ in viewModel.scheduleAutoSave(for: .symptomRatings) }
         .sheet(isPresented: $showEditSymptoms) {
             EditSymptomsSheet(
                 trackedSymptoms: SymptomsRepo.shared.getTrackedSymptoms(),
