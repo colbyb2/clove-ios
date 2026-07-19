@@ -4,6 +4,9 @@ import Foundation
 protocol TimePeriodManaging: AnyObject {
     /// Currently selected time period
     var selectedPeriod: TimePeriod { get set }
+    var currentDateRange: DateInterval? { get }
+    var isUsingCustomRange: Bool { get }
+    func setCustomRange(_ range: DateInterval)
 }
 
 /// Conform TimePeriodManager to the protocol

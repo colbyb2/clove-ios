@@ -7,6 +7,9 @@ final class InsightsHomeViewModel {
 
     var state: State = .idle
     var period: TimePeriod = TimePeriodManager.shared.selectedPeriod
+    var customInterval: DateInterval? = TimePeriodManager.shared.isUsingCustomRange
+        ? TimePeriodManager.shared.customRange
+        : nil
     var dataset: AnalyticsDataset?
     var summaries: [MetricID: MetricAnalysisSummary] = [:]
     var insights: [HealthInsight] = []
@@ -19,19 +22,43 @@ final class InsightsHomeViewModel {
     var insightFeedback: [String: InsightFeedback] = [:]
     var hypotheses: [SavedHypothesis] = []
 
+    var rangeLoadKey: String {
+        if let customInterval {
+            return "custom|\(customInterval.start.timeIntervalSinceReferenceDate)|\(customInterval.end.timeIntervalSinceReferenceDate)"
+        }
+        return period.rawValue
+    }
+
+    func selectPeriod(_ newPeriod: TimePeriod) {
+        customInterval = nil
+        period = newPeriod
+        TimePeriodManager.shared.selectedPeriod = newPeriod
+    }
+
+    func selectCustomRange(_ interval: DateInterval) {
+        customInterval = interval
+        TimePeriodManager.shared.setCustomRange(interval)
+    }
+
     func load() async {
         let started = Date()
         state = .loading
-        TimePeriodManager.shared.selectedPeriod = period
         do {
             let factory = AnalyticsDateRangeFactory()
-            let interval = factory.interval(for: period)
+            let interval: DateInterval
+            if let customInterval {
+                TimePeriodManager.shared.setCustomRange(customInterval)
+                interval = customInterval
+            } else {
+                TimePeriodManager.shared.selectedPeriod = period
+                interval = factory.interval(for: period)
+            }
             let current = try await AnalyticsRepositoryContainer.shared.load(
                 AnalyticsRequest(interval: interval, includeRawEvents: true),
                 granularity: AnalyticsChartPipeline().granularity(for: interval)
             )
             let previous: AnalyticsDataset?
-            if let previousInterval = factory.previous(equalTo: interval), period != .allTime {
+            if let previousInterval = factory.previous(equalTo: interval), customInterval != nil || period != .allTime {
                 previous = try await AnalyticsRepositoryContainer.shared.load(
                     AnalyticsRequest(interval: previousInterval, includeRawEvents: true),
                     granularity: AnalyticsChartPipeline().granularity(for: previousInterval)
@@ -188,6 +215,7 @@ struct InsightsView: View {
     @AppStorage(Constants.INSIGHTS_METRIC_CHARTS) private var metricCharts = true
     @AppStorage(Constants.INSIGHTS_CORRELATIONS) private var correlations = true
     @AppStorage(Constants.UNIFIED_ANALYTICS_ENABLED) private var unifiedAnalyticsEnabled = true
+    @State private var showingCustomRange = false
 
     private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
 
@@ -230,22 +258,46 @@ struct InsightsView: View {
             .background(CloveColors.background.ignoresSafeArea())
             .navigationTitle("Insights")
             .refreshable { await viewModel.load() }
-            .task(id: viewModel.period) { await viewModel.load() }
+            .task(id: viewModel.rangeLoadKey) { await viewModel.load() }
+            .sheet(isPresented: $showingCustomRange) {
+                CustomDateRangeSheet(initialRange: viewModel.customInterval) { interval in
+                    viewModel.selectCustomRange(interval)
+                }
+            }
         }
     }
 
     private var compactRangePicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(TimePeriod.allCases) { period in
-                    Button(period.shortDisplayName) { viewModel.period = period }
-                        .buttonStyle(.borderedProminent)
-                        .buttonBorderShape(.capsule)
-                        .tint(viewModel.period == period ? Theme.shared.accent : CloveColors.card)
-                        .foregroundStyle(viewModel.period == period ? .white : CloveColors.primaryText)
+        VStack(alignment: .leading, spacing: 8) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(TimePeriod.allCases) { period in
+                        Button(period.shortDisplayName) { viewModel.selectPeriod(period) }
+                            .buttonStyle(.borderedProminent)
+                            .buttonBorderShape(.capsule)
+                            .tint(viewModel.customInterval == nil && viewModel.period == period ? Theme.shared.accent : CloveColors.card)
+                            .foregroundStyle(viewModel.customInterval == nil && viewModel.period == period ? .white : CloveColors.primaryText)
+                    }
+                    Button { showingCustomRange = true } label: {
+                        Label("Custom", systemImage: "calendar")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .tint(viewModel.customInterval != nil ? Theme.shared.accent : CloveColors.card)
+                    .foregroundStyle(viewModel.customInterval != nil ? .white : CloveColors.primaryText)
                 }
             }
+            if let interval = viewModel.customInterval {
+                Label(customRangeText(interval), systemImage: "calendar.badge.checkmark")
+                    .font(.caption.bold())
+                    .foregroundStyle(Theme.shared.accent)
+            }
         }
+    }
+
+    private func customRangeText(_ interval: DateInterval) -> String {
+        let inclusiveEnd = Calendar.current.date(byAdding: .day, value: -1, to: interval.end) ?? interval.end
+        return "\(interval.start.formatted(date: .abbreviated, time: .omitted)) – \(inclusiveEnd.formatted(date: .abbreviated, time: .omitted))"
     }
 
     private var dashboardGrid: some View {
@@ -307,6 +359,86 @@ struct InsightsView: View {
         .background(RoundedRectangle(cornerRadius: CloveCorners.medium).fill(CloveColors.card)
             .shadow(color: .black.opacity(0.04), radius: 5, y: 2))
         .contentShape(RoundedRectangle(cornerRadius: CloveCorners.medium))
+    }
+}
+
+private struct CustomDateRangeSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var startDate: Date
+    @State private var endDate: Date
+    let onApply: (DateInterval) -> Void
+
+    init(initialRange: DateInterval?, onApply: @escaping (DateInterval) -> Void) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let initialStart = initialRange?.start
+            ?? calendar.date(byAdding: .day, value: -29, to: today)
+            ?? today
+        let initialEnd = initialRange.flatMap {
+            calendar.date(byAdding: .day, value: -1, to: $0.end)
+        } ?? today
+        _startDate = State(initialValue: min(initialStart, today))
+        _endDate = State(initialValue: min(initialEnd, today))
+        self.onApply = onApply
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    DatePicker(
+                        "Start date",
+                        selection: $startDate,
+                        in: Date(timeIntervalSince1970: 0)...endDate,
+                        displayedComponents: .date
+                    )
+                    DatePicker(
+                        "End date",
+                        selection: $endDate,
+                        in: startDate...Calendar.current.startOfDay(for: Date()),
+                        displayedComponents: .date
+                    )
+                } header: {
+                    Text("Date Range")
+                } footer: {
+                    Text("Both the start and end dates are included.")
+                }
+
+                Section("Selected Period") {
+                    LabeledContent("Length", value: "\(selectedDayCount) days")
+                    Text("\(startDate.formatted(date: .long, time: .omitted)) – \(endDate.formatted(date: .long, time: .omitted))")
+                        .font(.subheadline)
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+
+                Section {
+                    Text("Charts automatically switch between daily, weekly, and monthly summaries based on the length you choose.")
+                        .font(.caption)
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+            }
+            .navigationTitle("Custom Time Period")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Apply") { apply() }.fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private var selectedDayCount: Int {
+        max(1, (Calendar.current.dateComponents([.day], from: startDate, to: endDate).day ?? 0) + 1)
+    }
+
+    private func apply() {
+        guard let interval = AnalyticsDateRangeFactory().custom(start: startDate, inclusiveEnd: endDate) else { return }
+        onApply(interval)
+        dismiss()
     }
 }
 

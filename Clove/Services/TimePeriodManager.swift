@@ -231,11 +231,7 @@ class TimePeriodManager {
     func setCustomRange(_ range: DateInterval) {
         // Validate the range
         guard range.start < range.end else { return }
-        
-        // Limit maximum range to prevent performance issues (2 years)
-        let maxDays: TimeInterval = 365 * 2 * 24 * 60 * 60
-        guard range.duration <= maxDays else { return }
-        
+
         customRange = range
         isUsingCustomRange = true
     }

@@ -110,7 +110,8 @@ class MetricRegistry {
     private func refreshMetricSummaries() async {
         var summaries: [MetricSummary] = []
         let allMetrics = await getAllMetricProviders()
-        let interval = AnalyticsDateRangeFactory().interval(for: TimePeriodManager.shared.selectedPeriod)
+        let interval = TimePeriodManager.shared.currentDateRange
+            ?? AnalyticsDateRangeFactory().interval(for: TimePeriodManager.shared.selectedPeriod)
         guard let dataset = try? await AnalyticsRepositoryContainer.shared.load(
             AnalyticsRequest(interval: interval, includeRawEvents: false),
             granularity: AnalyticsChartPipeline().granularity(for: interval)
@@ -121,20 +122,19 @@ class MetricRegistry {
         }
 
         for metric in allMetrics {
-            let observations = observations(for: metric, in: dataset).compactMap { observation -> Double? in
-                guard case .observed(let value) = observation.state else { return nil }
-                return value.numericValue
-            }
-            let lastValue = observations.last.map(metric.formatValue)
+            let summaryValues = MetricSummaryObservationFormatter.summarize(
+                metric: metric,
+                observations: observations(for: metric, in: dataset)
+            )
             let summary = MetricSummary(
                 id: metric.id,
                 displayName: metric.displayName,
                 description: metric.description,
                 icon: metric.icon,
                 category: metric.category,
-                dataPointCount: observations.count,
-                lastValue: lastValue,
-                isAvailable: !observations.isEmpty,
+                dataPointCount: summaryValues.observedCount,
+                lastValue: summaryValues.lastValue,
+                isAvailable: summaryValues.observedCount > 0,
                 isActive: metric.category == .symptoms ? (metric as! SymptomMetricProvider).isActive : nil
             )
             
@@ -243,6 +243,45 @@ class MetricRegistry {
         
         return meals.map { meal in
             MealMetricProvider(mealName: meal)
+        }
+    }
+}
+
+struct MetricSummaryObservationValues: Equatable {
+    let observedCount: Int
+    let lastValue: String?
+}
+
+enum MetricSummaryObservationFormatter {
+    static func summarize(
+        metric: any MetricProvider,
+        observations: [MetricObservation]
+    ) -> MetricSummaryObservationValues {
+        let observed = observations.compactMap { observation -> (Date, MetricObservedValue)? in
+            guard case .observed(let value) = observation.state else { return nil }
+            return (observation.timestamp, value)
+        }
+        let latest = observed.max { $0.0 < $1.0 }?.1
+        return MetricSummaryObservationValues(
+            observedCount: observed.count,
+            lastValue: latest.flatMap { format($0, metric: metric) }
+        )
+    }
+
+    private static func format(_ value: MetricObservedValue, metric: any MetricProvider) -> String? {
+        if let number = value.numericValue { return metric.formatValue(number) }
+        switch value {
+        case .category(let category):
+            return category
+        case .distribution(let buckets):
+            let total = buckets.reduce(0) { $0 + $1.count }
+            if buckets.count == 1, let bucket = buckets.first,
+               let number = Double(bucket.value.replacingOccurrences(of: "number:", with: "")) {
+                return metric.formatValue(number)
+            }
+            return total > 0 ? "\(total) recorded" : nil
+        case .number, .boolean, .ratio:
+            return nil
         }
     }
 }

@@ -77,7 +77,7 @@ final class CrossReferenceViewModel {
                 title: title,
                 factorMetricID: analysis.factorDefinition.id.rawValue,
                 outcomeMetricID: analysis.outcomeDefinition.id.rawValue,
-                rangePolicy: timePeriodManager.selectedPeriod.rawValue,
+                rangePolicy: savedRangePolicy,
                 method: analysis.estimate?.method.rawValue,
                 lagDays: selectedLagDays,
                 displayOrder: savedAnalyses.count
@@ -101,13 +101,13 @@ final class CrossReferenceViewModel {
 
     func loadSavedAnalysis(_ saved: SavedAnalysis) {
         Task {
+            restoreRangePolicy(saved.rangePolicy)
             let factor = await resolveProvider(saved.factorMetricID)
             let outcome = await resolveProvider(saved.outcomeMetricID)
             guard let factor, let outcome else {
                 errorMessage = "One of these metrics is unavailable. You can keep, rename, or delete this saved analysis."
                 return
             }
-            if let period = TimePeriod(rawValue: saved.rangePolicy) { timePeriodManager.selectedPeriod = period }
             selectedLagDays = saved.lagDays
             calculateCorrelation(primary: factor, secondary: outcome)
         }
@@ -124,7 +124,8 @@ final class CrossReferenceViewModel {
     }
 
     private func performAnalysis(primary: any MetricProvider, secondary: any MetricProvider) async throws -> CorrelationAnalysis {
-        let interval = AnalyticsDateRangeFactory().interval(for: timePeriodManager.selectedPeriod)
+        let interval = timePeriodManager.currentDateRange
+            ?? AnalyticsDateRangeFactory().interval(for: timePeriodManager.selectedPeriod)
         let granularity = AnalyticsChartPipeline().granularity(for: interval)
         let dataset = try await AnalyticsRepositoryContainer.shared.load(
             AnalyticsRequest(interval: interval, includeRawEvents: true), granularity: granularity
@@ -191,12 +192,38 @@ final class CrossReferenceViewModel {
         return dataset.definitions.first { $0.displayName.caseInsensitiveCompare(providerID.replacingOccurrences(of: "_", with: " ")) == .orderedSame }
     }
 
+    private var savedRangePolicy: String {
+        guard timePeriodManager.isUsingCustomRange, let range = timePeriodManager.currentDateRange else {
+            return timePeriodManager.selectedPeriod.rawValue
+        }
+        return [
+            "custom",
+            String(range.start.timeIntervalSinceReferenceDate),
+            String(range.end.timeIntervalSinceReferenceDate)
+        ].joined(separator: "|")
+    }
+
+    private func restoreRangePolicy(_ policy: String) {
+        if let period = TimePeriod(rawValue: policy) {
+            timePeriodManager.selectedPeriod = period
+            return
+        }
+        let parts = policy.split(separator: "|")
+        guard parts.count == 3, parts[0] == "custom",
+              let start = Double(parts[1]), let end = Double(parts[2]), start < end else { return }
+        timePeriodManager.setCustomRange(DateInterval(
+            start: Date(timeIntervalSinceReferenceDate: start),
+            end: Date(timeIntervalSinceReferenceDate: end)
+        ))
+    }
+
     private func resolveProvider(_ persistedID: String) async -> (any MetricProvider)? {
         if let exact = await metricRegistry.getMetric(id: persistedID) { return exact }
         if let canonicalProvider = availableMetrics.first(where: { $0.catalogMetricDefinition?.id.rawValue == persistedID }) {
             return canonicalProvider
         }
-        let interval = AnalyticsDateRangeFactory().interval(for: timePeriodManager.selectedPeriod)
+        let interval = timePeriodManager.currentDateRange
+            ?? AnalyticsDateRangeFactory().interval(for: timePeriodManager.selectedPeriod)
         let granularity = AnalyticsChartPipeline().granularity(for: interval)
         guard let dataset = try? await AnalyticsRepositoryContainer.shared.load(
             AnalyticsRequest(interval: interval, includeRawEvents: false), granularity: granularity

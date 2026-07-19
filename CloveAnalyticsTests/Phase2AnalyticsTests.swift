@@ -88,6 +88,27 @@ final class MetricAnalysisSummaryTests: XCTestCase {
 }
 
 final class AnalyticsChartPipelineTests: XCTestCase {
+    func testMetricExplorerTreatsBristolDistributionsAsRecordedData() {
+        let date = AnalyticsTestDates.date(2026, 7, 1)
+        let observation = MetricObservation(
+            metricID: MetricCatalog.bristolStoolType.id,
+            timestamp: date,
+            day: date,
+            state: .observed(.distribution([
+                MetricDistributionBucket(value: "number:4.0", count: 1)
+            ])),
+            source: MetricSourceReference(kind: .dailyReduction, recordID: "bristol-fixture")
+        )
+
+        let values = MetricSummaryObservationFormatter.summarize(
+            metric: BowelMovementMetricProvider(),
+            observations: [observation]
+        )
+
+        XCTAssertEqual(values.observedCount, 1)
+        XCTAssertEqual(values.lastValue, "Type 4")
+    }
+
     func testMissingDailyObservationCreatesSeparateLineSegment() {
         let interval = DateInterval(start: AnalyticsTestDates.date(2026, 7, 1), end: AnalyticsTestDates.date(2026, 7, 6))
         let values: [(Date, MetricObservedValue)] = [
