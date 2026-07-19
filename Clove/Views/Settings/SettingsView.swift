@@ -114,7 +114,12 @@ private struct TrackingAndLoggingSettingsView: View {
                     showSymptomsSheet = true
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 } label: {
-                    SettingsButtonRow(icon: "bandage.fill", color: .orange, title: "Symptoms")
+                    SettingsRowLabel(
+                        icon: "bandage.fill",
+                        color: .orange,
+                        title: "Tracked Symptoms",
+                        detail: "Choose what appears in your daily tracker"
+                    )
                 }
                 .accessibilityHint("Add, edit, or remove tracked symptoms")
 

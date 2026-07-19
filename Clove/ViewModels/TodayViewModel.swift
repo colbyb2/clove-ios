@@ -141,10 +141,7 @@ class TodayViewModel {
    }
    
    func loadTrackedSymptoms() {
-      let trackedSymptoms = symptomsRepository.getTrackedSymptoms()
-      self.logData.symptomRatings = trackedSymptoms.map {
-         return SymptomRatingVM(symptomId: $0.id ?? 0, symptomName: $0.name, ratingDouble: 5, isBinary: $0.isBinary)
-      }
+      syncSymptomRatingsWithTrackedSymptoms()
    }
    
    private func syncSymptomRatingsWithTrackedSymptoms() {
@@ -240,7 +237,7 @@ class TodayViewModel {
          notes: settings.trackNotes ? logData.notes : nil,
          isFlareDay: logData.isFlareDay,
          weather: settings.trackWeather ? logData.weather : nil,
-         symptomRatings: logData.symptomRatings.map { $0.toModel() }
+         symptomRatings: settings.trackSymptoms ? logData.symptomRatings.map { $0.toModel() } : []
       )
 
       let result = logsRepository.saveLog(log)

@@ -71,7 +71,11 @@ class SymptomManager {
         
         if success {
             onSuccess()
-            ToastManager.shared.showToast(message: "Symptom added successfully", color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
+            ToastManager.shared.showToast(
+                message: "\(trimmedName) added to your daily tracker",
+                color: CloveColors.success,
+                icon: Image(systemName: "checkmark.circle")
+            )
         } else {
             ToastManager.shared.showToast(message: "Failed to add symptom", color: CloveColors.error)
         }

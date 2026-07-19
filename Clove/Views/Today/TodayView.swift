@@ -442,9 +442,14 @@ struct TodayView: View {
     @ViewBuilder
     private var symptomsSection: some View {
         HStack {
-            Text("Symptoms").font(.system(size: 22, weight: .semibold, design: .rounded))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Symptoms").font(.system(size: 22, weight: .semibold, design: .rounded))
+                Text("Tracked symptoms are available every day")
+                    .font(.caption)
+                    .foregroundStyle(CloveColors.secondaryText)
+            }
             Spacer()
-            Button("Edit") {
+            Button("Manage") {
                 showEditSymptoms = true
                 // Haptic feedback
                 let impactFeedback = UIImpactFeedbackGenerator(style: .light)
@@ -453,8 +458,8 @@ struct TodayView: View {
             .foregroundStyle(Theme.shared.accent)
             .fontWeight(.semibold)
             .frame(minWidth: 44, minHeight: 44)  // Minimum touch target
-            .accessibilityLabel("Edit symptoms")
-            .accessibilityHint("Opens symptoms management screen")
+            .accessibilityLabel("Manage tracked symptoms")
+            .accessibilityHint("Choose which symptoms appear in the daily tracker")
         }
         ForEach(viewModel.logData.symptomRatings, id: \.symptomId) { symptomRating in
             if let index = viewModel.logData.symptomRatings.firstIndex(where: {
@@ -462,6 +467,24 @@ struct TodayView: View {
             }) {
                 let isOneTimeSymptom = SymptomManager.shared.isOneTimeSymptom(
                     id: symptomRating.symptomId, name: symptomRating.symptomName)
+
+                if isOneTimeSymptom {
+                    HStack(spacing: 8) {
+                        Text("Today only")
+                            .font(.caption2.bold())
+                            .foregroundStyle(Theme.shared.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Theme.shared.accent.opacity(0.12), in: Capsule())
+                        Text(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted))
+                            .font(.caption)
+                            .foregroundStyle(CloveColors.secondaryText)
+                        Spacer()
+                        Button("Track every day") { promoteOneTimeSymptom(at: index) }
+                            .font(.caption.bold())
+                            .foregroundStyle(Theme.shared.accent)
+                    }
+                }
 
                 if symptomRating.isBinary {
                     BinarySymptomInput(
@@ -484,13 +507,22 @@ struct TodayView: View {
             }
         }
         if viewModel.logData.symptomRatings.isEmpty {
-            HStack {
-                Spacer()
-                Text("No Symptoms Being Tracked")
-                    .font(.system(size: 18, weight: .semibold))
+            VStack(spacing: 10) {
+                Image(systemName: "stethoscope")
+                    .font(.title2)
+                    .foregroundStyle(Theme.shared.accent)
+                Text("No symptoms tracked daily")
+                    .font(.headline)
+                Text("Choose symptoms you regularly monitor, or log something just for this day.")
+                    .font(.caption)
                     .foregroundStyle(CloveColors.secondaryText)
-                Spacer()
+                    .multilineTextAlignment(.center)
+                Button("Choose tracked symptoms") { showEditSymptoms = true }
+                    .buttonStyle(.bordered)
+                    .tint(Theme.shared.accent)
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
         }
 
         // Quick add button for occasional symptoms
@@ -501,16 +533,21 @@ struct TodayView: View {
             impactFeedback.impactOccurred()
         }) {
             HStack {
-                Text("Add Symptom")
-                    .foregroundStyle(CloveColors.secondaryText)
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Log another symptom today")
+                        .foregroundStyle(CloveColors.primaryText)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    Text("Only appears on \(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted))")
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .font(.caption2)
+                }
 
                 Image(systemName: "plus.circle.fill")
                     .foregroundStyle(Theme.shared.accent)
                     .font(.system(size: 14))
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.vertical, 9)
             .background(CloveColors.card)
             .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
             .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
@@ -519,6 +556,25 @@ struct TodayView: View {
         .sheet(isPresented: $showQuickAddSymptomSheet) {
             QuickAddSymptomSheet()
                 .environment(viewModel)
+        }
+    }
+
+    private func promoteOneTimeSymptom(at index: Int) {
+        guard viewModel.logData.symptomRatings.indices.contains(index) else { return }
+        let rating = viewModel.logData.symptomRatings[index]
+        if let existing = SymptomsRepo.shared.getTrackedSymptoms().first(where: {
+            $0.name.caseInsensitiveCompare(rating.symptomName) == .orderedSame
+        }), let id = existing.id {
+            viewModel.logData.symptomRatings[index].symptomId = id
+            return
+        }
+        let originalID = rating.symptomId
+        SymptomManager.shared.addSymptom(name: rating.symptomName, isBinary: rating.isBinary) {
+            guard let id = SymptomsRepo.shared.getTrackedSymptoms().first(where: {
+                $0.name.caseInsensitiveCompare(rating.symptomName) == .orderedSame
+            })?.id,
+            let currentIndex = viewModel.logData.symptomRatings.firstIndex(where: { $0.symptomId == originalID }) else { return }
+            viewModel.logData.symptomRatings[currentIndex].symptomId = id
         }
     }
 

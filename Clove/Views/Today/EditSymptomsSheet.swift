@@ -9,6 +9,7 @@ struct EditSymptomsSheet: View {
     @State private var editingIsBinary = false
     @FocusState private var isTextFieldFocused: Bool
     @State private var isLoading = false
+    @State private var isShowingAddForm = false
     
     // Animation states
     @State private var headerOpacity: Double = 0
@@ -45,18 +46,6 @@ struct EditSymptomsSheet: View {
                             .opacity(headerOpacity)
                             .offset(y: headerOffset)
                         
-                        // Add symptom form
-                        ModernAddSymptomFormView(
-                            newSymptomName: $newSymptomName,
-                            newSymptomIsBinary: $newSymptomIsBinary,
-                            isTextFieldFocused: $isTextFieldFocused,
-                            isLoading: $isLoading,
-                            isAddButtonEnabled: isAddButtonEnabled,
-                            onAddSymptom: addSymptom
-                        )
-                        .opacity(formOpacity)
-                        .offset(y: formOffset)
-                        
                         // Symptoms list
                         ModernSymptomListView(
                             trackedSymptoms: trackedSymptoms,
@@ -70,6 +59,35 @@ struct EditSymptomsSheet: View {
                         )
                         .opacity(listOpacity)
                         .offset(y: listOffset)
+
+                        Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                isShowingAddForm.toggle()
+                            }
+                            if isShowingAddForm { isTextFieldFocused = true }
+                        } label: {
+                            Label(
+                                isShowingAddForm ? "Hide New Symptom Form" : "Add Tracked Symptom",
+                                systemImage: isShowingAddForm ? "chevron.up" : "plus.circle.fill"
+                            )
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 13)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Theme.shared.accent)
+
+                        if isShowingAddForm {
+                            ModernAddSymptomFormView(
+                                newSymptomName: $newSymptomName,
+                                newSymptomIsBinary: $newSymptomIsBinary,
+                                isTextFieldFocused: $isTextFieldFocused,
+                                isLoading: $isLoading,
+                                isAddButtonEnabled: isAddButtonEnabled,
+                                onAddSymptom: addSymptom
+                            )
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
                         
                         Spacer(minLength: CloveSpacing.xlarge)
                     }
@@ -156,6 +174,7 @@ struct EditSymptomsSheet: View {
             newSymptomIsBinary = false
             isTextFieldFocused = false
             isLoading = false
+            isShowingAddForm = false
         }
     }
     
@@ -230,11 +249,11 @@ struct ModernSymptomHeaderView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Manage Symptoms")
+                    Text("Tracked Symptoms")
                         .font(.system(.title2, design: .rounded, weight: .bold))
                         .foregroundStyle(CloveColors.primaryText)
                     
-                    Text("Track patterns and triggers")
+                    Text("These appear in your daily tracker until you remove them")
                         .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(CloveColors.secondaryText)
                 }
@@ -266,7 +285,7 @@ struct ModernAddSymptomFormView: View {
         VStack(alignment: .leading, spacing: CloveSpacing.large) {
             // Section header
             HStack {
-                Text("Add Symptom")
+                Text("New Tracked Symptom")
                     .font(.system(.title3, design: .rounded, weight: .semibold))
                     .foregroundStyle(CloveColors.primaryText)
                 
@@ -406,7 +425,7 @@ struct ModernAddSymptomFormView: View {
                                 .font(.system(size: 16, weight: .semibold))
                         }
                         
-                        Text(isLoading ? "Adding..." : "Add Symptom")
+                        Text(isLoading ? "Adding..." : "Add to Daily Tracker")
                             .font(.system(.body, design: .rounded, weight: .semibold))
                     }
                     .foregroundStyle(.white)
@@ -623,7 +642,7 @@ struct ModernSymptomCard: View {
                             .font(.system(.body, design: .rounded, weight: .medium))
                             .foregroundStyle(CloveColors.primaryText)
                         
-                        Text("Tap to edit")
+                        Text(symptom.isBinary ? "Present / absent" : "Severity 0–10")
                             .font(.system(.caption, design: .rounded))
                             .foregroundStyle(CloveColors.secondaryText)
                     }
@@ -658,7 +677,7 @@ struct ModernSymptomCard: View {
                 }
             }
         }
-        .padding(CloveSpacing.large)
+        .padding(CloveSpacing.medium)
         .background(
             RoundedRectangle(cornerRadius: CloveCorners.large)
                 .fill(isEditing ? Theme.shared.accent.opacity(0.05) : CloveColors.card)
@@ -693,7 +712,7 @@ struct ModernSymptomEmptyStateView: View {
                     .font(.system(.title3, design: .rounded, weight: .semibold))
                     .foregroundStyle(CloveColors.primaryText)
                 
-                Text("Add your first symptom above to start tracking")
+                Text("Add symptoms you want available in your daily tracker.")
                     .font(.system(.subheadline, design: .rounded))
                     .foregroundStyle(CloveColors.secondaryText)
                     .multilineTextAlignment(.center)

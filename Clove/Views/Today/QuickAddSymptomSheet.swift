@@ -9,11 +9,19 @@ import SwiftUI
 import CryptoKit
 
 struct QuickAddSymptomSheet: View {
+    private enum TrackingScope: String, CaseIterable, Identifiable {
+        case todayOnly = "Just this day"
+        case everyDay = "Every day"
+        var id: String { rawValue }
+    }
+
     @Environment(TodayViewModel.self) var viewModel
     
     @Environment(\.dismiss) private var dismiss
     @State private var symptomName: String = ""
     @State private var isBinary: Bool = false
+    @State private var trackingScope: TrackingScope = .todayOnly
+    @State private var rating: Double = 5
     @FocusState private var isTextFieldFocused: Bool
 
     var body: some View {
@@ -32,12 +40,27 @@ struct QuickAddSymptomSheet: View {
                     }
 
                     VStack(spacing: CloveSpacing.small) {
-                        Text("Add One-Time Symptom")
+                        Text("Log a Symptom")
                             .font(.system(.title2, design: .rounded, weight: .bold))
                             .foregroundStyle(CloveColors.primaryText)
 
-                        Text("Log a symptom for today only")
+                        Text("Choose whether this is occasional or something you want to track regularly")
                             .font(.system(.subheadline, design: .rounded))
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
+
+                    VStack(alignment: .leading, spacing: CloveSpacing.small) {
+                        Text("How would you like to track this?")
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            .foregroundStyle(CloveColors.secondaryText)
+                        Picker("Tracking frequency", selection: $trackingScope) {
+                            ForEach(TrackingScope.allCases) { scope in Text(scope.rawValue).tag(scope) }
+                        }
+                        .pickerStyle(.segmented)
+                        Text(trackingScope == .todayOnly
+                             ? "Saved only to \(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted))."
+                             : "Added to your daily tracker and logged for this date.")
+                            .font(.caption)
                             .foregroundStyle(CloveColors.secondaryText)
                     }
                 }
@@ -120,9 +143,34 @@ struct QuickAddSymptomSheet: View {
                             }
                         }
 
-                        Text(isBinary ? "Log a 'Yes' or 'No' response for today" : "Rate the symptom on a 0-10 scale for today")
+                        Text(isBinary ? "Log a 'Yes' or 'No' response for this date" : "Rate the symptom on a 0-10 scale for this date")
                             .font(.caption)
                             .foregroundStyle(CloveColors.secondaryText)
+                    }
+                    .onChange(of: isBinary) { _, binary in
+                        rating = binary ? 10 : 5
+                    }
+
+                    VStack(alignment: .leading, spacing: CloveSpacing.small) {
+                        Text("Value for this date")
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            .foregroundStyle(CloveColors.secondaryText)
+                        if isBinary {
+                            Picker("Symptom status", selection: $rating) {
+                                Text("No").tag(0.0)
+                                Text("Yes").tag(10.0)
+                            }
+                            .pickerStyle(.segmented)
+                        } else {
+                            HStack {
+                                Slider(value: $rating, in: 0...10, step: 1)
+                                    .tint(Theme.shared.accent)
+                                Text("\(Int(rating))")
+                                    .font(.title3.bold())
+                                    .foregroundStyle(Theme.shared.accent)
+                                    .frame(width: 28)
+                            }
+                        }
                     }
 
                     // Save button
@@ -133,7 +181,7 @@ struct QuickAddSymptomSheet: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 16, weight: .semibold))
 
-                            Text("Save Symptom")
+                            Text(trackingScope == .todayOnly ? "Log for This Day" : "Track Daily & Log")
                                 .font(.system(.body, design: .rounded, weight: .semibold))
                         }
                         .foregroundStyle(.white)
@@ -175,7 +223,7 @@ struct QuickAddSymptomSheet: View {
                 isTextFieldFocused = true
             }
         }
-        .presentationDetents([.height(520)])
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }
 
@@ -187,20 +235,45 @@ struct QuickAddSymptomSheet: View {
         let trimmedName = symptomName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
 
-        // Generate consistent hash-based ID from symptom name
-        let symptomId = hashSymptomName(trimmedName)
-        viewModel.logData.symptomRatings.append(SymptomRatingVM(
-            symptomId: symptomId,
-            symptomName: trimmedName,
-            ratingDouble: isBinary ? 0 : 5,
-            isBinary: isBinary
-        ))
+        if trackingScope == .todayOnly {
+            appendRating(id: hashSymptomName(trimmedName), name: trimmedName)
+            ToastManager.shared.showToast(
+                message: "\(trimmedName) logged for \(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted)) only",
+                color: CloveColors.success,
+                icon: Image(systemName: "calendar.badge.checkmark")
+            )
+        } else if let existing = SymptomsRepo.shared.getTrackedSymptoms().first(where: {
+            $0.name.caseInsensitiveCompare(trimmedName) == .orderedSame
+        }), let id = existing.id {
+            appendRating(id: id, name: existing.name)
+            ToastManager.shared.showToast(message: "\(existing.name) is now logged and remains in your daily tracker", color: CloveColors.success)
+        } else {
+            SymptomManager.shared.addSymptom(name: trimmedName, isBinary: isBinary) {
+                guard let symptom = SymptomsRepo.shared.getTrackedSymptoms().first(where: {
+                    $0.name.caseInsensitiveCompare(trimmedName) == .orderedSame
+                }), let id = symptom.id else { return }
+                appendRating(id: id, name: symptom.name)
+            }
+        }
 
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
 
         dismiss()
+    }
+
+    private func appendRating(id: Int64, name: String) {
+        if let index = viewModel.logData.symptomRatings.firstIndex(where: { $0.symptomId == id }) {
+            viewModel.logData.symptomRatings[index].ratingDouble = rating
+            return
+        }
+        viewModel.logData.symptomRatings.append(SymptomRatingVM(
+            symptomId: id,
+            symptomName: name,
+            ratingDouble: rating,
+            isBinary: isBinary
+        ))
     }
 
     /// Generates a consistent Int64 hash from a symptom name
