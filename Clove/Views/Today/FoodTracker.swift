@@ -23,8 +23,9 @@ struct FoodTracker: View {
                     impactFeedback.impactOccurred()
                 }) {
                     HStack(spacing: CloveSpacing.small) {
-                        Text("🍽️")
-                            .font(.system(size: 20))
+                        Image(systemName: CloveSymbols.meals)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(Theme.shared.accent)
                         Text("Meals")
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
                             .foregroundStyle(CloveColors.primaryText)

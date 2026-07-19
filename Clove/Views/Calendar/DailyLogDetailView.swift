@@ -124,7 +124,7 @@ struct DailyLogDetailView: View {
     // MARK: - Physical & Mental Health Section
     private var physicalMentalSection: some View {
         VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Physical & Mental Health", emoji: "🩺")
+            SectionHeaderView(title: "Physical & Mental Health", icon: "heart.text.square.fill")
             
             VStack(spacing: CloveSpacing.medium) {
                 if let mood = log.mood {
@@ -132,7 +132,7 @@ struct DailyLogDetailView: View {
                         value: mood,
                         maxValue: 10,
                         label: "Mood",
-                        emoji: "😊",
+                        icon: CloveSymbols.mood(for: Double(mood)),
                         color: moodColor(for: mood)
                     )
                 }
@@ -161,7 +161,7 @@ struct DailyLogDetailView: View {
     // MARK: - Symptoms Section
     private var symptomsSection: some View {
         VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Symptoms", emoji: "🩹")
+            SectionHeaderView(title: "Symptoms", icon: CloveSymbols.symptom)
 
             VStack(spacing: CloveSpacing.small) {
                 ForEach(log.symptomRatings, id: \.symptomId) { symptom in
@@ -185,7 +185,7 @@ struct DailyLogDetailView: View {
 
     private func hydrationSection(ounces: Int) -> some View {
         VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Hydration", emoji: "💧")
+            SectionHeaderView(title: "Hydration", icon: CloveSymbols.hydration)
 
             HStack {
                 Image(systemName: "drop.fill")
@@ -210,7 +210,7 @@ struct DailyLogDetailView: View {
     // MARK: - Lifestyle Section
     private var lifestyleSection: some View {
         VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Activities & Lifestyle", emoji: "🌟")
+            SectionHeaderView(title: "Activities & Lifestyle", icon: "figure.mind.and.body")
 
             VStack(spacing: CloveSpacing.medium) {
                 // Food Entries Section
@@ -227,8 +227,9 @@ struct DailyLogDetailView: View {
                 if !log.medicationAdherence.isEmpty {
                     VStack(alignment: .leading, spacing: CloveSpacing.small) {
                         HStack {
-                            Text("💊")
-                                .font(.system(size: 16))
+                            Image(systemName: CloveSymbols.medication)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(Theme.shared.accent)
                             Text("Medications")
                                 .font(CloveFonts.body())
                                 .foregroundStyle(CloveColors.primaryText)
@@ -246,7 +247,7 @@ struct DailyLogDetailView: View {
     // MARK: - Notes Section
     private func notesSection(notes: String) -> some View {
         VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Notes", emoji: "📝")
+            SectionHeaderView(title: "Notes", icon: CloveSymbols.notes)
             NotesDisplayView(notes: notes)
         }
     }
@@ -284,12 +285,12 @@ struct DailyLogDetailView: View {
     // MARK: - Weather Section
     private func weatherSection(weather: String) -> some View {
         VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Weather", emoji: "🌤️")
+            SectionHeaderView(title: "Weather", icon: CloveSymbols.weather)
 
             HStack(spacing: CloveSpacing.medium) {
-                // Weather emoji display
-                Text(weatherEmoji(for: weather))
-                    .font(.system(size: 48))
+                Image(systemName: CloveSymbols.weather(for: weather))
+                    .font(.system(size: 42, weight: .semibold))
+                    .foregroundStyle(weatherBorderColor(for: weather))
                     .scaleEffect(1.0)
                     .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
 
@@ -320,7 +321,7 @@ struct DailyLogDetailView: View {
     // MARK: - Cycle Section
     private func cycleSection(cycle: Cycle) -> some View {
         VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Cycle", emoji: "🩸")
+            SectionHeaderView(title: "Cycle", icon: CloveSymbols.cycle)
 
             HStack(spacing: CloveSpacing.small) {
                 // Flow icon
@@ -388,7 +389,7 @@ struct DailyLogDetailView: View {
     // MARK: - Bowel Movements Section
     private var bowelMovementsSection: some View {
         VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Bowel Movements", emoji: "🚽")
+            SectionHeaderView(title: "Bowel Movements", icon: CloveSymbols.bowelMovement)
             
             if bowelMovements.isEmpty {
                 HStack(spacing: CloveSpacing.medium) {
@@ -566,18 +567,6 @@ struct DailyLogDetailView: View {
         }
     }
     
-    private func weatherEmoji(for weather: String) -> String {
-        switch weather {
-        case "Sunny": return "☀️"
-        case "Cloudy": return "☁️"
-        case "Rainy": return "🌧️"
-        case "Stormy": return "⛈️"
-        case "Snow": return "❄️"
-        case "Gloomy": return "🌫️"
-        default: return "🌤️"
-        }
-    }
-    
     private func weatherBackgroundColor(for weather: String) -> Color {
         switch weather {
         case "Sunny": return Color.yellow.opacity(0.1)
@@ -741,8 +730,9 @@ struct FoodEntriesDetailSection: View {
                 }
             }) {
                 HStack {
-                    Text("🍽️")
-                        .font(.system(size: 16))
+                    Image(systemName: CloveSymbols.meals)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Theme.shared.accent)
                     Text("Meals")
                         .font(CloveFonts.body())
                         .foregroundStyle(CloveColors.primaryText)
@@ -845,8 +835,9 @@ struct ActivityEntriesDetailSection: View {
                 }
             }) {
                 HStack {
-                    Text("🏃")
-                        .font(.system(size: 16))
+                    Image(systemName: CloveSymbols.activities)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Theme.shared.accent)
                     Text("Activities")
                         .font(CloveFonts.body())
                         .foregroundStyle(CloveColors.primaryText)

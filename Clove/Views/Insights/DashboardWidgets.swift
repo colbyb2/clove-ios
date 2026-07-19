@@ -43,8 +43,9 @@ struct TrendOverviewWidget: View {
         HStack(spacing: CloveSpacing.large) {
             ForEach(Array(dashboardManager.metricSummaries.prefix(4).enumerated()), id: \.offset) { index, summary in
                 VStack(spacing: CloveSpacing.small) {
-                    Text(summary.icon)
-                        .font(.system(size: 20))
+                    Image(systemName: summary.icon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Theme.shared.accent)
                     
                     if let current = summary.currentValue {
                         Text(summary.formattedValue(current))

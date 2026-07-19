@@ -62,8 +62,9 @@ struct SummaryHeader: View {
 struct FlareDayBadge: View {
     var body: some View {
         HStack(spacing: 4) {
-            Text("🔥")
-                .font(.system(size: 14))
+            Image(systemName: CloveSymbols.flare)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.orange)
             Text("Flare Day")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(CloveColors.error)
@@ -87,7 +88,7 @@ struct MetricsGrid: View {
                 MetricCard(
                     title: "Mood",
                     value: mood,
-                    emoji: YesterdayHelpers.moodEmoji(for: mood),
+                    icon: CloveSymbols.mood(for: Double(mood)),
                     color: YesterdayHelpers.moodColor(for: mood)
                 )
             }
@@ -96,7 +97,7 @@ struct MetricsGrid: View {
                 MetricCard(
                     title: "Pain",
                     value: pain,
-                    emoji: "🩹",
+                    icon: CloveSymbols.pain,
                     color: YesterdayHelpers.painColor(for: pain)
                 )
             }
@@ -105,7 +106,7 @@ struct MetricsGrid: View {
                 MetricCard(
                     title: "Energy",
                     value: energy,
-                    emoji: "⚡",
+                    icon: CloveSymbols.energy,
                     color: YesterdayHelpers.energyColor(for: energy)
                 )
             }
@@ -200,16 +201,6 @@ struct NoDataView: View {
 
 // MARK: - Helper Functions
 struct YesterdayHelpers {
-    static func moodEmoji(for mood: Int) -> String {
-        switch mood {
-        case 0...2: return "😢"
-        case 3...4: return "😕"
-        case 5...6: return "😐"
-        case 7...8: return "🙂"
-        default: return "😁"
-        }
-    }
-    
     static func moodColor(for mood: Int) -> Color {
         switch mood {
         case 0...3: return CloveColors.error
@@ -247,13 +238,14 @@ struct YesterdayHelpers {
 struct MetricCard: View {
     let title: String
     let value: Int
-    let emoji: String
+    let icon: String
     let color: Color
     
     var body: some View {
         VStack(spacing: 4) {
-            Text(emoji)
-                .font(.system(size: 20))
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(color)
             
             Text("\(value)")
                 .font(.system(size: 18, weight: .bold))

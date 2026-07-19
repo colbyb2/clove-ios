@@ -44,7 +44,7 @@ struct TodayView: View {
                         AccessibleRatingInput(
                             value: $viewModel.logData.mood,
                             label: "Mood",
-                            emoji: String(viewModel.currentMoodEmoji),
+                            icon: viewModel.currentMoodSymbol,
                             maxValue: 10
                         )
                     }
@@ -53,7 +53,7 @@ struct TodayView: View {
                         AccessibleRatingInput(
                             value: $viewModel.logData.painLevel,
                             label: "Pain Level",
-                            emoji: "🩹",
+                            icon: CloveSymbols.pain,
                             maxValue: 10
                         )
                     }
@@ -62,7 +62,7 @@ struct TodayView: View {
                         AccessibleRatingInput(
                             value: $viewModel.logData.energyLevel,
                             label: "Energy Level",
-                            emoji: "⚡",
+                            icon: CloveSymbols.energy,
                             maxValue: 10
                         )
                     }
@@ -89,8 +89,9 @@ struct TodayView: View {
                         VStack(spacing: CloveSpacing.small) {
                             HStack {
                                 HStack(spacing: CloveSpacing.small) {
-                                    Text("💊")
-                                        .font(.system(size: 20))
+                                    Image(systemName: CloveSymbols.medication)
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundStyle(Theme.shared.accent)
                                     Text("Medications")
                                         .font(
                                             .system(size: 18, weight: .semibold, design: .rounded))
@@ -136,8 +137,9 @@ struct TodayView: View {
                         VStack(spacing: CloveSpacing.small) {
                             HStack {
                                 HStack(spacing: CloveSpacing.small) {
-                                    Text(weatherEmoji(for: viewModel.logData.weather))
-                                        .font(.system(size: 20))
+                                    Image(systemName: CloveSymbols.weather(for: viewModel.logData.weather))
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundStyle(Theme.shared.accent)
                                     Text("Weather")
                                         .font(
                                             .system(size: 18, weight: .semibold, design: .rounded))
@@ -187,8 +189,9 @@ struct TodayView: View {
                     if let cycle = viewModel.cycleEntry {
                         VStack(spacing: CloveSpacing.small) {
                             HStack(spacing: CloveSpacing.small) {
-                                Text("🩸")
-                                    .font(.system(size: 20))
+                                Image(systemName: CloveSymbols.cycle)
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(Theme.shared.accent)
                                 Text("Cycle")
                                     .font(.system(size: 18, weight: .semibold, design: .rounded))
 
@@ -216,8 +219,9 @@ struct TodayView: View {
                         VStack(spacing: CloveSpacing.small) {
                             HStack {
                                 HStack(spacing: CloveSpacing.small) {
-                                    Text("📝")
-                                        .font(.system(size: 20))
+                                    Image(systemName: CloveSymbols.notes)
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundStyle(Theme.shared.accent)
                                     Text("Notes")
                                         .font(
                                             .system(size: 18, weight: .semibold, design: .rounded))
@@ -265,8 +269,9 @@ struct TodayView: View {
                         VStack(spacing: CloveSpacing.small) {
                             HStack {
                                 HStack(spacing: CloveSpacing.small) {
-                                    Text("🔥")
-                                        .font(.system(size: 20))
+                                    Image(systemName: CloveSymbols.flare)
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundStyle(.orange)
                                     Text("Flare Day")
                                         .font(
                                             .system(size: 18, weight: .semibold, design: .rounded))
@@ -490,7 +495,7 @@ struct TodayView: View {
                     BinarySymptomInput(
                         value: $viewModel.logData.symptomRatings[index].ratingDouble,
                         label: symptomRating.symptomName,
-                        emoji: "🩺",
+                        icon: CloveSymbols.symptom,
                         onDelete: isOneTimeSymptom
                             ? { viewModel.logData.symptomRatings.remove(at: index) } : nil
                     )
@@ -498,7 +503,7 @@ struct TodayView: View {
                     AccessibleRatingInput(
                         value: $viewModel.logData.symptomRatings[index].ratingDouble,
                         label: symptomRating.symptomName,
-                        emoji: "🩺",
+                        icon: CloveSymbols.symptom,
                         maxValue: 10,
                         onDelete: isOneTimeSymptom
                             ? { viewModel.logData.symptomRatings.remove(at: index) } : nil
@@ -575,18 +580,6 @@ struct TodayView: View {
             })?.id,
             let currentIndex = viewModel.logData.symptomRatings.firstIndex(where: { $0.symptomId == originalID }) else { return }
             viewModel.logData.symptomRatings[currentIndex].symptomId = id
-        }
-    }
-
-    private func weatherEmoji(for weather: String?) -> String {
-        switch weather {
-        case "Sunny": return "☀️"
-        case "Cloudy": return "☁️"
-        case "Rainy": return "🌧️"
-        case "Stormy": return "⛈️"
-        case "Snow": return "❄️"
-        case "Gloomy": return "🌫️"
-        default: return "🌤️"
         }
     }
 

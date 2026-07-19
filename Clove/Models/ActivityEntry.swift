@@ -34,16 +34,6 @@ enum ActivityCategory: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    var emoji: String {
-        switch self {
-        case .exercise: return "🏃"
-        case .wellness: return "🧘"
-        case .social: return "👥"
-        case .chores: return "🏠"
-        case .rest: return "😴"
-        case .other: return "✨"
-        }
-    }
 }
 
 /// Intensity levels for activities
@@ -138,11 +128,8 @@ struct ActivityEntry: Codable, FetchableRecord, PersistableRecord, Identifiable 
 // MARK: - Helper Extensions
 
 extension ActivityEntry {
-    /// Returns the display text for the entry
+    /// Returns plain display text. Icons are rendered separately with SF Symbols.
     var displayText: String {
-        if let icon = icon, !icon.isEmpty {
-            return "\(icon) \(name)"
-        }
         return name
     }
 

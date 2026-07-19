@@ -44,7 +44,7 @@ struct ManageActivitiesView: View {
                     ForEach(ActivityCategory.allCases) { category in
                         ActivityCategoryFilterChip(
                             title: category.displayName,
-                            emoji: category.emoji,
+                            icon: category.icon,
                             isSelected: selectedCategory == category
                         ) {
                             selectedCategory = category
@@ -195,16 +195,16 @@ struct ManageActivitiesView: View {
 
 private struct ActivityCategoryFilterChip: View {
     let title: String
-    var emoji: String? = nil
+    var icon: String? = nil
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
-                if let emoji = emoji {
-                    Text(emoji)
-                        .font(.system(size: 12))
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .semibold))
                 }
                 Text(title)
                     .font(.system(.subheadline, design: .rounded).weight(.medium))

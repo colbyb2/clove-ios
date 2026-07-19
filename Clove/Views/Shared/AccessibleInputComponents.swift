@@ -4,7 +4,7 @@ import SwiftUI
 struct AccessibleRatingInput: View {
     @Binding var value: Double
     var label: String
-    var emoji: String? = nil
+    var icon: String? = nil
     var minValue: Int = 0
     var maxValue: Int = 10
     var step: Int = 1
@@ -17,11 +17,11 @@ struct AccessibleRatingInput: View {
         VStack(spacing: CloveSpacing.medium) {
             // Header with toggle for input method
             HStack {
-                // Label with emoji
                 HStack(spacing: CloveSpacing.small) {
-                    if let emoji = emoji {
-                        Text(emoji)
-                            .font(.system(size: 20))
+                    if let icon {
+                        Image(systemName: icon)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(Theme.shared.accent)
                     }
                     Text(label)
                         .font(.system(size: 22, weight: .semibold, design: .rounded))
@@ -332,7 +332,7 @@ struct AccessibleStepperButton: View {
 struct BinarySymptomInput: View {
     @Binding var value: Double
     let label: String
-    let emoji: String?
+    let icon: String?
     var onDelete: (() -> Void)? = nil
 
     private var isPresent: Bool { value > 0 }
@@ -341,9 +341,10 @@ struct BinarySymptomInput: View {
         VStack(spacing: CloveSpacing.medium) {
             // Header
             HStack(spacing: CloveSpacing.small) {
-                if let emoji = emoji {
-                    Text(emoji)
-                        .font(.system(size: 20))
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Theme.shared.accent)
                 }
                 Text(label)
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
@@ -432,7 +433,7 @@ fileprivate struct ContentPreview: View {
             AccessibleRatingInput(
                 value: $rating,
                 label: "Pain Level",
-                emoji: "🩹",
+                icon: CloveSymbols.symptom,
                 maxValue: 10,
                 onDelete: {}
             )
@@ -440,7 +441,7 @@ fileprivate struct ContentPreview: View {
             BinarySymptomInput(
                 value: $binaryValue,
                 label: "Headache",
-                emoji: "🩹",
+                icon: CloveSymbols.symptom,
                 onDelete: {}
             )
 

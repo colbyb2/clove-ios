@@ -306,8 +306,8 @@ private struct ActivityCategoryTab: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
-                Text(category.emoji)
-                    .font(.system(size: 14))
+                Image(systemName: category.icon)
+                    .font(.system(size: 14, weight: .semibold))
                 Text(category.displayName)
                     .font(.system(.subheadline, design: .rounded).weight(.medium))
             }
@@ -442,10 +442,7 @@ struct AddCustomActivitySheet: View {
 
                     Picker("Category", selection: $category) {
                         ForEach(ActivityCategory.allCases) { cat in
-                            HStack {
-                                Text(cat.emoji)
-                                Text(cat.displayName)
-                            }
+                            Label(cat.displayName, systemImage: cat.icon)
                             .tag(cat)
                         }
                     }

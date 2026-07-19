@@ -115,10 +115,10 @@ struct CloveSlider: View {
    }
 }
 
-struct EmojiSlider: View {
+struct SymbolSlider: View {
    @Binding var value: Double
-   var icon: Character = "😁"
-   var emojiMap: [ClosedRange<Double>: Character]? = nil
+   var icon: String = CloveSymbols.mood
+   var symbolMap: [ClosedRange<Double>: String]? = nil
    
    var options: SliderOptions = SliderOptions(start: 0, end: 10, interval: 1)
    
@@ -127,11 +127,11 @@ struct EmojiSlider: View {
    @State private var sliderWidth: CGFloat = 0.0
    @State private var visualOffset: CGFloat = 0.0 // For smooth visual movement
    
-   private var currentEmoji: Character {
-      if let emojiMap = emojiMap {
-         for (range, emoji) in emojiMap {
+   private var currentSymbol: String {
+      if let symbolMap {
+         for (range, symbol) in symbolMap {
             if range.contains(value) {
-               return emoji
+               return symbol
             }
          }
       }
@@ -141,7 +141,7 @@ struct EmojiSlider: View {
    var body: some View {
       ZStack {
          GeometryReader { proxy in
-            let availableWidth = proxy.size.width - 30 // Account for emoji width
+            let availableWidth = proxy.size.width - 30
             let currentOffset = isDragging ? visualOffset : CGFloat(value / Double(options.end)) * availableWidth
             
             ZStack {
@@ -150,10 +150,10 @@ struct EmojiSlider: View {
                   .frame(height: 8)
                   .foregroundStyle(.gray)
                
-               // Emoji thumb
                HStack {
-                  Text(verbatim: String(currentEmoji))
-                     .font(.system(size: 45))
+                  Image(systemName: currentSymbol)
+                     .font(.system(size: 28, weight: .semibold))
+                     .foregroundStyle(Theme.shared.accent)
                      .offset(x: currentOffset)
                      .animation(.interactiveSpring(), value: currentOffset)
                   Spacer()
@@ -219,15 +219,14 @@ fileprivate struct SliderPreview: View {
    
    @State var value: Int = 5
    
-   @State var emojiValue: Double = 0.0
+   @State var symbolValue: Double = 0.0
    
-   // Emoji map for different value ranges
-   let moodEmojiMap: [ClosedRange<Double>: Character] = [
-      0.0...2.0: "😢",
-      2.1...4.0: "😕",
-      4.1...6.0: "😐",
-      6.1...8.0: "🙂",
-      8.1...10.0: "😁"
+   let moodSymbolMap: [ClosedRange<Double>: String] = [
+      0.0...2.0: "cloud.rain.fill",
+      2.1...4.0: "cloud.fill",
+      4.1...6.0: "minus.circle.fill",
+      6.1...8.0: "sun.min.fill",
+      8.1...10.0: "sun.max.fill"
    ]
    
    var body: some View {
@@ -237,9 +236,9 @@ fileprivate struct SliderPreview: View {
          CloveSlider(value: 0.3, barColor: .blue, options: snapOptions) { changedValue in
             self.value = Int(changedValue)
          }
-         Text("\(Int(emojiValue))")
+         Text("\(Int(symbolValue))")
             .font(.largeTitle)
-         EmojiSlider(value: $emojiValue, emojiMap: moodEmojiMap, options: snapOptions)
+         SymbolSlider(value: $symbolValue, symbolMap: moodSymbolMap, options: snapOptions)
       }
    }
 }

@@ -4,13 +4,13 @@ struct WeatherSelectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedWeather: String?
     
-    private let weatherOptions: [(name: String, emoji: String)] = [
-        ("Sunny", "☀️"),
-        ("Cloudy", "☁️"),
-        ("Rainy", "🌧️"),
-        ("Stormy", "⛈️"),
-        ("Snow", "❄️"),
-        ("Gloomy", "🌫️")
+    private let weatherOptions: [(name: String, symbol: String)] = [
+        ("Sunny", "sun.max.fill"),
+        ("Cloudy", "cloud.fill"),
+        ("Rainy", "cloud.rain.fill"),
+        ("Stormy", "cloud.bolt.rain.fill"),
+        ("Snow", "cloud.snow.fill"),
+        ("Gloomy", "cloud.fog.fill")
     ]
     
     @State private var animateIn = false
@@ -36,7 +36,7 @@ struct WeatherSelectionSheet: View {
                 ForEach(weatherOptions, id: \.name) { weather in
                     WeatherOptionCard(
                         name: weather.name,
-                        emoji: weather.emoji,
+                        symbol: weather.symbol,
                         isSelected: selectedWeather == weather.name
                     ) {
                         // Haptic feedback
@@ -69,7 +69,7 @@ struct WeatherSelectionSheet: View {
 
 struct WeatherOptionCard: View {
     let name: String
-    let emoji: String
+    let symbol: String
     let isSelected: Bool
     let onTap: () -> Void
     
@@ -78,8 +78,9 @@ struct WeatherOptionCard: View {
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 12) {
-                Text(emoji)
-                    .font(.system(size: 40))
+                Image(systemName: symbol)
+                    .font(.system(size: 36, weight: .semibold))
+                    .foregroundStyle(isSelected ? .white : Theme.shared.accent)
                     .scaleEffect(isSelected ? 1.2 : 1.0)
                 
                 Text(name)

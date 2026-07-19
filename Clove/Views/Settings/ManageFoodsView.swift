@@ -44,7 +44,7 @@ struct ManageFoodsView: View {
                     ForEach(MealCategory.allCases) { category in
                         MealCategoryChip(
                             title: category.displayName,
-                            emoji: category.emoji,
+                            icon: category.icon,
                             isSelected: selectedCategory == category
                         ) {
                             selectedCategory = category
@@ -195,16 +195,16 @@ struct ManageFoodsView: View {
 
 private struct MealCategoryChip: View {
     let title: String
-    var emoji: String? = nil
+    var icon: String? = nil
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
-                if let emoji = emoji {
-                    Text(emoji)
-                        .font(.system(size: 12))
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .semibold))
                 }
                 Text(title)
                     .font(.system(.subheadline, design: .rounded).weight(.medium))
@@ -227,8 +227,11 @@ private struct FoodManageRow: View {
     var body: some View {
         HStack(spacing: CloveSpacing.medium) {
             // Category indicator
-            Text(entry.category.emoji)
-                .font(.system(size: 20))
+            Image(systemName: entry.category.icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Theme.shared.accent)
+                .frame(width: 28, height: 28)
+                .background(Theme.shared.accent.opacity(0.12), in: Circle())
 
             // Name and category
             VStack(alignment: .leading, spacing: 2) {

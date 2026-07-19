@@ -31,15 +31,6 @@ enum MealCategory: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    var emoji: String {
-        switch self {
-        case .breakfast: return "🌅"
-        case .lunch: return "☀️"
-        case .dinner: return "🌙"
-        case .snack: return "🍪"
-        case .beverage: return "☕"
-        }
-    }
 }
 
 /// A food entry representing a single food/meal logged at a specific time
@@ -92,11 +83,8 @@ struct FoodEntry: Codable, FetchableRecord, PersistableRecord, Identifiable {
 // MARK: - Helper Extensions
 
 extension FoodEntry {
-    /// Returns the display text for the entry
+    /// Returns plain display text. Icons are rendered separately with SF Symbols.
     var displayText: String {
-        if let icon = icon, !icon.isEmpty {
-            return "\(icon) \(name)"
-        }
         return name
     }
 

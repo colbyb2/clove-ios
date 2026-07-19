@@ -187,7 +187,9 @@ struct AnalyticsMetricDetailView: View {
 
     private func detailHeader(_ result: AnalyticsChartResult) -> some View {
         HStack(alignment: .top, spacing: CloveSpacing.medium) {
-            Text(metricIcon).font(.system(size: 30))
+            Image(systemName: metricIcon)
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(Theme.shared.accent)
             VStack(alignment: .leading, spacing: 4) {
                 Text(result.definition.displayName)
                     .font(.system(.title2, design: .rounded).weight(.bold))
@@ -500,22 +502,22 @@ struct AnalyticsMetricDetailView: View {
 
     private static func icon(for definition: MetricDefinition) -> String {
         switch definition.id {
-        case MetricCatalog.mood.id: return "😊"
-        case MetricCatalog.painLevel.id: return "⚡️"
-        case MetricCatalog.energyLevel.id: return "🔋"
-        case MetricCatalog.hydration.id: return "💧"
-        case MetricCatalog.bristolStoolType.id, MetricCatalog.bowelMovementFrequency.id: return "🚽"
-        case MetricCatalog.medicationAdherence.id: return "💊"
-        case MetricCatalog.flowLevel.id: return "🩸"
+        case MetricCatalog.mood.id: return CloveSymbols.mood
+        case MetricCatalog.painLevel.id: return CloveSymbols.pain
+        case MetricCatalog.energyLevel.id: return CloveSymbols.energy
+        case MetricCatalog.hydration.id: return CloveSymbols.hydration
+        case MetricCatalog.bristolStoolType.id, MetricCatalog.bowelMovementFrequency.id: return CloveSymbols.bowelMovement
+        case MetricCatalog.medicationAdherence.id: return CloveSymbols.medication
+        case MetricCatalog.flowLevel.id: return CloveSymbols.cycle
         default:
             return switch definition.category {
-            case .symptoms: "🩹"
-            case .medications: "💊"
-            case .activities: "🏃"
-            case .meals: "🍎"
-            case .environmental: "🌤️"
-            case .lifestyle: "✨"
-            case .coreHealth: "📊"
+            case .symptoms: CloveSymbols.symptom
+            case .medications: CloveSymbols.medication
+            case .activities: CloveSymbols.activities
+            case .meals: CloveSymbols.meals
+            case .environmental: CloveSymbols.weather
+            case .lifestyle: "figure.mind.and.body"
+            case .coreHealth: CloveSymbols.overview
             }
         }
     }

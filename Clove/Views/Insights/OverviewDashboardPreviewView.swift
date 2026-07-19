@@ -208,8 +208,9 @@ struct PreviewWidgetCard: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
             } else {
-                Text("💡")
-                    .font(.system(size: 16))
+                Image(systemName: "lightbulb.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.shared.accent)
                 
                 Text("No insights yet")
                     .font(.system(.caption2))
@@ -223,8 +224,9 @@ struct PreviewWidgetCard: View {
             HStack(spacing: CloveSpacing.xsmall) {
                 ForEach(Array(dashboardManager.metricSummaries.prefix(3).enumerated()), id: \.offset) { _, summary in
                     VStack {
-                        Text(summary.icon)
-                            .font(.system(size: 8))
+                        Image(systemName: summary.icon)
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(Theme.shared.accent)
                         Image(systemName: summary.trend.icon)
                             .font(.system(size: 6))
                             .foregroundStyle(summary.trend.color)
@@ -253,8 +255,9 @@ struct PreviewWidgetCard: View {
                     .font(.system(.caption2))
                     .foregroundStyle(CloveColors.secondaryText)
             } else {
-                Text("📊")
-                    .font(.system(size: 16))
+                Image(systemName: CloveSymbols.overview)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.shared.accent)
                 
                 Text("No patterns")
                     .font(.system(.caption2))
@@ -274,8 +277,9 @@ struct PreviewWidgetCard: View {
                     .font(.system(.caption2))
                     .foregroundStyle(CloveColors.secondaryText)
             } else {
-                Text("🔗")
-                    .font(.system(size: 16))
+                Image(systemName: "link")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.shared.accent)
                 
                 Text("No correlations")
                     .font(.system(.caption2))

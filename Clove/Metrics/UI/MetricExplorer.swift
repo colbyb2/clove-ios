@@ -376,8 +376,9 @@ struct RecentMetricChip: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: CloveSpacing.small) {
-                Text(metric.icon)
-                    .font(.system(size: 16))
+                Image(systemName: metric.icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.shared.accent)
 
                 Text(metric.displayName)
                     .font(CloveFonts.small())
@@ -438,8 +439,9 @@ struct MetricCardV2: View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: CloveSpacing.medium) {
                 HStack {
-                    Text(metric.icon)
-                        .font(.system(size: 20))
+                    Image(systemName: metric.icon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Theme.shared.accent)
                     
                     Spacer()
                     
@@ -521,7 +523,7 @@ struct MetricCardV2: View {
 // MARK: - Preview
 
 #Preview {
-    MetricCardV2(metric: MetricSummary(id: "mockMetricId", displayName: "Mock Metric", description: "This is a fake metric.", icon: "🎄", category: .symptoms, dataPointCount: 70, lastValue: "5", isAvailable: true, isActive: false)) {}
+    MetricCardV2(metric: MetricSummary(id: "mockMetricId", displayName: "Mock Metric", description: "This is a fake metric.", icon: "stethoscope", category: .symptoms, dataPointCount: 70, lastValue: "5", isAvailable: true, isActive: false)) {}
         .frame(maxWidth: 200)
 }
 

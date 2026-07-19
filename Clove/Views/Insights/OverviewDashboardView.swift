@@ -218,8 +218,9 @@ struct QuickStatItem: View {
     var body: some View {
         VStack(spacing: CloveSpacing.xsmall) {
             HStack(spacing: CloveSpacing.small) {
-                Text(summary.icon)
-                    .font(.system(size: 16))
+                Image(systemName: summary.icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.shared.accent)
                 
                 Image(systemName: summary.trend.icon)
                     .font(.system(size: 12))

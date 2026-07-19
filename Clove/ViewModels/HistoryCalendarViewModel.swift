@@ -219,18 +219,4 @@ enum TrackingCategory: Hashable, Identifiable {
       }
    }
    
-   var emoji: String {
-      switch self {
-      case .allData: return "📊"
-      case .mood: return "😊"
-      case .pain: return "🩹"
-      case .energy: return "⚡"
-      case .hydration: return "💧"
-      case .meals: return "🍎"
-      case .activities: return "🏃"
-      case .medications: return "💊"
-      case .bowelMovements: return "🚽"
-      case .symptom: return "🩺"
-      }
-   }
 }

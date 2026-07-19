@@ -85,21 +85,8 @@ class TodayViewModel {
       return vm
    }
    
-   let moodEmojiMap: [ClosedRange<Double>: Character] = [
-      0.0...2.0: "😢",
-      2.1...4.0: "😕",
-      4.1...6.0: "😐",
-      6.1...8.0: "🙂",
-      8.1...10.0: "😁"
-   ]
-   
-   var currentMoodEmoji: Character {
-      for (range, emoji) in moodEmojiMap {
-         if range.contains(logData.mood) {
-            return emoji
-         }
-      }
-      return "❔"
+   var currentMoodSymbol: String {
+      CloveSymbols.mood(for: logData.mood)
    }
    
    func load() {

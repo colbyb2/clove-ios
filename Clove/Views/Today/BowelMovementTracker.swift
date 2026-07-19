@@ -14,8 +14,9 @@ struct BowelMovementTracker: View {
             // Main Header Row
             HStack {
                 HStack(spacing: CloveSpacing.small) {
-                    Text("🚽")
-                        .font(.system(size: 20))
+                    Image(systemName: CloveSymbols.bowelMovement)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Theme.shared.accent)
                     Text("Bowel Movements")
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                 }

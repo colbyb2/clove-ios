@@ -495,9 +495,9 @@ struct CrossReferenceView: View {
                .foregroundStyle(CloveColors.primaryText)
 
             VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
-               exampleRow(primary: "😊 Mood", secondary: "⚡️ Energy Level")
-               exampleRow(primary: "💊 Medication", secondary: "😌 Pain Level")
-               exampleRow(primary: "💧 Hydration", secondary: "🤕 Headaches")
+               exampleRow(primary: "Mood", secondary: "Energy Level")
+               exampleRow(primary: "Medication", secondary: "Pain Level")
+               exampleRow(primary: "Hydration", secondary: "Headaches")
             }
          }
 
@@ -776,8 +776,9 @@ struct MetricPairSelector: View {
             VStack(spacing: CloveSpacing.small) {
                HStack(spacing: CloveSpacing.small) {
                   if let metric = selectedMetric {
-                     Text(metric.icon)
-                        .font(.system(size: 20))
+                     Image(systemName: metric.icon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Theme.shared.accent)
                   } else {
                      Spacer()
 
@@ -873,8 +874,9 @@ struct SavedCorrelationCard: View {
          HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: CloveSpacing.xsmall) {
                HStack(spacing: CloveSpacing.xsmall) {
-                  Text(pair.primary.icon)
-                     .font(.system(size: 14))
+                  Image(systemName: pair.primary.icon)
+                     .font(.system(size: 14, weight: .semibold))
+                     .foregroundStyle(Theme.shared.accent)
                   Text(pair.primary.displayName)
                      .font(CloveFonts.small())
                      .foregroundStyle(CloveColors.primaryText)
@@ -892,8 +894,9 @@ struct SavedCorrelationCard: View {
                }
 
                HStack(spacing: CloveSpacing.xsmall) {
-                  Text(pair.secondary.icon)
-                     .font(.system(size: 14))
+                  Image(systemName: pair.secondary.icon)
+                     .font(.system(size: 14, weight: .semibold))
+                     .foregroundStyle(Theme.shared.accent)
                   Text(pair.secondary.displayName)
                      .font(CloveFonts.small())
                      .foregroundStyle(CloveColors.primaryText)

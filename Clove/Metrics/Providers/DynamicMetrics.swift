@@ -10,7 +10,7 @@ struct SymptomMetricProvider: MetricProvider {
     var id: String { "symptom_\(symptomName.lowercased().replacingOccurrences(of: " ", with: "_"))" }
     var displayName: String { symptomName }
     var description: String { "Tracking \(symptomName.lowercased()) severity" }
-    let icon = "🩹"
+    let icon = CloveSymbols.symptom
     let category: MetricCategory = .symptoms
     var dataType: MetricDataType = .continuous(range: 0...10)
     var chartType: MetricChartType = .line
@@ -49,7 +49,7 @@ struct SymptomMetricProvider: MetricProvider {
     func formatValue(_ value: Double) -> String {
         switch dataType {
         case .binary:
-            return value < 5 ? "❌" : "✅"
+            return value < 5 ? "No" : "Yes"
         default:
             return String(Int(value.rounded()))
         }
@@ -64,7 +64,7 @@ struct MedicationMetricProvider: MetricProvider {
     var id: String { "medication_\(medicationName.lowercased().replacingOccurrences(of: " ", with: "_"))" }
     var displayName: String { medicationName }
     var description: String { "Days when \(medicationName) was taken" }
-    let icon = "💊"
+    let icon = CloveSymbols.medication
     let category: MetricCategory = .medications
     let dataType: MetricDataType = .binary
     let chartType: MetricChartType = .line
@@ -97,7 +97,7 @@ struct MedicationMetricProvider: MetricProvider {
     }
     
     func formatValue(_ value: Double) -> String {
-        return value == 1.0 ? "✅" : "❌"
+        return value == 1.0 ? "Yes" : "No"
     }
     
     var chartConfiguration: MetricChartConfiguration {
@@ -120,7 +120,7 @@ struct ActivityMetricProvider: MetricProvider {
     var id: String { "activity_\(activityName.lowercased().replacingOccurrences(of: " ", with: "_"))" }
     var displayName: String { activityName }
     var description: String { "Days when \(activityName.lowercased()) was done" }
-    let icon = "🏃"
+    let icon = CloveSymbols.activities
     let category: MetricCategory = .activities
     let dataType: MetricDataType = .binary
     let chartType: MetricChartType = .scatter
@@ -185,7 +185,7 @@ struct ActivityMetricProvider: MetricProvider {
     }
 
     func formatValue(_ value: Double) -> String {
-        return value == 1.0 ? "✅" : "❌"
+        return value == 1.0 ? "Yes" : "No"
     }
 
     var chartConfiguration: MetricChartConfiguration {
@@ -208,7 +208,7 @@ struct MealMetricProvider: MetricProvider {
     var id: String { "meal_\(mealName.lowercased().replacingOccurrences(of: " ", with: "_"))" }
     var displayName: String { mealName }
     var description: String { "Days when \(mealName.lowercased()) was eaten" }
-    let icon = "🍽️"
+    let icon = CloveSymbols.meals
     let category: MetricCategory = .meals
     let dataType: MetricDataType = .binary
     let chartType: MetricChartType = .scatter
@@ -273,7 +273,7 @@ struct MealMetricProvider: MetricProvider {
     }
 
     func formatValue(_ value: Double) -> String {
-        return value == 1.0 ? "✅" : "❌"
+        return value == 1.0 ? "Yes" : "No"
     }
 
     var chartConfiguration: MetricChartConfiguration {
@@ -294,7 +294,7 @@ struct WeatherMetricProvider: MetricProvider {
     let id = "weather"
     let displayName = "Weather"
     let description = "Daily weather conditions (clear to stormy scale)"
-    let icon = "🌤️"
+    let icon = CloveSymbols.weather
     let category: MetricCategory = .environmental
     let dataType: MetricDataType = .categorical(values: ["Stormy", "Rainy", "Gloomy", "Cloudy", "Snow", "Sunny"])
     let chartType: MetricChartType = .line
@@ -372,7 +372,7 @@ struct ActivityCountMetricProvider: MetricProvider {
     let id = "activity_count"
     let displayName = "Activity Count"
     let description = "Number of activities logged per day"
-    let icon = "🏃"
+    let icon = CloveSymbols.activities
     let category: MetricCategory = .activities
     let dataType: MetricDataType = .count
     let chartType: MetricChartType = .bar
@@ -437,7 +437,7 @@ struct MealCountMetricProvider: MetricProvider {
     let id = "meal_count"
     let displayName = "Meal Count"
     let description = "Number of meals logged per day"
-    let icon = "🍎"
+    let icon = CloveSymbols.meals
     let category: MetricCategory = .meals
     let dataType: MetricDataType = .count
     let chartType: MetricChartType = .bar

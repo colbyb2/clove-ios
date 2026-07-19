@@ -109,13 +109,13 @@ final class DashboardManager {
 
     private func icon(for category: MetricSemanticCategory) -> String {
         switch category {
-        case .coreHealth: "💜"
-        case .symptoms: "🩺"
-        case .medications: "💊"
-        case .lifestyle: "🌿"
-        case .environmental: "🌤️"
-        case .activities: "🏃"
-        case .meals: "🍽️"
+        case .coreHealth: CloveSymbols.overview
+        case .symptoms: CloveSymbols.symptom
+        case .medications: CloveSymbols.medication
+        case .lifestyle: "figure.mind.and.body"
+        case .environmental: CloveSymbols.weather
+        case .activities: CloveSymbols.activities
+        case .meals: CloveSymbols.meals
         }
     }
 

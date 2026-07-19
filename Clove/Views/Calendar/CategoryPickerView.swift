@@ -62,8 +62,9 @@ struct CategoryChip: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: CloveSpacing.small) {
-                Text(category.emoji)
-                    .font(.system(size: 16))
+                Image(systemName: category.icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(isSelected ? .white : Theme.shared.accent)
                 
                 Text(category.displayName)
                     .font(CloveFonts.body())

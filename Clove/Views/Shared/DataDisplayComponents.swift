@@ -4,20 +4,15 @@ import SwiftUI
 struct SectionHeaderView: View {
     let title: String
     let icon: String?
-    let emoji: String?
     
-    init(title: String, icon: String? = nil, emoji: String? = nil) {
+    init(title: String, icon: String? = nil) {
         self.title = title
         self.icon = icon
-        self.emoji = emoji
     }
     
     var body: some View {
         HStack(spacing: CloveSpacing.small) {
-            if let emoji = emoji {
-                Text(emoji)
-                    .font(.system(size: 18))
-            } else if let icon = icon {
+            if let icon = icon {
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Theme.shared.accent)
@@ -37,24 +32,24 @@ struct RatingDisplayView: View {
     let value: Int
     let maxValue: Int
     let label: String
-    let emoji: String?
+    let icon: String?
     let color: Color
     
-    init(value: Int, maxValue: Int = 10, label: String, emoji: String? = nil, color: Color = Theme.shared.accent) {
+    init(value: Int, maxValue: Int = 10, label: String, icon: String? = nil, color: Color = Theme.shared.accent) {
         self.value = value
         self.maxValue = maxValue
         self.label = label
-        self.emoji = emoji
+        self.icon = icon
         self.color = color
     }
     
     var body: some View {
         HStack(spacing: CloveSpacing.medium) {
-            // Label with emoji
             HStack(spacing: CloveSpacing.small) {
-                if let emoji = emoji {
-                    Text(emoji)
-                        .font(.system(size: 16))
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(color)
                 }
                 Text(label)
                     .font(CloveFonts.body())
@@ -246,9 +241,9 @@ struct DataCardView<Content: View>: View {
 
 #Preview {
     VStack(spacing: 20) {
-        SectionHeaderView(title: "Physical Health", emoji: "🩹")
+        SectionHeaderView(title: "Physical Health", icon: CloveSymbols.pain)
         
-        RatingDisplayView(value: 7, label: "Pain Level", emoji: "🩹", color: .orange)
+        RatingDisplayView(value: 7, label: "Pain Level", icon: CloveSymbols.pain, color: .orange)
         
         ProgressRatingView(value: 8, maxValue: 10, label: "Energy Level", color: CloveColors.green)
         

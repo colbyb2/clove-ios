@@ -18,7 +18,8 @@ struct CloveToggle: View {
             ZStack {
                Circle()
                   .foregroundStyle(handleColor)
-               Text("🔥")
+               Image(systemName: CloveSymbols.flare)
+                  .foregroundStyle(.orange)
             }
             if (!toggled) {
                Spacer()

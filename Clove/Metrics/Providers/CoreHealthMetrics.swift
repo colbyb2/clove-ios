@@ -7,7 +7,7 @@ struct MoodMetricProvider: MetricProvider {
     let id = "mood"
     let displayName = "Mood"
     let description = "1-10 scale tracking daily mood"
-    let icon = "😊"
+    let icon = CloveSymbols.mood
     let category: MetricCategory = .coreHealth
     let dataType: MetricDataType = .continuous(range: 0...10)
     let chartType: MetricChartType = .line
@@ -46,7 +46,7 @@ struct PainLevelMetricProvider: MetricProvider {
     let id = "pain_level"
     let displayName = "Pain Level"
     let description = "1-10 scale tracking pain intensity"
-    let icon = "🔥"
+    let icon = CloveSymbols.pain
     let category: MetricCategory = .coreHealth
     let dataType: MetricDataType = .continuous(range: 0...10)
     let chartType: MetricChartType = .line
@@ -85,7 +85,7 @@ struct EnergyLevelMetricProvider: MetricProvider {
     let id = "energy_level"
     let displayName = "Energy Level"
     let description = "1-10 scale tracking energy levels"
-    let icon = "⚡"
+    let icon = CloveSymbols.energy
     let category: MetricCategory = .coreHealth
     let dataType: MetricDataType = .continuous(range: 0...10)
     let chartType: MetricChartType = .line
@@ -124,7 +124,7 @@ struct HydrationMetricProvider: MetricProvider {
     let id = "hydration"
     let displayName = "Hydration"
     let description = "Daily water intake in fluid ounces"
-    let icon = "💧"
+    let icon = CloveSymbols.hydration
     let category: MetricCategory = .coreHealth
     let dataType: MetricDataType = .count
     let chartType: MetricChartType = .bar
@@ -171,7 +171,7 @@ struct FlareDayMetricProvider: MetricProvider {
     let id = "flare_day"
     let displayName = "Flare Days"
     let description = "Frequency of flare-up days"
-    let icon = "⚠️"
+    let icon = CloveSymbols.flare
     let category: MetricCategory = .coreHealth
     let dataType: MetricDataType = .binary
     let chartType: MetricChartType = .line
@@ -199,7 +199,7 @@ struct FlareDayMetricProvider: MetricProvider {
     }
     
     func formatValue(_ value: Double) -> String {
-        return value == 1.0 ? "✅" : "❌"
+        return value == 1.0 ? "Yes" : "No"
     }
     
     var chartConfiguration: MetricChartConfiguration {
@@ -220,7 +220,7 @@ struct MedicationAdherenceMetricProvider: MetricProvider {
     let id = "medication_adherence"
     let displayName = "Medication Adherence"
     let description = "Percentage of medications taken as prescribed"
-    let icon = "💊"
+    let icon = CloveSymbols.medication
     let category: MetricCategory = .medications
     let dataType: MetricDataType = .percentage
     let chartType: MetricChartType = .area
@@ -282,7 +282,7 @@ struct BowelMovementMetricProvider: MetricProvider {
 
     let description: String = "Daily bowel movements."
 
-    let icon: String = "💩"
+    let icon: String = CloveSymbols.bowelMovement
 
     var category: MetricCategory = .coreHealth
 
@@ -316,7 +316,7 @@ struct FlowLevelMetricProvider: MetricProvider {
     let id = "flow_level"
     let displayName = "Flow Level"
     let description = "Period flow intensity"
-    let icon = "🩸"
+    let icon = CloveSymbols.cycle
     let category: MetricCategory = .coreHealth
     let dataType: MetricDataType = .continuous(range: 0...5)
     let chartType: MetricChartType = .line
