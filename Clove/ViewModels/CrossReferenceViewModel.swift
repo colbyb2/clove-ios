@@ -173,7 +173,6 @@ final class CrossReferenceViewModel {
         if let estimate, let effect = estimate.effect {
             let direction = estimate.method.signed ? (effect >= 0 ? "move in the same direction" : "move in opposite directions") : "vary together"
             return ["On matching recorded days, \(factor.displayName) and \(outcome.displayName) tend to \(direction).",
-                    "The result uses \(estimate.method.displayName), selected for these metric types.",
                     "This pattern is an association and does not show that one metric causes the other."]
         }
         if let event = eventOutcomes.first, let difference = event.meanDifference {
