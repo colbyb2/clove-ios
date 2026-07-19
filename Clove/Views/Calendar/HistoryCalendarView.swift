@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HistoryCalendarView: View {
     @Environment(\.dependencies) private var dependencies
+    @AppStorage(Constants.HYDRATION_GOAL_OUNCES) private var hydrationGoalOunces = 64
     @State private var viewModel = HistoryCalendarViewModel()
     @State private var currentMonth = Date()
     
@@ -29,6 +30,10 @@ struct HistoryCalendarView: View {
             .sheet(item: $viewModel.selectedDate) { date in
                 if let log = viewModel.log(for: date) {
                     DailyLogDetailView(log: log)
+                } else if !viewModel.bowelMovements(for: date).isEmpty {
+                    // Bowel movements are stored separately from DailyLog. A date-only
+                    // log lets the existing detail screen load and display those records.
+                    DailyLogDetailView(log: DailyLog(date: date))
                 } else {
                     EmptyLogView(date: date)
                 }
@@ -36,7 +41,11 @@ struct HistoryCalendarView: View {
             
             // Color legend (only show when filtering)
             if viewModel.selectedCategory != .allData {
-                ColorLegendView(category: viewModel.selectedCategory, trackedSymptoms: viewModel.trackedSymptoms)
+                ColorLegendView(
+                    category: viewModel.selectedCategory,
+                    trackedSymptoms: viewModel.trackedSymptoms,
+                    hydrationGoalOunces: hydrationGoalOunces
+                )
                     .padding(.horizontal)
                     .padding(.bottom)
             }
@@ -70,6 +79,9 @@ struct HistoryCalendarView: View {
     func getCalendarRecords() -> [Date: CalendarRecord] {
         // Get all unique dates from logs, cycles, and predictions
         var allDates = Set(viewModel.logsByDate.keys).union(Set(viewModel.cyclesByDate.keys))
+        if viewModel.userSettings.trackBowelMovements {
+            allDates.formUnion(viewModel.bowelMovementsByDate.keys)
+        }
         
         // Add predicted cycle dates if prediction exists
         let predictedDates = getPredictedCycleDates()
@@ -85,7 +97,19 @@ struct HistoryCalendarView: View {
             
             // Get the color based on the log data (if it exists)
             // Don't show heatmap color for predicted dates
-            let color = log != nil && !isPredicted ? getLogColor(log: log!) : .clear
+            let color: Color
+            if isPredicted {
+                color = .clear
+            } else if viewModel.selectedCategory == .bowelMovements {
+                color = bowelMovementColor(for: viewModel.bowelMovements(for: date))
+            } else if let log {
+                color = getLogColor(log: log)
+            } else if viewModel.selectedCategory == .allData,
+                      !viewModel.bowelMovements(for: date).isEmpty {
+                color = Theme.shared.accent.opacity(0.7)
+            } else {
+                color = .clear
+            }
             
             records[date] = CalendarRecord(
                 color: color,
@@ -122,7 +146,8 @@ struct HistoryCalendarView: View {
         switch viewModel.selectedCategory {
         case .allData:
             // Show a general indicator if any data exists
-            if log.mood != nil || log.painLevel != nil || log.energyLevel != nil || !log.symptomRatings.isEmpty {
+            if log.mood != nil || log.painLevel != nil || log.energyLevel != nil ||
+                (log.waterIntake ?? 0) > 0 || !log.symptomRatings.isEmpty {
                 return Theme.shared.accent.opacity(0.7)
             }
             return .clear
@@ -177,6 +202,11 @@ struct HistoryCalendarView: View {
                 default: return .gray.opacity(0.5)
                 }
             }
+
+        case .hydration:
+            if let waterIntake = log.waterIntake, waterIntake > 0 {
+                return hydrationColor(ounces: waterIntake)
+            }
             
         case .meals:
             if !log.meals.isEmpty {
@@ -192,6 +222,11 @@ struct HistoryCalendarView: View {
             if !log.medicationsTaken.isEmpty {
                 return Theme.shared.accent.opacity(0.75)
             }
+
+        case .bowelMovements:
+            // This category is colored using the separately stored movement records
+            // in getCalendarRecords().
+            break
             
         case .symptom(let id, _):
             if let rating = log.symptomRatings.first(where: { $0.symptomId == id }) {
@@ -226,11 +261,44 @@ struct HistoryCalendarView: View {
         
         return .clear
     }
+
+    private func hydrationColor(ounces: Int) -> Color {
+        let progress = Double(ounces) / Double(max(1, hydrationGoalOunces))
+        switch progress {
+        case ..<0.25: return CloveColors.red.opacity(0.85)
+        case ..<0.50: return CloveColors.orange.opacity(0.85)
+        case ..<0.75: return CloveColors.yellow.opacity(0.85)
+        case ..<1.0: return CloveColors.blue.opacity(0.8)
+        default: return CloveColors.green.opacity(0.9)
+        }
+    }
+
+    private func bowelMovementColor(for movements: [BowelMovement]) -> Color {
+        guard !movements.isEmpty else { return .clear }
+
+        // Score each entry by its distance from the typical Bristol range (types 3–4).
+        // Averaging individual distances avoids making a type 1 + type 7 day look
+        // deceptively healthy simply because their numeric average is type 4.
+        let averageDistance = movements.map { movement -> Double in
+            let type = min(7.0, max(1.0, movement.type))
+            if type < 3 { return 3 - type }
+            if type > 4 { return type - 4 }
+            return 0
+        }.reduce(0, +) / Double(movements.count)
+
+        switch averageDistance {
+        case ...0.25: return CloveColors.green.opacity(0.9)
+        case ...1.25: return CloveColors.yellow.opacity(0.85)
+        case ...2.25: return CloveColors.orange.opacity(0.88)
+        default: return CloveColors.red.opacity(0.9)
+        }
+    }
 }
 
 struct ColorLegendView: View {
     let category: TrackingCategory
     let trackedSymptoms: [TrackedSymptom]
+    let hydrationGoalOunces: Int
     
     var body: some View {
         VStack(spacing: 8) {
@@ -274,6 +342,18 @@ struct ColorLegendView: View {
                     ],
                     labels: ["Exhausted", "Energized"]
                 )
+
+            case .hydration:
+                GradientLegendView(
+                    colors: [
+                        CloveColors.red.opacity(0.85),
+                        CloveColors.orange.opacity(0.85),
+                        CloveColors.yellow.opacity(0.85),
+                        CloveColors.blue.opacity(0.8),
+                        CloveColors.green.opacity(0.9)
+                    ],
+                    labels: ["Low", "Goal met (\(hydrationGoalOunces) oz)"]
+                )
                 
             case .meals:
                 BinaryLegendView(
@@ -297,6 +377,17 @@ struct ColorLegendView: View {
                     yesColor: Theme.shared.accent.opacity(0.75),
                     noLabel: "None",
                     yesLabel: "Logged"
+                )
+
+            case .bowelMovements:
+                GradientLegendView(
+                    colors: [
+                        CloveColors.red.opacity(0.9),
+                        CloveColors.orange.opacity(0.88),
+                        CloveColors.yellow.opacity(0.85),
+                        CloveColors.green.opacity(0.9)
+                    ],
+                    labels: ["Far from typical", "Types 3–4"]
                 )
                 
             case .symptom(let id, _):

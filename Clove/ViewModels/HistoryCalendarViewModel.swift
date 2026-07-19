@@ -7,11 +7,13 @@ class HistoryCalendarViewModel {
    private let logsRepository: LogsRepositoryProtocol
    private let settingsRepository: UserSettingsRepositoryProtocol
    private let symptomsRepository: SymptomsRepositoryProtocol
+   private let bowelMovementRepository: BowelMovementRepositoryProtocol
    private let cycleRepository: CycleRepositoryProtocol
    private let cycleManager: CycleManaging
 
    // MARK: - State
    var logsByDate: [Date: DailyLog] = [:]
+   var bowelMovementsByDate: [Date: [BowelMovement]] = [:]
    var cyclesByDate: [Date: Cycle] = [:]
    var cyclePrediction: CyclePrediction? = nil
    var selectedDate: Date? = nil
@@ -42,9 +44,11 @@ class HistoryCalendarViewModel {
       if userSettings.trackMood { categories.append(.mood) }
       if userSettings.trackPain { categories.append(.pain) }
       if userSettings.trackEnergy { categories.append(.energy) }
+      if userSettings.trackHydration { categories.append(.hydration) }
       if userSettings.trackMeals { categories.append(.meals) }
       if userSettings.trackActivities { categories.append(.activities) }
       if userSettings.trackMeds { categories.append(.medications) }
+      if userSettings.trackBowelMovements { categories.append(.bowelMovements) }
       
       // Add symptom categories
       for symptom in trackedSymptoms {
@@ -64,6 +68,7 @@ class HistoryCalendarViewModel {
          logsRepository: LogsRepo.shared,
          settingsRepository: UserSettingsRepo.shared,
          symptomsRepository: SymptomsRepo.shared,
+         bowelMovementRepository: BowelMovementRepo.shared,
          cycleRepository: CycleRepo.shared,
          cycleManager: CycleManager()
       )
@@ -74,12 +79,14 @@ class HistoryCalendarViewModel {
       logsRepository: LogsRepositoryProtocol,
       settingsRepository: UserSettingsRepositoryProtocol,
       symptomsRepository: SymptomsRepositoryProtocol,
+      bowelMovementRepository: BowelMovementRepositoryProtocol,
       cycleRepository: CycleRepositoryProtocol,
       cycleManager: CycleManaging
    ) {
       self.logsRepository = logsRepository
       self.settingsRepository = settingsRepository
       self.symptomsRepository = symptomsRepository
+      self.bowelMovementRepository = bowelMovementRepository
       self.cycleRepository = cycleRepository
       self.cycleManager = cycleManager
       loadData()
@@ -95,6 +102,7 @@ class HistoryCalendarViewModel {
          logsRepository: container.logsRepository,
          settingsRepository: container.settingsRepository,
          symptomsRepository: container.symptomsRepository,
+         bowelMovementRepository: container.bowelMovementRepository,
          cycleRepository: container.cycleRepository,
          cycleManager: MockCycleManager()
       )
@@ -102,6 +110,7 @@ class HistoryCalendarViewModel {
    
    func loadData() {
       loadLogs()
+      loadBowelMovements()
       loadCycles()
       loadUserSettings()
       loadTrackedSymptoms()
@@ -112,6 +121,13 @@ class HistoryCalendarViewModel {
       let logs = logsRepository.getLogs()
       // Use merging initializer to handle duplicate dates - keep the most recent entry (last one)
       self.logsByDate = Dictionary(logs.map { ($0.date.stripTime(), $0) }, uniquingKeysWith: { _, last in last })
+   }
+
+   func loadBowelMovements() {
+      bowelMovementsByDate = Dictionary(
+         grouping: bowelMovementRepository.getAllBowelMovements(),
+         by: { $0.date.stripTime() }
+      )
    }
 
    func loadCycles() {
@@ -140,6 +156,10 @@ class HistoryCalendarViewModel {
    func log(for date: Date) -> DailyLog? {
       logsByDate[date.stripTime()]
    }
+
+   func bowelMovements(for date: Date) -> [BowelMovement] {
+      bowelMovementsByDate[date.stripTime()] ?? []
+   }
 }
 
 enum TrackingCategory: Hashable, Identifiable {
@@ -147,9 +167,11 @@ enum TrackingCategory: Hashable, Identifiable {
    case mood
    case pain
    case energy
+   case hydration
    case meals
    case activities
    case medications
+   case bowelMovements
    case symptom(id: Int64, name: String)
    
    var id: String {
@@ -158,9 +180,11 @@ enum TrackingCategory: Hashable, Identifiable {
       case .mood: return "mood"
       case .pain: return "pain"
       case .energy: return "energy"
+      case .hydration: return "hydration"
       case .meals: return "meals"
       case .activities: return "activities"
       case .medications: return "medications"
+      case .bowelMovements: return "bowelMovements"
       case .symptom(let id, _): return "symptom_\(id)"
       }
    }
@@ -171,9 +195,11 @@ enum TrackingCategory: Hashable, Identifiable {
       case .mood: return "Mood"
       case .pain: return "Pain"
       case .energy: return "Energy"
+      case .hydration: return "Hydration"
       case .meals: return "Meals"
       case .activities: return "Activities"
       case .medications: return "Medications"
+      case .bowelMovements: return "Bowel Movements"
       case .symptom(_, let name): return name
       }
    }
@@ -184,9 +210,11 @@ enum TrackingCategory: Hashable, Identifiable {
       case .mood: return "face.smiling"
       case .pain: return "cross.fill"
       case .energy: return "bolt.fill"
+      case .hydration: return "drop.fill"
       case .meals: return "fork.knife"
       case .activities: return "figure.walk"
       case .medications: return "pills.fill"
+      case .bowelMovements: return "figure.seated.side"
       case .symptom: return "stethoscope"
       }
    }
@@ -197,9 +225,11 @@ enum TrackingCategory: Hashable, Identifiable {
       case .mood: return "😊"
       case .pain: return "🩹"
       case .energy: return "⚡"
+      case .hydration: return "💧"
       case .meals: return "🍎"
       case .activities: return "🏃"
       case .medications: return "💊"
+      case .bowelMovements: return "🚽"
       case .symptom: return "🩺"
       }
    }
