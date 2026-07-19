@@ -2,355 +2,359 @@ import SwiftUI
 
 struct SettingsView: View {
     @State private var viewModel = UserSettingsViewModel()
-    @State private var showExportSheet = false
-    @State private var showMedicationSetup = false
-    @State private var showMedicationTimeline = false
+
+    var body: some View {
+        Form {
+            Section {
+                NavigationLink {
+                    TrackingAndLoggingSettingsView(viewModel: viewModel)
+                } label: {
+                    SettingsCategoryLabel(icon: "checklist", color: .blue, title: "Tracking & Logging",
+                                          subtitle: "Features, goals, symptoms, medications, and daily logging")
+                }
+
+                NavigationLink {
+                    InsightsSettingsView()
+                } label: {
+                    SettingsCategoryLabel(icon: "sparkles", color: .purple, title: "Insights",
+                                          subtitle: "Dashboard complexity and local diagnostics")
+                }
+
+                NavigationLink {
+                    AppearanceAndAlertsSettingsView()
+                } label: {
+                    SettingsCategoryLabel(icon: "paintpalette.fill", color: .pink, title: "Appearance & Alerts",
+                                          subtitle: "Theme and reminders")
+                }
+            }
+
+            Section {
+                NavigationLink {
+                    DataSettingsView()
+                } label: {
+                    SettingsCategoryLabel(icon: "externaldrive.fill", color: .green, title: "Data",
+                                          subtitle: "Import and export your records")
+                }
+
+                NavigationLink {
+                    HelpAndAboutSettingsView()
+                } label: {
+                    SettingsCategoryLabel(icon: "questionmark.circle.fill", color: Theme.shared.accent,
+                                          title: "Help & About", subtitle: "Tutorials, updates, terms, and app version")
+                }
+            }
+        }
+        .navigationTitle("Settings")
+        .onAppear { viewModel.load() }
+    }
+}
+
+private struct SettingsCategoryLabel: View {
+    let icon: String
+    let color: Color
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 34, height: 34)
+                .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).foregroundStyle(CloveColors.primaryText)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct TrackingAndLoggingSettingsView: View {
+    let viewModel: UserSettingsViewModel
     @State private var showSymptomsSheet = false
     @State private var trackedSymptoms: [TrackedSymptom] = []
-    @AppStorage(Constants.LOCAL_ANALYTICS_DIAGNOSTICS) private var localAnalyticsDiagnostics = true
     @AppStorage(Constants.HYDRATION_GOAL_OUNCES) private var hydrationGoalOunces = 64
 
-    // Get app version from bundle
-    private var appVersion: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+    var body: some View {
+        @Bindable var bindableViewModel = viewModel
+        Form {
+            Section("Daily Tracker") {
+                NavigationLink {
+                    CustomizeTrackerView().environment(viewModel)
+                } label: {
+                    Label("Choose What to Track", systemImage: "checklist")
+                }
 
-        if let build = build, build != version {
-            return "\(version) (\(build))"
-        } else {
-            return version
+                Toggle(isOn: $bindableViewModel.settings.autoSaveEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Auto Save Daily Changes")
+                        Text("Save edits shortly after you make them")
+                            .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                    }
+                }
+                .onChange(of: viewModel.settings.autoSaveEnabled) { _, _ in viewModel.save() }
+            }
+
+            Section("Goals") {
+                NavigationLink {
+                    HydrationSettingsView()
+                } label: {
+                    SettingsRowLabel(icon: "drop.fill", color: .blue, title: "Hydration Goal",
+                                     detail: "\(hydrationGoalOunces) oz per day")
+                }
+            }
+
+            Section("Tracked Items") {
+                Button {
+                    showSymptomsSheet = true
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } label: {
+                    SettingsButtonRow(icon: "bandage.fill", color: .orange, title: "Symptoms")
+                }
+                .accessibilityHint("Add, edit, or remove tracked symptoms")
+
+                NavigationLink {
+                    MedicationSettingsView()
+                } label: {
+                    SettingsRowLabel(icon: "pills.fill", color: .purple, title: "Medications",
+                                     detail: "Manage medications and history")
+                }
+
+                NavigationLink {
+                    CycleOverviewView()
+                } label: {
+                    SettingsRowLabel(icon: "calendar", color: .red, title: "Cycle",
+                                     detail: "History and predictions")
+                }
+
+                NavigationLink {
+                    FoodAndActivitySettingsView()
+                } label: {
+                    SettingsRowLabel(icon: "fork.knife", color: .green, title: "Food & Activities",
+                                     detail: "Favorites and saved items")
+                }
+            }
+        }
+        .navigationTitle("Tracking & Logging")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear { loadTrackedSymptoms() }
+        .sheet(isPresented: $showSymptomsSheet) {
+            EditSymptomsSheet(trackedSymptoms: trackedSymptoms, refresh: loadTrackedSymptoms)
+                .onDisappear { loadTrackedSymptoms() }
         }
     }
 
     private func loadTrackedSymptoms() {
         trackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
     }
+}
 
-    private func showTermsAndConditions() {
-        // Find the terms and conditions popup from the available popups
-        if let termsPopup = Popups.all.first(where: { $0.id == "termsAndConditions" }) {
-            // Force show the popup by setting it directly, bypassing the UserDefaults check
-            PopupManager.shared.currentPopup = termsPopup
+private struct MedicationSettingsView: View {
+    @State private var showSetup = false
+    @State private var showTimeline = false
+
+    var body: some View {
+        Form {
+            Section {
+                Button { showSetup = true } label: {
+                    SettingsButtonRow(icon: "pills.fill", color: .purple, title: "Manage Medications")
+                }
+                .accessibilityHint("Add, edit, or remove medications")
+
+                Button { showTimeline = true } label: {
+                    SettingsButtonRow(icon: "clock.fill", color: .blue, title: "Medication History")
+                }
+                .accessibilityHint("View medication changes over time")
+            }
         }
+        .navigationTitle("Medications")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showSetup) { MedicationSetupSheet() }
+        .sheet(isPresented: $showTimeline) { MedicationTimelineView() }
+    }
+}
+
+private struct FoodAndActivitySettingsView: View {
+    var body: some View {
+        Form {
+            Section {
+                NavigationLink {
+                    ManageFoodsView()
+                } label: {
+                    SettingsRowLabel(icon: "fork.knife", color: .green, title: "Manage Foods",
+                                     detail: "Organize foods and favorites")
+                }
+                NavigationLink {
+                    ManageActivitiesView()
+                } label: {
+                    SettingsRowLabel(icon: "figure.run", color: .blue, title: "Manage Activities",
+                                     detail: "Organize activities and favorites")
+                }
+            }
+        }
+        .navigationTitle("Food & Activities")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct InsightsSettingsView: View {
+    @AppStorage(Constants.LOCAL_ANALYTICS_DIAGNOSTICS) private var localDiagnostics = true
+
+    var body: some View {
+        Form {
+            Section("Display") {
+                NavigationLink {
+                    InsightsCustomizationView()
+                } label: {
+                    SettingsRowLabel(icon: "slider.horizontal.3", color: .purple, title: "Dashboard Complexity",
+                                     detail: "Choose which insight features appear")
+                }
+            }
+            Section("Privacy & Reliability") {
+                Toggle(isOn: $localDiagnostics) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Local Diagnostics")
+                        Text("Stores aggregate reliability and speed counters only on this device")
+                            .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                    }
+                }
+                .onChange(of: localDiagnostics) { _, enabled in
+                    AnalyticsDiagnosticsRecorder.shared.isEnabled = enabled
+                }
+            }
+        }
+        .navigationTitle("Insights")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct AppearanceAndAlertsSettingsView: View {
+    var body: some View {
+        Form {
+            Section("Appearance") {
+                NavigationLink {
+                    ThemeCustomizationView()
+                } label: {
+                    SettingsRowLabel(icon: "paintpalette.fill", color: .pink, title: "Theme",
+                                     detail: "Colors and appearance")
+                }
+            }
+            Section("Alerts") {
+                NavigationLink {
+                    DailyReminderView()
+                } label: {
+                    SettingsRowLabel(icon: "bell.fill", color: .orange, title: "Reminders",
+                                     detail: "Daily logging notifications")
+                }
+            }
+        }
+        .navigationTitle("Appearance & Alerts")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct DataSettingsView: View {
+    @State private var showExportSheet = false
+
+    var body: some View {
+        Form {
+            Section {
+                Button { showExportSheet = true } label: {
+                    SettingsButtonRow(icon: "square.and.arrow.up", color: .blue, title: "Export Data")
+                }
+                .accessibilityHint("Export health data as a CSV file")
+
+                NavigationLink {
+                    DataImportView()
+                } label: {
+                    SettingsRowLabel(icon: "square.and.arrow.down", color: .green, title: "Import Data",
+                                     detail: "Import records from a CSV file")
+                }
+            }
+        }
+        .navigationTitle("Data")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showExportSheet) { DataExportSheet() }
+    }
+}
+
+private struct HelpAndAboutSettingsView: View {
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+        return build.map { $0 == version ? version : "\(version) (\($0))" } ?? version
     }
 
     var body: some View {
-        @Bindable var bindableViewModel = viewModel
-        ZStack {
-            Form {
-                Section(header: Text("Customization")) {
-                    HStack {
-                        Image(systemName: "gear")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Theme.shared.accent)
-                        NavigationLink("Feature Selection") {
-                            CustomizeTrackerView()
-                                .environment(viewModel)
-                        }
-                    }
-                    HStack {
-                        Image(systemName: "paintpalette.fill")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Theme.shared.accent)
-                        NavigationLink("Theme") {
-                            ThemeCustomizationView()
-                        }
-                    }
-
-                    HStack {
-                        Image(systemName: "bell.fill")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Theme.shared.accent)
-                        NavigationLink("Reminders") {
-                            DailyReminderView()
-                        }
-                    }
+        Form {
+            Section("Help") {
+                NavigationLink {
+                    TutorialSettingsView().environment(TutorialManager.shared)
+                } label: {
+                    SettingsRowLabel(icon: "lightbulb.fill", color: .yellow, title: "Tutorials",
+                                     detail: "Learn how to use Clove")
                 }
-
-                Section(header: Text("Insights")) {
-                    HStack {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Theme.shared.accent)
-                        NavigationLink("Complexity") {
-                            InsightsCustomizationView()
-                        }
-                    }
-                    Toggle(isOn: $localAnalyticsDiagnostics) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Local Diagnostics")
-                            Text("Stores only aggregate reliability and speed counters on this device.")
-                                .font(.caption).foregroundStyle(CloveColors.secondaryText)
-                        }
-                    }
-                    .onChange(of: localAnalyticsDiagnostics) { _, enabled in
-                        AnalyticsDiagnosticsRecorder.shared.isEnabled = enabled
-                    }
-                }
-
-                Section(header: Text("Logging")) {
-                    Toggle("Auto Save Daily Changes", isOn: $bindableViewModel.settings.autoSaveEnabled)
-                        .onChange(of: viewModel.settings.autoSaveEnabled) { _, _ in
-                            viewModel.save()
-                        }
-                }
-
-                Section(header: Text("Hydration")) {
-                    NavigationLink {
-                        HydrationSettingsView()
-                    } label: {
-                        HStack {
-                            Image(systemName: "drop.fill")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(.blue)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Daily Water Goal")
-                                Text("Controls the goal line and chart colors")
-                                    .font(.caption)
-                                    .foregroundStyle(CloveColors.secondaryText)
-                            }
-                            Spacer()
-                            Text("\(hydrationGoalOunces) oz")
-                                .foregroundStyle(CloveColors.secondaryText)
-                        }
-                    }
-                    .accessibilityHint("Set your daily hydration goal")
-                }
-
-                Section(header: Text("Medication")) {
-                    Button(action: {
-                        showMedicationSetup = true
-                        // Haptic feedback
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                        impactFeedback.impactOccurred()
-                    }) {
-                        HStack {
-                            Image(systemName: "pills")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(Theme.shared.accent)
-
-                            Text("Manage Medications")
-                                .foregroundStyle(CloveColors.primaryText)
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(CloveColors.secondaryText)
-                        }
-                    }
-                    .accessibilityLabel("Manage medications")
-                    .accessibilityHint("Add, edit, or remove medications for daily tracking")
-
-                    Button(action: {
-                        showMedicationTimeline = true
-                        // Haptic feedback
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                        impactFeedback.impactOccurred()
-                    }) {
-                        HStack {
-                            Image(systemName: "clock")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(Theme.shared.accent)
-
-                            Text("Medication History")
-                                .foregroundStyle(CloveColors.primaryText)
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(CloveColors.secondaryText)
-                        }
-                    }
-                    .accessibilityLabel("Medication history")
-                    .accessibilityHint("View timeline of medication changes")
-                }
-
-                Section(header: Text("Symptoms")) {
-                    Button(action: {
-                        showSymptomsSheet = true
-                        // Haptic feedback
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                        impactFeedback.impactOccurred()
-                    }) {
-                        HStack {
-                            Image(systemName: "bandage")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(Theme.shared.accent)
-
-                            Text("Manage Symptoms")
-                                .foregroundStyle(CloveColors.primaryText)
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(CloveColors.secondaryText)
-                        }
-                    }
-                    .accessibilityLabel("Manage symptoms")
-                    .accessibilityHint("Add, edit, or remove symptoms for daily tracking")
-                }
-
-                Section(header: Text("Cycle")) {
-                    HStack {
-                        Text("🩸")
-                            .font(.system(size: 16))
-                        NavigationLink(destination: CycleOverviewView()) {
-                            HStack(spacing: 8) {
-                                Text("Cycle Overview")
-                                    .foregroundStyle(CloveColors.primaryText)
-                            }
-                        }
-                    }
-                    .accessibilityLabel("Cycle overview")
-                    .accessibilityHint("View cycle history and predictions")
-                }
-
-                Section(header: Text("Food & Activities")) {
-                    HStack {
-                        Image(systemName: "fork.knife")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(CloveColors.green)
-                        NavigationLink("Manage Foods") {
-                            ManageFoodsView()
-                        }
-                    }
-                    .accessibilityLabel("Manage foods")
-                    .accessibilityHint("View and organize your food entries and favorites")
-
-                    HStack {
-                        Image(systemName: "figure.run")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(CloveColors.info)
-                        NavigationLink("Manage Activities") {
-                            ManageActivitiesView()
-                        }
-                    }
-                    .accessibilityLabel("Manage activities")
-                    .accessibilityHint("View and organize your activity entries and favorites")
-                }
-
-                Section(header: Text("Data")) {
-                    Button(action: {
-                        showExportSheet = true
-                        // Haptic feedback
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                        impactFeedback.impactOccurred()
-                    }) {
-                        HStack {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(Theme.shared.accent)
-
-                            Text("Export Data")
-                                .foregroundStyle(CloveColors.primaryText)
-
-                            Spacer()
-                        }
-                    }
-                    .accessibilityLabel("Export data")
-                    .accessibilityHint("Export your health data as a CSV file")
-
-                    HStack {
-                        Image(systemName: "square.and.arrow.down")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Theme.shared.accent)
-                        NavigationLink("Import Data") {
-                            DataImportView()
-                        }
-                    }
-                    .accessibilityLabel("Import data")
-                    .accessibilityHint("Import your health data from a CSV file")
-                }
-
-                Section(header: Text("Help")) {
-                    HStack {
-                        Image(systemName: "lightbulb.fill")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Theme.shared.accent)
-                        NavigationLink("Tutorials") {
-                            TutorialSettingsView()
-                                .environment(TutorialManager.shared)
-                        }
-                    }
-
-                    HStack {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Theme.shared.accent)
-                        NavigationLink("What's New") {
-                            ChangelogView()
-                        }
-                    }
-                    .accessibilityLabel("What's new")
-                    .accessibilityHint("View changelog and version history")
-
-                    Button(action: {
-                        showTermsAndConditions()
-                        // Haptic feedback
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                        impactFeedback.impactOccurred()
-                    }) {
-                        HStack {
-                            Image(systemName: "doc.text.fill")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(Theme.shared.accent)
-
-                            Text("View Terms and Conditions")
-                                .foregroundStyle(CloveColors.primaryText)
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(CloveColors.secondaryText)
-                        }
-                    }
-                    .accessibilityLabel("View terms and conditions")
-                    .accessibilityHint("Display the app's terms and conditions")
-                }
-
-                // Version indicator section
-                Section(
-                    footer:
-                        HStack {
-                            Spacer()
-                            Text("Clove\nVersion \(appVersion)")
-                                .font(.footnote)
-                                .multilineTextAlignment(.center)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                        }
-                ) {
-                    EmptyView()  // No row content
+                NavigationLink {
+                    ChangelogView()
+                } label: {
+                    SettingsRowLabel(icon: "clock.arrow.circlepath", color: .blue, title: "What's New",
+                                     detail: "Recent changes and improvements")
                 }
             }
-        }
-        .navigationTitle("Settings")
-        .onAppear {
-            viewModel.load()
-            loadTrackedSymptoms()
-        }
-        .sheet(isPresented: $showExportSheet) {
-            DataExportSheet()
-        }
-        .sheet(isPresented: $showMedicationSetup) {
-            MedicationSetupSheet()
-        }
-        .sheet(isPresented: $showMedicationTimeline) {
-            MedicationTimelineView()
-        }
-        .sheet(isPresented: $showSymptomsSheet) {
-            EditSymptomsSheet(
-                trackedSymptoms: SymptomsRepo.shared.getTrackedSymptoms(),
-                refresh: loadTrackedSymptoms
-            )
-            .onDisappear {
-                loadTrackedSymptoms()  // Refresh symptoms list when sheet closes
+
+            Section("About") {
+                Button { showTermsAndConditions() } label: {
+                    SettingsButtonRow(icon: "doc.text.fill", color: .gray, title: "Terms & Conditions")
+                }
+                LabeledContent("Version", value: appVersion)
             }
         }
+        .navigationTitle("Help & About")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func showTermsAndConditions() {
+        if let termsPopup = Popups.all.first(where: { $0.id == "termsAndConditions" }) {
+            PopupManager.shared.currentPopup = termsPopup
+        }
+    }
+}
+
+private struct SettingsRowLabel: View {
+    let icon: String
+    let color: Color
+    let title: String
+    let detail: String
+
+    var body: some View {
+        HStack(spacing: 11) {
+            Image(systemName: icon).foregroundStyle(color).frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).foregroundStyle(CloveColors.primaryText)
+                Text(detail).font(.caption).foregroundStyle(CloveColors.secondaryText)
+            }
+        }
+    }
+}
+
+private struct SettingsButtonRow: View {
+    let icon: String
+    let color: Color
+    let title: String
+
+    var body: some View {
+        HStack {
+            Image(systemName: icon).foregroundStyle(color).frame(width: 24)
+            Text(title).foregroundStyle(CloveColors.primaryText)
+            Spacer()
+            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(CloveColors.secondaryText)
+        }
+        .contentShape(Rectangle())
     }
 }
 

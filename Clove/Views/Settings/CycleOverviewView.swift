@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CycleOverviewView: View {
+    @State private var settingsViewModel = UserSettingsViewModel()
     @State private var periods: [Period] = []
     @State private var cyclePrediction: CyclePrediction? = nil
     @State private var selectedPeriod: Period? = nil
@@ -18,53 +19,59 @@ struct CycleOverviewView: View {
                 .ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 24) {
-                    // Prediction Card (Hero)
-                    predictionCard
-                        .padding(.horizontal)
-                        .padding(.top, 10)
-
-                    // Cycle Statistics Card
-                    if cycleStatistics != nil {
-                        statisticsCard
+                if settingsViewModel.settings.trackCycle {
+                    VStack(spacing: 24) {
+                        // Prediction Card (Hero)
+                        predictionCard
                             .padding(.horizontal)
-                    }
+                            .padding(.top, 10)
 
-                    // Period History
-                    if periods.isEmpty {
-                        emptyStateView
+                        // Cycle Statistics Card
+                        if cycleStatistics != nil {
+                            statisticsCard
                             .padding(.horizontal)
-                    } else {
-                        VStack(spacing: 16) {
-                            // Section header
-                            HStack {
-                                Text("History")
-                                    .font(.system(.title3, design: .rounded, weight: .bold))
-                                    .foregroundStyle(CloveColors.primaryText)
+                        }
 
-                                Spacer()
+                        // Period History
+                        if periods.isEmpty {
+                            emptyStateView
+                                .padding(.horizontal)
+                        } else {
+                            VStack(spacing: 16) {
+                                // Section header
+                                HStack {
+                                    Text("History")
+                                        .font(.system(.title3, design: .rounded, weight: .bold))
+                                        .foregroundStyle(CloveColors.primaryText)
 
-                                // Subtle count badge
-                                Text("\(periods.count) Cycles")
-                                    .font(.system(.caption, weight: .medium))
-                                    .foregroundStyle(CloveColors.secondaryText)
-                            }
-                            .padding(.horizontal)
+                                    Spacer()
 
-                            // Period cards
-                            ForEach(periods) { period in
-                                PeriodCard(period: period) {
-                                    selectedPeriod = period
-                                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                    impactFeedback.impactOccurred()
+                                    // Subtle count badge
+                                    Text("\(periods.count) Cycles")
+                                        .font(.system(.caption, weight: .medium))
+                                        .foregroundStyle(CloveColors.secondaryText)
                                 }
                                 .padding(.horizontal)
+
+                                // Period cards
+                                ForEach(periods) { period in
+                                    PeriodCard(period: period) {
+                                        selectedPeriod = period
+                                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                        impactFeedback.impactOccurred()
+                                    }
+                                    .padding(.horizontal)
+                                }
                             }
+                            .padding(.vertical)
                         }
-                        .padding(.vertical)
                     }
+                    .padding(.bottom, 40)
+                } else {
+                    cycleDisabledView
+                        .padding(.horizontal)
+                        .padding(.top, 10)
                 }
-                .padding(.bottom, 40)
             }
         }
         .navigationTitle("Cycle")
@@ -78,7 +85,10 @@ struct CycleOverviewView: View {
             }
         }
         .onAppear {
-            loadData()
+            settingsViewModel.load()
+            if settingsViewModel.settings.trackCycle {
+                loadData()
+            }
         }
         .sheet(item: $selectedPeriod) { period in
             PeriodDetailSheet(period: period)
@@ -90,6 +100,53 @@ struct CycleOverviewView: View {
                 "Predictions are estimates based on your past cycle patterns. This is not medical advice."
             )
         }
+    }
+
+    private var cycleDisabledView: some View {
+        VStack(spacing: 18) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 38))
+                .foregroundStyle(.orange)
+                .frame(width: 72, height: 72)
+                .background(Color.orange.opacity(0.12), in: Circle())
+
+            VStack(spacing: 8) {
+                Text("Cycle Tracking Is Turned Off")
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .foregroundStyle(CloveColors.primaryText)
+
+                Text("Turn on Cycle in Features to add cycle entries from the Today screen and build your history here.")
+                    .font(.subheadline)
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .multilineTextAlignment(.center)
+            }
+
+            NavigationLink {
+                CustomizeTrackerView()
+                    .environment(settingsViewModel)
+            } label: {
+                Label("Open Feature Selection", systemImage: "checklist")
+                    .font(.subheadline.bold())
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.shared.accent)
+
+            Text("Settings › Tracking & Logging › Choose What to Track › Cycle")
+                .font(.caption)
+                .foregroundStyle(CloveColors.secondaryText)
+                .multilineTextAlignment(.center)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(CloveColors.card)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                )
+        )
     }
 
     // MARK: - Hero Card
