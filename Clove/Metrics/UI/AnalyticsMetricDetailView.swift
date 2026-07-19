@@ -73,7 +73,9 @@ final class AnalyticsMetricDetailViewModel {
 }
 
 struct AnalyticsMetricDetailView: View {
-    let metric: any MetricProvider
+    private let metricID: String
+    private let metricDisplayName: String
+    private let metricIcon: String
     let timeManager = TimePeriodManager.shared
 
     @State private var viewModel = AnalyticsMetricDetailViewModel()
@@ -81,6 +83,18 @@ struct AnalyticsMetricDetailView: View {
     @State private var selectedDate: Date?
     @State private var selectedLog: DailyLog?
     @AppStorage(Constants.HYDRATION_GOAL_OUNCES) private var hydrationGoalOunces = 64
+
+    init(metric: any MetricProvider) {
+        metricID = metric.id
+        metricDisplayName = metric.displayName
+        metricIcon = metric.icon
+    }
+
+    init(definition: MetricDefinition) {
+        metricID = definition.id.rawValue
+        metricDisplayName = definition.displayName
+        metricIcon = Self.icon(for: definition)
+    }
 
     private var interval: DateInterval {
         timeManager.currentDateRange ?? AnalyticsDateRangeFactory().interval(for: .allTime)
@@ -91,7 +105,7 @@ struct AnalyticsMetricDetailView: View {
     }
 
     private var loadKey: String {
-        [metric.id, String(interval.start.timeIntervalSinceReferenceDate), String(interval.end.timeIntervalSinceReferenceDate), String(timeManager.isComparisonModeEnabled), String(hydrationGoalOunces)].joined(separator: "|")
+        [metricID, String(interval.start.timeIntervalSinceReferenceDate), String(interval.end.timeIntervalSinceReferenceDate), String(timeManager.isComparisonModeEnabled), String(hydrationGoalOunces)].joined(separator: "|")
     }
 
     var body: some View {
@@ -109,7 +123,7 @@ struct AnalyticsMetricDetailView: View {
         }
         .task(id: loadKey) {
             await viewModel.load(
-                providerID: metric.id,
+                providerID: metricID,
                 interval: interval,
                 compare: timeManager.isComparisonModeEnabled && timeManager.selectedPeriod != .allTime,
                 granularity: granularity,
@@ -124,7 +138,7 @@ struct AnalyticsMetricDetailView: View {
     private var loadingView: some View {
         VStack(spacing: CloveSpacing.medium) {
             ProgressView()
-            Text("Analyzing \(metric.displayName)…")
+            Text("Analyzing \(metricDisplayName)…")
                 .font(CloveFonts.small())
                 .foregroundStyle(CloveColors.secondaryText)
         }
@@ -138,7 +152,7 @@ struct AnalyticsMetricDetailView: View {
             Text(message)
         } actions: {
             Button("Try Again") {
-                Task { await viewModel.load(providerID: metric.id, interval: interval, compare: timeManager.isComparisonModeEnabled, granularity: granularity, hydrationGoal: Double(hydrationGoalOunces)) }
+                Task { await viewModel.load(providerID: metricID, interval: interval, compare: timeManager.isComparisonModeEnabled, granularity: granularity, hydrationGoal: Double(hydrationGoalOunces)) }
             }
         }
         .frame(minHeight: 260)
@@ -173,7 +187,7 @@ struct AnalyticsMetricDetailView: View {
 
     private func detailHeader(_ result: AnalyticsChartResult) -> some View {
         HStack(alignment: .top, spacing: CloveSpacing.medium) {
-            Text(metric.icon).font(.system(size: 30))
+            Text(metricIcon).font(.system(size: 30))
             VStack(alignment: .leading, spacing: 4) {
                 Text(result.definition.displayName)
                     .font(.system(.title2, design: .rounded).weight(.bold))
@@ -481,6 +495,28 @@ struct AnalyticsMetricDetailView: View {
             let minimum = values.min() ?? 0
             let maximum = values.max() ?? 1
             return minimum == maximum ? (minimum - 1)...(maximum + 1) : minimum...maximum
+        }
+    }
+
+    private static func icon(for definition: MetricDefinition) -> String {
+        switch definition.id {
+        case MetricCatalog.mood.id: return "😊"
+        case MetricCatalog.painLevel.id: return "⚡️"
+        case MetricCatalog.energyLevel.id: return "🔋"
+        case MetricCatalog.hydration.id: return "💧"
+        case MetricCatalog.bristolStoolType.id, MetricCatalog.bowelMovementFrequency.id: return "🚽"
+        case MetricCatalog.medicationAdherence.id: return "💊"
+        case MetricCatalog.flowLevel.id: return "🩸"
+        default:
+            return switch definition.category {
+            case .symptoms: "🩹"
+            case .medications: "💊"
+            case .activities: "🏃"
+            case .meals: "🍎"
+            case .environmental: "🌤️"
+            case .lifestyle: "✨"
+            case .coreHealth: "📊"
+            }
         }
     }
 }

@@ -50,6 +50,26 @@ struct ChangelogItem: Identifiable {
 class ChangelogData {
     static let versions: [ChangelogVersion] = [
         ChangelogVersion(
+            version: "1.6.0",
+            date: "July 2026",
+            changes: [
+                ChangelogItem(type: .new, description: "Added hydration tracking with quick-add amounts, automatic saving, daily goals, charts, History filters, and goal-based heatmaps."),
+                ChangelogItem(type: .new, description: "Rebuilt Health Insights as a compact dashboard with dedicated screens for metrics, changes, discoveries, coverage, wellbeing, and comparisons."),
+                ChangelogItem(type: .new, description: "Added richer metric analysis with trends, averages, medians, notable dates, data coverage, daily and aggregated charts, and previous-period comparisons."),
+                ChangelogItem(type: .new, description: "Added custom time periods so any historical start and end dates can be explored across Insights and saved comparisons."),
+                ChangelogItem(type: .new, description: "Added automatic discovery, personal baselines, context analysis, wellbeing snapshots, saved findings, feedback, and hypothesis tracking."),
+                ChangelogItem(type: .improvement, description: "Redesigned correlation results with plain-language explanations, clearer scatter plots, timing analysis, coverage details, and saved comparisons."),
+                ChangelogItem(type: .improvement, description: "Simplified statistical findings so relationship direction, strength, confidence, timing, and limitations are easier to understand."),
+                ChangelogItem(type: .new, description: "Added debounced auto save for daily metrics, with an option in Settings to turn it off."),
+                ChangelogItem(type: .improvement, description: "Meals, activities, bowel movements, and other daily entries can now be edited after they are added."),
+                ChangelogItem(type: .improvement, description: "Redesigned symptom management with clear one-day versus daily tracking, compact management, and the ability to promote occasional symptoms to tracked symptoms."),
+                ChangelogItem(type: .improvement, description: "Expanded History with hydration and bowel movement categories, including goal-based hydration and Bristol-type health heatmaps."),
+                ChangelogItem(type: .improvement, description: "Reorganized Settings into focused submenus so tracking features, goals, Insights, appearance, alerts, data, and help are easier to find."),
+                ChangelogItem(type: .improvement, description: "Improved cycle guidance, empty states, chart layouts, scrolling, and navigation throughout the app."),
+                ChangelogItem(type: .bugfix, description: "Fixed missing bowel movement data in Metric Explorer and several chart, correlation, date-range, and small-screen layout issues.")
+            ]
+        ),
+        ChangelogVersion(
             version: "1.5.0",
             date: "February 2026",
             changes: [

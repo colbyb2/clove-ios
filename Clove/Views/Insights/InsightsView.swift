@@ -126,13 +126,19 @@ final class InsightsHomeViewModel {
         return trackedCoverage.map { $0.1.observedDayFraction }.reduce(0, +) / Double(trackedCoverage.count)
     }
 
-    func provider(for id: MetricID) -> (any MetricProvider)? { provider(forRawID: id.rawValue) }
+    func provider(for id: MetricID) -> (any MetricProvider)? {
+        provider(forRawID: id.rawValue)
+    }
 
     func provider(forRawID id: String?) -> (any MetricProvider)? {
         guard let id else { return defaultProvider }
-        return providers.values.first {
+
+        // An explicit metric selection must never silently become another metric.
+        // Providers are keyed by their canonical catalog ID during `load()`, so use
+        // that exact match first and retain the value scan only for legacy aliases.
+        return providers[id] ?? providers.values.first {
             $0.id == id || $0.catalogMetricDefinition?.id.rawValue == id
-        } ?? defaultProvider
+        }
     }
 
     var defaultProvider: (any MetricProvider)? {
@@ -701,13 +707,10 @@ private struct MetricChangesDetailView: View {
                     ContentUnavailableView("Not Enough Comparable Data", systemImage: "arrow.up.arrow.down")
                 } else {
                     ForEach(viewModel.comparableChanges, id: \.0.id) { definition, comparison in
-                        Group {
-                            if let provider = viewModel.provider(for: definition.id) {
-                                NavigationLink(destination: AnalyticsMetricDetailScreen(metric: provider)) {
-                                    row(definition, comparison)
-                                }
-                            } else { row(definition, comparison) }
-                        }.buttonStyle(.plain)
+                        NavigationLink(destination: AnalyticsMetricDetailScreen(definition: definition)) {
+                            row(definition, comparison)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }.padding(CloveSpacing.large)
@@ -736,17 +739,17 @@ private struct MetricChangesDetailView: View {
 }
 
 private struct AnalyticsMetricDetailScreen: View {
-    let metric: any MetricProvider
+    let definition: MetricDefinition
 
     var body: some View {
         ScrollView {
-            AnalyticsMetricDetailView(metric: metric)
+            AnalyticsMetricDetailView(definition: definition)
                 .padding(.horizontal, CloveSpacing.large)
                 .padding(.top, CloveSpacing.small)
                 .padding(.bottom, 110)
         }
         .background(CloveColors.background.ignoresSafeArea())
-        .navigationTitle(metric.displayName)
+        .navigationTitle(definition.displayName)
         .navigationBarTitleDisplayMode(.inline)
     }
 }

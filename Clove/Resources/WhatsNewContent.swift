@@ -84,8 +84,34 @@ enum WhatsNewContent {
         ],
         version: "1.5.0"
     )
+
+    static let version_1_6_0 = Popup(
+        id: "whats_new_1_6_0",
+        type: .whatsNew,
+        icon: "sparkles",
+        title: "Clove Just Got Smarter",
+        message: "Explore your health more deeply, track your day more quickly, and make sense of your patterns with less effort.",
+        features: [
+            WhatsNewFeature(
+                icon: "chart.xyaxis.line",
+                title: "All-New Health Insights",
+                description: "A redesigned dashboard, richer metric charts, clearer findings, personal baselines, and easier-to-understand comparisons."
+            ),
+            WhatsNewFeature(
+                icon: "drop.fill",
+                title: "Hydration Tracking",
+                description: "Quickly log water throughout the day, set a daily goal, and review progress in charts and History."
+            ),
+            WhatsNewFeature(
+                icon: "bolt.fill",
+                title: "Faster Daily Logging",
+                description: "Automatic saving, editable entries, and clearer symptom tools make daily tracking quicker and easier."
+            )
+        ],
+        version: "1.6.0"
+    )
     
     static let allWhatsNewPopups: [Popup] = [
-        version_1_5_0
+        version_1_6_0
     ]
 }

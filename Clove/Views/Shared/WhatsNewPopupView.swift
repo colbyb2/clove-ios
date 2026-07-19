@@ -2,164 +2,258 @@ import SwiftUI
 
 struct WhatsNewPopupView: View {
     let popup: Popup
+
     @State private var isVisible = false
-    
+    @State private var selectedFeature = 0
+
+    private var features: [WhatsNewFeature] {
+        popup.features ?? []
+    }
+
+    private var isLastFeature: Bool {
+        features.isEmpty || selectedFeature == features.count - 1
+    }
+
     var body: some View {
-        ZStack {
-            // Semi-transparent backdrop
-            Color.black.opacity(0.4)
-                .ignoresSafeArea()
-                .opacity(isVisible ? 1 : 0)
-                .animation(.easeInOut(duration: 0.3), value: isVisible)
-            
-            // Popup content
-            popupContent
-                .scaleEffect(isVisible ? 1 : 0.9)
-                .opacity(isVisible ? 1 : 0)
-                .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isVisible)
-        }
-        .onAppear {
-            withAnimation {
-                isVisible = true
+        GeometryReader { geometry in
+            ZStack {
+                Color.black.opacity(0.62)
+                    .ignoresSafeArea()
+                    .opacity(isVisible ? 1 : 0)
+
+                popupContent
+                    .frame(maxWidth: 430)
+                    .frame(height: min(geometry.size.height - 48, 620))
+                    .padding(.horizontal, 20)
+                    .scaleEffect(isVisible ? 1 : 0.94)
+                    .opacity(isVisible ? 1 : 0)
             }
         }
+        .animation(.easeOut(duration: 0.25), value: isVisible)
+        .onAppear {
+            isVisible = true
+        }
     }
-    
+
     private var popupContent: some View {
         VStack(spacing: 0) {
-            // Header with title and version
-            headerSection
-            
-            // Features section
-            featuresSection
-            
-            // Action button
-            actionButton
+            header
+
+            if features.isEmpty {
+                emptyFeatureContent
+            } else {
+                featurePager
+                pageIndicator
+            }
+
+            actions
         }
-        .frame(maxWidth: .infinity)
-        .frame(maxHeight: min(UIScreen.main.bounds.height * 0.7, 500))
-        .background(popupBackground)
-        .padding(.horizontal, 24)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(CloveColors.card)
+                .shadow(color: .black.opacity(0.3), radius: 28, y: 14)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
-    
-    private var headerSection: some View {
-        VStack(spacing: CloveSpacing.medium) {
-            // App icon or feature icon
+
+    private var header: some View {
+        VStack(spacing: 8) {
+            HStack(alignment: .top) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Theme.shared.accent.opacity(0.14))
+
+                    Image(systemName: popup.icon ?? "sparkles")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(Theme.shared.accent)
+                }
+                .frame(width: 48, height: 48)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("WHAT'S NEW")
+                        .font(.system(size: 12, weight: .bold))
+                        .tracking(1.1)
+                        .foregroundStyle(Theme.shared.accent)
+
+                    Text(popup.title)
+                        .font(.system(size: 23, weight: .bold, design: .rounded))
+                        .foregroundStyle(CloveColors.primaryText)
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 8)
+
+                Button(action: dismissPopup) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .frame(width: 34, height: 34)
+                        .background(Circle().fill(CloveColors.background))
+                }
+                .accessibilityLabel("Close what's new")
+            }
+
+            HStack {
+                if let version = popup.version {
+                    Text("Version \(version)")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+
+                Spacer()
+
+                if !features.isEmpty {
+                    Text("\(selectedFeature + 1) of \(features.count)")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .contentTransition(.numericText())
+                }
+            }
+        }
+        .padding(.horizontal, 22)
+        .padding(.top, 22)
+        .padding(.bottom, 14)
+    }
+
+    private var featurePager: some View {
+        TabView(selection: $selectedFeature) {
+            ForEach(Array(features.enumerated()), id: \.element.id) { index, feature in
+                featurePage(feature)
+                    .tag(index)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .frame(maxHeight: .infinity)
+    }
+
+    private func featurePage(_ feature: WhatsNewFeature) -> some View {
+        VStack(spacing: 18) {
+            Spacer(minLength: 4)
+
             ZStack {
                 Circle()
-                    .fill(Theme.shared.accent.opacity(0.1))
-                    .frame(width: 64, height: 64)
-                
-                Image(systemName: popup.icon ?? "star.fill")
-                    .font(.system(size: 28, weight: .medium))
+                    .fill(Theme.shared.accent.opacity(0.12))
+                    .frame(width: 112, height: 112)
+
+                Circle()
+                    .stroke(Theme.shared.accent.opacity(0.18), lineWidth: 1)
+                    .frame(width: 112, height: 112)
+
+                Image(systemName: feature.icon)
+                    .font(.system(size: 44, weight: .medium))
                     .foregroundStyle(Theme.shared.accent)
             }
-            
-            // Title
-            Text(popup.title)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(CloveColors.primaryText)
-                .multilineTextAlignment(.center)
-            
-            // Version badge
-            if let version = popup.version {
-                Text("Version \(version)")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Theme.shared.accent)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Theme.shared.accent.opacity(0.1))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(Theme.shared.accent.opacity(0.3), lineWidth: 1)
-                            )
-                    )
+
+            VStack(spacing: 10) {
+                Text(feature.title)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(CloveColors.primaryText)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(feature.description)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 26)
+
+            Spacer(minLength: 4)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var emptyFeatureContent: some View {
+        Text(popup.message)
+            .font(.system(size: 17))
+            .foregroundStyle(CloveColors.secondaryText)
+            .multilineTextAlignment(.center)
+            .frame(maxHeight: .infinity)
+            .padding(.horizontal, 28)
+    }
+
+    private var pageIndicator: some View {
+        HStack(spacing: 8) {
+            ForEach(features.indices, id: \.self) { index in
+                Capsule()
+                    .fill(index == selectedFeature ? Theme.shared.accent : CloveColors.secondaryText.opacity(0.25))
+                    .frame(width: index == selectedFeature ? 24 : 8, height: 8)
+                    .animation(.easeInOut(duration: 0.2), value: selectedFeature)
             }
         }
-        .padding(.top, CloveSpacing.large)
-        .padding(.bottom, CloveSpacing.medium)
-        .padding(.horizontal, CloveSpacing.medium)
+        .padding(.bottom, 18)
+        .accessibilityHidden(true)
     }
-    
-    private var featuresSection: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: CloveSpacing.medium) {
-                // Introduction message if provided
-                if !popup.message.isEmpty {
-                    Text(popup.message)
-                        .font(.system(size: 16))
-                        .foregroundStyle(CloveColors.secondaryText)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, CloveSpacing.medium)
-                }
-                
-                // Feature highlights
-                if let features = popup.features, !features.isEmpty {
-                    LazyVStack(spacing: CloveSpacing.small) {
-                        ForEach(features) { feature in
-                            FeatureHighlightCard(feature: feature)
-                        }
+
+    private var actions: some View {
+        HStack(spacing: 12) {
+            if selectedFeature > 0 {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        selectedFeature -= 1
                     }
-                    .padding(.horizontal, CloveSpacing.medium)
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(Theme.shared.accent)
+                        .frame(width: 52, height: 52)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Theme.shared.accent.opacity(0.12))
+                        )
                 }
+                .accessibilityLabel("Previous feature")
+                .transition(.scale.combined(with: .opacity))
             }
-            .padding(.vertical, CloveSpacing.medium)
-            .padding(.bottom, CloveSpacing.large)
-        }
-    }
-    
-    private var actionButton: some View {
-        VStack(spacing: 0) {
-            Divider()
-                .background(CloveColors.secondaryText.opacity(0.2))
-            
-            Button(action: {
-                dismissPopup()
-            }) {
-                HStack(spacing: CloveSpacing.small) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 16, weight: .semibold))
-                    
-                    Text("Got it!")
-                        .font(.system(size: 18, weight: .semibold))
+
+            Button(action: advanceOrDismiss) {
+                HStack(spacing: 8) {
+                    Text(isLastFeature ? "Start exploring" : "Next")
+                    Image(systemName: isLastFeature ? "checkmark" : "arrow.right")
                 }
-                .foregroundColor(.white)
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
+                .frame(height: 52)
                 .background(
-                    RoundedRectangle(cornerRadius: CloveCorners.medium)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(Theme.shared.accent)
                 )
             }
-            .padding(.horizontal, CloveSpacing.large)
-            .padding(.vertical, CloveSpacing.medium)
         }
+        .padding(.horizontal, 22)
+        .padding(.top, 16)
+        .padding(.bottom, 22)
         .background(CloveColors.card)
+        .overlay(alignment: .top) {
+            Divider().opacity(0.35)
+        }
+        .animation(.easeInOut(duration: 0.2), value: selectedFeature)
     }
-    
-    private var popupBackground: some View {
-        RoundedRectangle(cornerRadius: 20)
-            .fill(CloveColors.card)
-            .shadow(
-                color: .black.opacity(0.15),
-                radius: 20,
-                x: 0,
-                y: 10
-            )
+
+    private func advanceOrDismiss() {
+        if isLastFeature {
+            dismissPopup()
+        } else {
+            let feedback = UISelectionFeedbackGenerator()
+            feedback.selectionChanged()
+
+            withAnimation(.easeInOut(duration: 0.25)) {
+                selectedFeature += 1
+            }
+        }
     }
-    
+
     private func dismissPopup() {
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-        impactFeedback.impactOccurred()
-        
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+
+        withAnimation(.easeIn(duration: 0.2)) {
             isVisible = false
         }
-        
-        // Dismiss after animation completes
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             PopupManager.shared.close()
         }
     }
@@ -167,35 +261,8 @@ struct WhatsNewPopupView: View {
 
 #Preview {
     ZStack {
-        CloveColors.background
-            .ignoresSafeArea()
-        
-        WhatsNewPopupView(
-            popup: Popup(
-                id: "whats_new_1_2_2",
-                type: .whatsNew,
-                icon: "sparkles",
-                title: "What's New",
-                message: "We've added some exciting new features to help you track your health more comprehensively!",
-                features: [
-                    WhatsNewFeature(
-                        icon: "toilet",
-                        title: "Bowel Movement Tracking",
-                        description: "Track Bristol Stool Chart types to monitor digestive health patterns"
-                    ),
-                    WhatsNewFeature(
-                        icon: "chart.line.uptrend.xyaxis",
-                        title: "Enhanced Analytics",
-                        description: "Improved correlation analysis with better data aggregation"
-                    ),
-                    WhatsNewFeature(
-                        icon: "square.and.arrow.up",
-                        title: "CSV Export Updates",
-                        description: "Export now includes bowel movement data for comprehensive health records"
-                    )
-                ],
-                version: "1.2.2"
-            )
-        )
+        CloveColors.background.ignoresSafeArea()
+
+        WhatsNewPopupView(popup: WhatsNewContent.version_1_6_0)
     }
 }
