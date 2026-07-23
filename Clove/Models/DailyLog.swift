@@ -44,18 +44,34 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
         self.meals = meals
         self.activities = activities
         self.medicationsTaken = medicationsTaken
-        self.medicationAdherenceJSON = try! JSONEncoder().encode(medicationAdherence).toJSONString()
+        self.medicationAdherenceJSON = Self.encodeJSON(medicationAdherence)
         self.notes = notes
         self.isFlareDay = isFlareDay
         self.weather = weather
-        self.symptomRatingsJSON = try! JSONEncoder().encode(symptomRatings).toJSONString()
+        self.symptomRatingsJSON = Self.encodeJSON(symptomRatings)
     }
 
     var symptomRatings: [SymptomRating] {
-        (try? JSONDecoder().decode([SymptomRating].self, from: symptomRatingsJSON.data(using: .utf8)!)) ?? []
+        Self.decodeJSON(symptomRatingsJSON, fallback: [])
     }
     
     var medicationAdherence: [MedicationAdherence] {
-        (try? JSONDecoder().decode([MedicationAdherence].self, from: medicationAdherenceJSON.data(using: .utf8)!)) ?? []
+        Self.decodeJSON(medicationAdherenceJSON, fallback: [])
+    }
+
+    private static func encodeJSON<Value: Encodable>(_ value: Value) -> String {
+        guard let data = try? JSONEncoder().encode(value),
+              let json = String(data: data, encoding: .utf8) else {
+            return "[]"
+        }
+        return json
+    }
+
+    private static func decodeJSON<Value: Decodable>(_ json: String, fallback: Value) -> Value {
+        guard let data = json.data(using: .utf8),
+              let value = try? JSONDecoder().decode(Value.self, from: data) else {
+            return fallback
+        }
+        return value
     }
 }

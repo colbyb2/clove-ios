@@ -15,6 +15,12 @@ struct SymptomRatingVM: Identifiable, Equatable {
     }
 
     func toModel() -> SymptomRating {
-        SymptomRating(symptomId: symptomId, symptomName: symptomName, rating: Int(ratingDouble), isBinary: isBinary)
+        let rating = ratingDouble.isFinite ? Int(ratingDouble.rounded()) : 0
+        return SymptomRating(
+            symptomId: symptomId,
+            symptomName: symptomName,
+            rating: min(10, max(0, rating)),
+            isBinary: isBinary
+        )
     }
 }

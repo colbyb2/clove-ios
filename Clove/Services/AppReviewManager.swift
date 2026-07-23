@@ -245,8 +245,8 @@ class AppReviewManager: AppReviewManaging {
 
     private func hasMinimumEngagement() async -> Bool {
         // Check minimum logs
-        let logsCount = logsRepository.getLogs().count
-        guard logsCount >= minimumLogsForPrompt else {
+        let logs = logsRepository.getLogs()
+        guard logs.count >= minimumLogsForPrompt else {
             return false
         }
 
@@ -256,18 +256,30 @@ class AppReviewManager: AppReviewManaging {
             return false
         }
 
-        // Check current streak (user must have 3+ day streak)
-        // Refresh dashboard data to get latest streaks
-        await dashboardManager.refreshDashboard()
+        // Review eligibility should stay lightweight and must not make a successful save depend
+        // on the analytics/dashboard pipeline. Count distinct consecutive logging days directly.
+        return hasCurrentLoggingStreak(in: logs, minimumDays: minimumStreakForPrompt)
+    }
 
-        let streaks = dashboardManager.currentStreaks
-        let hasGoodStreak = streaks.contains { $0.currentStreak >= minimumStreakForPrompt }
+    private func hasCurrentLoggingStreak(in logs: [DailyLog], minimumDays: Int) -> Bool {
+        guard minimumDays > 0 else { return true }
+        let calendar = Calendar.current
+        let loggedDays = Set(logs.map { calendar.startOfDay(for: $0.date) })
+        var day = calendar.startOfDay(for: Date())
+        var streak = 0
 
-        guard hasGoodStreak else {
-            return false
+        while loggedDays.contains(day) {
+            streak += 1
+            if streak >= minimumDays {
+                return true
+            }
+            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: day) else {
+                return false
+            }
+            day = previousDay
         }
 
-        return true
+        return false
     }
 
     private func meetsPromptLimits() async -> Bool {

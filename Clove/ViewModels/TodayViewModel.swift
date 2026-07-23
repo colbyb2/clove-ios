@@ -2,6 +2,7 @@ import SwiftUI
 import Foundation
 import GRDB
 
+@MainActor
 @Observable
 class TodayViewModel {
    enum AutoSaveField: Hashable {
@@ -230,9 +231,9 @@ class TodayViewModel {
 
       let log = DailyLog(
          date: selectedDate,
-         mood: settings.trackMood ? Int(logData.mood) : nil,
-         painLevel: settings.trackPain ? Int(logData.painLevel) : nil,
-         energyLevel: settings.trackEnergy ? Int(logData.energyLevel) : nil,
+         mood: settings.trackMood ? Self.rating(from: logData.mood) : nil,
+         painLevel: settings.trackPain ? Self.rating(from: logData.painLevel) : nil,
+         energyLevel: settings.trackEnergy ? Self.rating(from: logData.energyLevel) : nil,
          waterIntake: settings.trackHydration && logData.waterIntake > 0 ? logData.waterIntake : nil,
          meals: settings.trackMeals ? logData.meals : [],
          activities: settings.trackActivities ? logData.activities : [],
@@ -248,7 +249,6 @@ class TodayViewModel {
       isSaving = false
 
       if result {
-         MetricRegistry.shared.invalidateCache()
          autoSaveBaseline = AutoSaveSnapshot(logData: logData)
          modifiedAutoSaveFields.removeAll()
          if showFeedback {
@@ -300,11 +300,11 @@ class TodayViewModel {
       for field in fieldsToSave {
          switch field {
          case .mood:
-            log.mood = settings.trackMood ? Int(logData.mood) : nil
+            log.mood = settings.trackMood ? Self.rating(from: logData.mood) : nil
          case .painLevel:
-            log.painLevel = settings.trackPain ? Int(logData.painLevel) : nil
+            log.painLevel = settings.trackPain ? Self.rating(from: logData.painLevel) : nil
          case .energyLevel:
-            log.energyLevel = settings.trackEnergy ? Int(logData.energyLevel) : nil
+            log.energyLevel = settings.trackEnergy ? Self.rating(from: logData.energyLevel) : nil
          case .isFlareDay:
             log.isFlareDay = logData.isFlareDay
          case .weather:
@@ -313,11 +313,11 @@ class TodayViewModel {
             log.notes = settings.trackNotes ? logData.notes : nil
          case .medicationAdherence:
             let adherence = settings.trackMeds ? logData.medicationAdherence : []
-            log.medicationAdherenceJSON = try! JSONEncoder().encode(adherence).toJSONString()
+            log.medicationAdherenceJSON = Self.encodeJSON(adherence)
             log.medicationsTaken = adherence.filter(\.wasTaken).map(\.medicationName)
          case .symptomRatings:
             let ratings = settings.trackSymptoms ? logData.symptomRatings.map { $0.toModel() } : []
-            log.symptomRatingsJSON = try! JSONEncoder().encode(ratings).toJSONString()
+            log.symptomRatingsJSON = Self.encodeJSON(ratings)
          }
       }
 
@@ -325,7 +325,6 @@ class TodayViewModel {
       isSaving = false
 
       if result {
-         MetricRegistry.shared.invalidateCache()
          autoSaveBaseline.update(fieldsToSave, from: logData)
          modifiedAutoSaveFields.subtract(fieldsToSave)
       }
@@ -334,11 +333,22 @@ class TodayViewModel {
    func saveHydration() {
       guard isAutoSaveEnabled else { return }
       let ounces = logData.waterIntake > 0 ? logData.waterIntake : nil
-      if logsRepository.saveWaterIntake(ounces, for: selectedDate) {
-         MetricRegistry.shared.invalidateCache()
-      } else {
+      if !logsRepository.saveWaterIntake(ounces, for: selectedDate) {
          toastManager.showToast(message: "Hydration couldn't be saved.", color: CloveColors.error)
       }
+   }
+
+   private static func rating(from value: Double) -> Int? {
+      guard value.isFinite else { return nil }
+      return min(10, max(0, Int(value.rounded())))
+   }
+
+   private static func encodeJSON<Value: Encodable>(_ value: Value) -> String {
+      guard let data = try? JSONEncoder().encode(value),
+            let json = String(data: data, encoding: .utf8) else {
+         return "[]"
+      }
+      return json
    }
    
    // MARK: - Symptom Management

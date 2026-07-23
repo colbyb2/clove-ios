@@ -152,15 +152,18 @@ final class DashboardManager {
 
     private func loadWeekdays(_ dataset: AnalyticsDataset) {
         let calendar = Calendar.current
-        weeklyPatterns = Dictionary(uniqueKeysWithValues: dataset.definitions.compactMap { definition -> (String, [Double])? in
-            let values = dataset.observations(for: definition.id).compactMap { observation -> (Int, Double)? in
-                guard case .observed(let value) = observation.state, let number = value.numericValue else { return nil }
-                return (calendar.component(.weekday, from: observation.day), number)
-            }
-            guard !values.isEmpty else { return nil }
-            let groups = Dictionary(grouping: values, by: \.0)
-            return (definition.displayName, (1...7).map { day in let group = groups[day] ?? []; return group.isEmpty ? 0 : group.reduce(0) { $0 + $1.1 } / Double(group.count) })
-        })
+        weeklyPatterns = Dictionary(
+            dataset.definitions.compactMap { definition -> (String, [Double])? in
+                let values = dataset.observations(for: definition.id).compactMap { observation -> (Int, Double)? in
+                    guard case .observed(let value) = observation.state, let number = value.numericValue else { return nil }
+                    return (calendar.component(.weekday, from: observation.day), number)
+                }
+                guard !values.isEmpty else { return nil }
+                let groups = Dictionary(grouping: values, by: \.0)
+                return (definition.displayName, (1...7).map { day in let group = groups[day] ?? []; return group.isEmpty ? 0 : group.reduce(0) { $0 + $1.1 } / Double(group.count) })
+            },
+            uniquingKeysWith: { existing, _ in existing }
+        )
     }
 
     private func loadWidgetPreferences() { if let data = UserDefaults.standard.data(forKey: "dashboardWidgets"), let decoded = try? JSONDecoder().decode([DashboardWidget].self, from: data) { widgets = decoded.sorted { $0.position < $1.position } } }
