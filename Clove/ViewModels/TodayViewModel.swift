@@ -9,11 +9,18 @@ class TodayViewModel {
       case mood
       case painLevel
       case energyLevel
+      case hydration
       case isFlareDay
       case weather
       case notes
       case medicationAdherence
       case symptomRatings
+   }
+
+   enum SaveState: Equatable {
+      case saved
+      case saving
+      case failed
    }
 
    // MARK: - Dependencies
@@ -33,15 +40,14 @@ class TodayViewModel {
 
    var yesterdayLog: DailyLog? = nil
    var cycleEntry: Cycle? = nil
-   var isSaving = false
+   private(set) var saveState: SaveState = .saved
+   var isSaving: Bool { saveState == .saving }
    private var autoSaveTask: Task<Void, Never>?
    private var isLoadingLogData = false
+   private var hasLoadedLogData = false
+   private var loadedDate = Date()
    private var autoSaveBaseline = AutoSaveSnapshot(logData: LogData())
    private var modifiedAutoSaveFields: Set<AutoSaveField> = []
-
-   private var isAutoSaveEnabled: Bool {
-      settingsRepository.getSettings()?.autoSaveEnabled ?? true
-   }
 
    // MARK: - Initialization
 
@@ -111,10 +117,22 @@ class TodayViewModel {
    }
    
    func loadLogData(for date: Date) {
+      if hasLoadedLogData,
+         !Calendar.current.isDate(date, inSameDayAs: loadedDate),
+         !flushPendingChanges(showFailureFeedback: true) {
+         selectedDate = loadedDate
+         return
+      }
+      if hasLoadedLogData, Calendar.current.isDate(date, inSameDayAs: loadedDate) {
+         selectedDate = loadedDate
+         return
+      }
+
       autoSaveTask?.cancel()
       isLoadingLogData = true
       defer { isLoadingLogData = false }
       self.selectedDate = date
+      loadedDate = date
 
       // Load bowel movements for this date (externally, not in LogData)
       let bowelMovements = bowelMovementRepository.getBowelMovementsForDate(date)
@@ -139,6 +157,8 @@ class TodayViewModel {
       // Form defaults and tracked-item synchronization are display state, not user edits.
       autoSaveBaseline = AutoSaveSnapshot(logData: logData)
       modifiedAutoSaveFields.removeAll()
+      saveState = .saved
+      hasLoadedLogData = true
    }
    
    func loadSettings() {
@@ -222,7 +242,7 @@ class TodayViewModel {
       // Prevent duplicate saves
       guard !isSaving else { return }
       autoSaveTask?.cancel()
-      isSaving = true
+      saveState = .saving
 
       // Extract medication names that were marked as taken
       let medicationsTaken = settings.trackMeds ?
@@ -231,7 +251,7 @@ class TodayViewModel {
             .map { $0.medicationName } : []
 
       let log = DailyLog(
-         date: selectedDate,
+         date: loadedDate,
          mood: settings.trackMood ? Self.rating(from: logData.mood) : nil,
          painLevel: settings.trackPain ? Self.rating(from: logData.painLevel) : nil,
          energyLevel: settings.trackEnergy ? Self.rating(from: logData.energyLevel) : nil,
@@ -247,11 +267,11 @@ class TodayViewModel {
       )
 
       let result = logsRepository.saveLog(log)
-      isSaving = false
 
       if result {
          autoSaveBaseline = AutoSaveSnapshot(logData: logData)
          modifiedAutoSaveFields.removeAll()
+         saveState = .saved
          if showFeedback {
             let message = "Log saved successfully"
             toastManager.showToast(message: message, color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
@@ -261,8 +281,11 @@ class TodayViewModel {
          if showFeedback { Task {
             await AppReviewManager.shared.promptForReviewIfEligible()
          } }
-      } else if showFeedback {
-         toastManager.showToast(message: "Hmm, something went wrong.", color: CloveColors.error)
+      } else {
+         saveState = .failed
+         if showFeedback {
+            toastManager.showToast(message: "Changes couldn't be saved. Tap Retry.", color: CloveColors.error)
+         }
       }
 
    }
@@ -271,7 +294,7 @@ class TodayViewModel {
    /// Loaded defaults are compared with the initial form snapshot and are never persisted by
    /// merely opening the Today view.
    func scheduleAutoSave(for field: AutoSaveField) {
-      guard !isLoadingLogData, isAutoSaveEnabled else { return }
+      guard !isLoadingLogData else { return }
 
       if autoSaveBaseline.matches(field, in: logData) {
          modifiedAutoSaveFields.remove(field)
@@ -280,23 +303,31 @@ class TodayViewModel {
       }
 
       autoSaveTask?.cancel()
-      guard !modifiedAutoSaveFields.isEmpty else { return }
+      guard !modifiedAutoSaveFields.isEmpty else {
+         saveState = .saved
+         return
+      }
+
+      saveState = .saving
 
       autoSaveTask = Task { [weak self] in
          try? await Task.sleep(nanoseconds: 600_000_000)
          guard !Task.isCancelled else { return }
          self?.autoSaveTask = nil
-         guard self?.isAutoSaveEnabled == true else { return }
          self?.saveModifiedFields()
       }
    }
 
-   private func saveModifiedFields() {
-      guard !isSaving, !modifiedAutoSaveFields.isEmpty else { return }
-      isSaving = true
+   @discardableResult
+   private func saveModifiedFields() -> Bool {
+      guard !modifiedAutoSaveFields.isEmpty else {
+         saveState = .saved
+         return true
+      }
+      saveState = .saving
 
       let fieldsToSave = modifiedAutoSaveFields
-      var log = logsRepository.getLogForDate(selectedDate) ?? DailyLog(date: selectedDate)
+      var log = logsRepository.getLogForDate(loadedDate) ?? DailyLog(date: loadedDate)
 
       for field in fieldsToSave {
          switch field {
@@ -306,6 +337,8 @@ class TodayViewModel {
             log.painLevel = settings.trackPain ? Self.rating(from: logData.painLevel) : nil
          case .energyLevel:
             log.energyLevel = settings.trackEnergy ? Self.rating(from: logData.energyLevel) : nil
+         case .hydration:
+            log.waterIntake = settings.trackHydration && logData.waterIntake > 0 ? logData.waterIntake : nil
          case .isFlareDay:
             log.isFlareDay = logData.isFlareDay
          case .weather:
@@ -323,20 +356,43 @@ class TodayViewModel {
       }
 
       let result = logsRepository.saveLog(log)
-      isSaving = false
 
       if result {
          autoSaveBaseline.update(fieldsToSave, from: logData)
          modifiedAutoSaveFields.subtract(fieldsToSave)
+         saveState = modifiedAutoSaveFields.isEmpty ? .saved : .saving
+      } else {
+         saveState = .failed
       }
+      return result
    }
 
    func saveHydration() {
-      guard isAutoSaveEnabled else { return }
-      let ounces = logData.waterIntake > 0 ? logData.waterIntake : nil
-      if !logsRepository.saveWaterIntake(ounces, for: selectedDate) {
-         toastManager.showToast(message: "Hydration couldn't be saved.", color: CloveColors.error)
+      scheduleAutoSave(for: .hydration)
+   }
+
+   func retrySave() {
+      autoSaveTask?.cancel()
+      autoSaveTask = nil
+      if !saveModifiedFields() {
+         toastManager.showToast(message: "Still unable to save. Your changes remain on screen.", color: CloveColors.error)
       }
+   }
+
+   @discardableResult
+   func flushPendingChanges(showFailureFeedback: Bool = false) -> Bool {
+      autoSaveTask?.cancel()
+      autoSaveTask = nil
+      guard !modifiedAutoSaveFields.isEmpty else { return saveState != .failed }
+      let saved = saveModifiedFields()
+      if !saved, showFailureFeedback {
+         toastManager.showToast(
+            message: "Changes couldn't be saved. Return to Today and tap Retry.",
+            color: CloveColors.error,
+            icon: Image(systemName: "exclamationmark.triangle")
+         )
+      }
+      return saved
    }
 
    private static func rating(from value: Double?) -> Int? {
@@ -435,6 +491,7 @@ private struct AutoSaveSnapshot {
    var mood: Double?
    var painLevel: Double?
    var energyLevel: Double?
+   var waterIntake: Int
    var isFlareDay: Bool
    var weather: String?
    var notes: String?
@@ -445,6 +502,7 @@ private struct AutoSaveSnapshot {
       mood = logData.mood
       painLevel = logData.painLevel
       energyLevel = logData.energyLevel
+      waterIntake = logData.waterIntake
       isFlareDay = logData.isFlareDay
       weather = logData.weather
       notes = logData.notes
@@ -457,6 +515,7 @@ private struct AutoSaveSnapshot {
       case .mood: mood == logData.mood
       case .painLevel: painLevel == logData.painLevel
       case .energyLevel: energyLevel == logData.energyLevel
+      case .hydration: waterIntake == logData.waterIntake
       case .isFlareDay: isFlareDay == logData.isFlareDay
       case .weather: weather == logData.weather
       case .notes: notes == logData.notes
@@ -471,6 +530,7 @@ private struct AutoSaveSnapshot {
          case .mood: mood = logData.mood
          case .painLevel: painLevel = logData.painLevel
          case .energyLevel: energyLevel = logData.energyLevel
+         case .hydration: waterIntake = logData.waterIntake
          case .isFlareDay: isFlareDay = logData.isFlareDay
          case .weather: weather = logData.weather
          case .notes: notes = logData.notes

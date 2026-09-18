@@ -30,6 +30,11 @@ struct TodayView: View {
                         self.viewModel.loadLogData(for: newDate)
                     }
 
+                    DailySaveStatusView(
+                        state: viewModel.saveState,
+                        onRetry: viewModel.retrySave
+                    )
+
                     // Yesterday's Summary (only show if data exists or it's helpful for context)
                     if viewModel.yesterdayLog != nil
                         && Calendar.current.isDateInToday(viewModel.selectedDate)
@@ -329,50 +334,6 @@ struct TodayView: View {
                         )
                     }
 
-                    // MARK: Save Button
-                    Button(action: {
-                        // Haptic feedback for save action
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                        impactFeedback.impactOccurred()
-
-                        viewModel.saveLog()
-
-                        // Success haptic feedback (will be triggered by toast in ViewModel)
-                    }) {
-                        HStack(spacing: CloveSpacing.small) {
-                            if viewModel.isSaving {
-                                ProgressView()
-                                    .scaleEffect(0.9)
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            } else {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 18, weight: .semibold))
-                            }
-
-                            Text(viewModel.isSaving ? "Saving..." : "Save Log")
-                                .font(.system(size: 18, weight: .semibold))
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)  // Large touch target
-                        .background(
-                            RoundedRectangle(cornerRadius: CloveCorners.medium)
-                                .fill(
-                                    viewModel.isSaving
-                                        ? CloveColors.secondaryText : Theme.shared.accent
-                                )
-                                .shadow(
-                                    color: Theme.shared.accent.opacity(0.3), radius: 4, x: 0, y: 2)
-                        )
-                    }
-                    .disabled(viewModel.isSaving)
-                    .accessibilityLabel(
-                        viewModel.isSaving ? "Saving health log" : "Save today's health log"
-                    )
-                    .accessibilityHint(
-                        viewModel.isSaving
-                            ? "Currently saving with weather data"
-                            : "Saves all current ratings and settings")
                 }
                 .padding()
             }
@@ -383,6 +344,9 @@ struct TodayView: View {
             if TutorialManager.shared.startTutorial(Tutorials.TodayView) == .Failure {
                 print("Tutorial [TodayView] Failed to Start")
             }
+        }
+        .onDisappear {
+            viewModel.flushPendingChanges(showFailureFeedback: true)
         }
         .onChange(of: navigationCoordinator.targetDate) { _, newDate in
             if let targetDate = newDate {
@@ -612,6 +576,84 @@ struct TodayView: View {
             return trimmedNotes
         } else {
             return String(trimmedNotes.prefix(40)) + "..."
+        }
+    }
+}
+
+private struct DailySaveStatusView: View {
+    let state: TodayViewModel.SaveState
+    let onRetry: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            statusIcon
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(statusColor)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(CloveColors.secondaryText)
+            }
+
+            Spacer()
+
+            if state == .failed {
+                Button("Retry", action: onRetry)
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 38)
+                    .background(CloveColors.error, in: Capsule())
+            }
+        }
+        .padding(.horizontal, CloveSpacing.medium)
+        .padding(.vertical, 12)
+        .background(statusColor.opacity(0.09), in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+        .overlay {
+            RoundedRectangle(cornerRadius: CloveCorners.medium)
+                .stroke(statusColor.opacity(0.18), lineWidth: 1)
+        }
+        .animation(.easeInOut(duration: 0.2), value: state)
+        .accessibilityElement(children: state == .failed ? .contain : .combine)
+    }
+
+    @ViewBuilder
+    private var statusIcon: some View {
+        if state == .saving {
+            ProgressView()
+                .tint(statusColor)
+                .frame(width: 22, height: 22)
+        } else {
+            Image(systemName: state == .saved ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(statusColor)
+                .frame(width: 22, height: 22)
+        }
+    }
+
+    private var title: String {
+        switch state {
+        case .saved: "Saved"
+        case .saving: "Saving changes..."
+        case .failed: "Changes not saved"
+        }
+    }
+
+    private var detail: String {
+        switch state {
+        case .saved: "Changes save automatically"
+        case .saving: "You can keep tracking while this finishes"
+        case .failed: "Your changes are still here. Try again."
+        }
+    }
+
+    private var statusColor: Color {
+        switch state {
+        case .saved: CloveColors.success
+        case .saving: Theme.shared.accent
+        case .failed: CloveColors.error
         }
     }
 }

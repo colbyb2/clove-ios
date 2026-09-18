@@ -117,6 +117,12 @@ struct BowelMovementSelectionSheet: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 dismiss()
             }
+        } else {
+            ToastManager.shared.showToast(
+                message: "Bowel movement couldn't be saved. Please try again.",
+                color: CloveColors.error,
+                icon: Image(systemName: "exclamationmark.triangle")
+            )
         }
     }
 
@@ -130,6 +136,12 @@ struct BowelMovementSelectionSheet: View {
             onUpdate()
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             dismiss()
+        } else {
+            ToastManager.shared.showToast(
+                message: "Bowel movement couldn't be saved. Please try again.",
+                color: CloveColors.error,
+                icon: Image(systemName: "exclamationmark.triangle")
+            )
         }
     }
 }

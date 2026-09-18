@@ -90,14 +90,16 @@ private struct TrackingAndLoggingSettingsView: View {
                     Label("Choose What to Track", systemImage: "checklist")
                 }
 
-                Toggle(isOn: $bindableViewModel.settings.autoSaveEnabled) {
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(CloveColors.success)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Auto Save Daily Changes")
-                        Text("Save edits shortly after you make them")
-                            .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                        Text("Automatic Saving")
+                        Text("Daily changes save automatically, with status shown on Today")
+                            .font(.caption)
+                            .foregroundStyle(CloveColors.secondaryText)
                     }
                 }
-                .onChange(of: viewModel.settings.autoSaveEnabled) { _, _ in viewModel.save() }
             }
 
             Section("Goals") {

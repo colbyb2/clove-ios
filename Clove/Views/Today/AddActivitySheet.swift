@@ -273,8 +273,19 @@ struct AddActivitySheet: View {
         )
 
         if repo.save(entry) != nil {
+            ToastManager.shared.showToast(
+                message: "Activity saved",
+                color: CloveColors.success,
+                icon: Image(systemName: "checkmark.circle.fill")
+            )
             onSave()
             dismiss()
+        } else {
+            ToastManager.shared.showToast(
+                message: "Activity couldn't be saved. Please try again.",
+                color: CloveColors.error,
+                icon: Image(systemName: "exclamationmark.triangle")
+            )
         }
     }
 
@@ -544,6 +555,12 @@ struct AddCustomActivitySheet: View {
 
             onSave()
             dismiss()
+        } else {
+            ToastManager.shared.showToast(
+                message: "Activity couldn't be saved. Please try again.",
+                color: CloveColors.error,
+                icon: Image(systemName: "exclamationmark.triangle")
+            )
         }
     }
 }

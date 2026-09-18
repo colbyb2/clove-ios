@@ -152,6 +152,12 @@ struct ActivityTracker: View {
             // Haptic feedback
             let impactFeedback = UIImpactFeedbackGenerator(style: .light)
             impactFeedback.impactOccurred()
+        } else {
+            ToastManager.shared.showToast(
+                message: "Activity couldn't be deleted. Please try again.",
+                color: CloveColors.error,
+                icon: Image(systemName: "exclamationmark.triangle")
+            )
         }
     }
 }

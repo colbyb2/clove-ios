@@ -277,8 +277,19 @@ struct AddFoodSheet: View {
         )
 
         if repo.save(entry) != nil {
+            ToastManager.shared.showToast(
+                message: "Food saved",
+                color: CloveColors.success,
+                icon: Image(systemName: "checkmark.circle.fill")
+            )
             onSave()
             dismiss()
+        } else {
+            ToastManager.shared.showToast(
+                message: "Food couldn't be saved. Please try again.",
+                color: CloveColors.error,
+                icon: Image(systemName: "exclamationmark.triangle")
+            )
         }
     }
 
@@ -481,6 +492,12 @@ struct AddCustomFoodSheet: View {
 
             onSave()
             dismiss()
+        } else {
+            ToastManager.shared.showToast(
+                message: "Food couldn't be saved. Please try again.",
+                color: CloveColors.error,
+                icon: Image(systemName: "exclamationmark.triangle")
+            )
         }
     }
 }
