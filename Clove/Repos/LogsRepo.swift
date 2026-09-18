@@ -6,33 +6,24 @@ class LogsRepo {
 
    private let databaseManager: DatabaseManaging
    private let analyticsRevisionSource: any AnalyticsRevisionProviding
+   private let calendar: Calendar
 
    init(
       databaseManager: DatabaseManaging,
-      analyticsRevisionSource: any AnalyticsRevisionProviding = AnalyticsRevisionSource.shared
+      analyticsRevisionSource: any AnalyticsRevisionProviding = AnalyticsRevisionSource.shared,
+      calendar: Calendar = .current
    ) {
       self.databaseManager = databaseManager
       self.analyticsRevisionSource = analyticsRevisionSource
+      self.calendar = calendar
    }
    
    func saveLog(_ log: DailyLog) -> Bool {
       do {
          try databaseManager.write { db in
-            // Check if a log already exists for this date
-            let calendar = Calendar.current
-            let startOfDay = calendar.startOfDay(for: log.date)
-            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-            
-            // Try to find an existing log for today
-            if let existingLog = try DailyLog.filter(Column("date") >= startOfDay && Column("date") < endOfDay).fetchOne(db) {
-               // Update the existing log with the new log's ID
-               var updatedLog = log
-               updatedLog.id = existingLog.id
-               try updatedLog.update(db)
-            } else {
-               // No existing log, save as new
-               try log.save(db)
-            }
+            var normalizedLog = log
+            normalizedLog.dayKey = LocalDayKey.make(for: log.date, calendar: calendar)
+            try normalizedLog.upsert(db)
          }
          analyticsRevisionSource.bump(reason: .dailyLog)
          return true
@@ -45,20 +36,18 @@ class LogsRepo {
    func saveWaterIntake(_ ounces: Int?, for date: Date) -> Bool {
       do {
          try databaseManager.write { db in
-            let calendar = Calendar.current
-            let startOfDay = calendar.startOfDay(for: date)
-            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+            let dayKey = LocalDayKey.make(for: date, calendar: calendar)
 
             if let existingLog = try DailyLog
-               .filter(Column("date") >= startOfDay && Column("date") < endOfDay)
+               .filter(Column("dayKey") == dayKey)
                .fetchOne(db) {
                try db.execute(
                   sql: "UPDATE dailyLog SET waterIntake = ? WHERE id = ?",
                   arguments: [ounces, existingLog.id]
                )
             } else if let ounces {
-               let log = DailyLog(date: date, waterIntake: ounces)
-               try log.insert(db)
+               let log = DailyLog(date: date, dayKey: dayKey, waterIntake: ounces)
+               try log.upsert(db)
             }
          }
          analyticsRevisionSource.bump(reason: .dailyLog)
@@ -72,7 +61,7 @@ class LogsRepo {
    func getLogs() -> [DailyLog] {
       do {
          return try databaseManager.read { db in
-            try DailyLog.fetchAll(db)
+            try DailyLog.order(Column("dayKey").asc).fetchAll(db)
          }
       } catch {
          print("Error getting logs: \(error)")
@@ -83,11 +72,8 @@ class LogsRepo {
    func getLogForDate(_ date: Date) -> DailyLog? {
       do {
          return try databaseManager.read { db in
-            let calendar = Calendar.current
-            let startOfDay = calendar.startOfDay(for: date)
-            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-
-            return try DailyLog.filter(Column("date") >= startOfDay && Column("date") < endOfDay).fetchOne(db)
+            let dayKey = LocalDayKey.make(for: date, calendar: calendar)
+            return try DailyLog.filter(Column("dayKey") == dayKey).fetchOne(db)
          }
       } catch {
          print("Error getting log for date: \(error)")
@@ -98,7 +84,12 @@ class LogsRepo {
    func getLogsInRange(from startDate: Date, to endDate: Date) -> [DailyLog] {
       do {
          return try databaseManager.read { db in
-            try DailyLog.filter(Column("date") >= startDate && Column("date") <= endDate).fetchAll(db)
+            let startKey = LocalDayKey.make(for: startDate, calendar: calendar)
+            let endKey = LocalDayKey.make(for: endDate, calendar: calendar)
+            return try DailyLog
+               .filter(Column("dayKey") >= startKey && Column("dayKey") <= endKey)
+               .order(Column("dayKey").asc)
+               .fetchAll(db)
          }
       } catch {
          print("Error getting logs in range: \(error)")

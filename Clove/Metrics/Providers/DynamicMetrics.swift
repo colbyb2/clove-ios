@@ -32,7 +32,7 @@ struct SymptomMetricProvider: MetricProvider {
             guard let symptomRating = log.symptomRatings.first(where: { $0.symptomName == symptomName }) else { return nil }
             
             return MetricDataPoint(
-                date: log.date,
+                date: log.date(in: Calendar.current),
                 value: Double(symptomRating.rating),
                 rawValue: symptomRating,
                 metricId: id
@@ -82,7 +82,7 @@ struct MedicationMetricProvider: MetricProvider {
         return logs.map { log in
             let wasTaken = log.medicationsTaken.contains(medicationName)
             return MetricDataPoint(
-                date: log.date,
+                date: log.date(in: Calendar.current),
                 value: wasTaken ? 1.0 : 0.0,
                 rawValue: wasTaken,
                 metricId: id
@@ -150,7 +150,7 @@ struct ActivityMetricProvider: MetricProvider {
         // Get all unique days from both logs and entries
         var allDays = Set<Date>()
         for log in logs {
-            allDays.insert(calendar.startOfDay(for: log.date))
+            allDays.insert(log.date(in: calendar))
         }
         for day in daysWithActivity {
             allDays.insert(day)
@@ -238,7 +238,7 @@ struct MealMetricProvider: MetricProvider {
         // Get all unique days from both logs and entries
         var allDays = Set<Date>()
         for log in logs {
-            allDays.insert(calendar.startOfDay(for: log.date))
+            allDays.insert(log.date(in: calendar))
         }
         for day in daysWithMeal {
             allDays.insert(day)
@@ -309,7 +309,7 @@ struct WeatherMetricProvider: MetricProvider {
             guard let weather = log.weather else { return nil }
             
             return MetricDataPoint(
-                date: log.date,
+                date: log.date(in: Calendar.current),
                 value: convertWeatherToNumeric(weather),
                 rawValue: weather,
                 metricId: id
@@ -396,7 +396,7 @@ struct ActivityCountMetricProvider: MetricProvider {
         // Get all unique days from both logs and entries
         var allDays = Set<Date>()
         for log in logs {
-            allDays.insert(calendar.startOfDay(for: log.date))
+            allDays.insert(log.date(in: calendar))
         }
         for day in countsByDay.keys {
             allDays.insert(day)
@@ -461,7 +461,7 @@ struct MealCountMetricProvider: MetricProvider {
         // Get all unique days from both logs and entries
         var allDays = Set<Date>()
         for log in logs {
-            allDays.insert(calendar.startOfDay(for: log.date))
+            allDays.insert(log.date(in: calendar))
         }
         for day in countsByDay.keys {
             allDays.insert(day)

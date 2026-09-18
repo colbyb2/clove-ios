@@ -47,10 +47,11 @@ struct DailyLogObservationAdapter {
 
         var observations: [MetricObservation] = []
         for log in logs {
-            let day = normalizer.day(containing: log.date)
+            let stableDate = log.date(in: normalizer.calendar)
+            let day = normalizer.day(containing: stableDate)
             let identity = ObservationAdapterSupport.recordID(
                 log.id,
-                fallback: ObservationAdapterSupport.fallback(date: log.date, discriminator: "daily-log")
+                fallback: ObservationAdapterSupport.fallback(date: stableDate, discriminator: "daily-log")
             )
 
             observations.append(contentsOf: coreDefinitions.map {
@@ -105,7 +106,7 @@ struct DailyLogObservationAdapter {
 
         return MetricObservation(
             metricID: definition.id,
-            timestamp: log.date,
+            timestamp: log.date(in: normalizer.calendar),
             day: day,
             state: state,
             source: source,
@@ -134,7 +135,7 @@ struct DailyLogObservationAdapter {
         guard let rating else {
             return ObservationAdapterSupport.missing(
                 metricID: definition.id,
-                timestamp: log.date,
+                timestamp: log.date(in: normalizer.calendar),
                 day: day,
                 source: source,
                 flags: identityFlags
@@ -151,7 +152,7 @@ struct DailyLogObservationAdapter {
         }
         return MetricObservation(
             metricID: definition.id,
-            timestamp: log.date,
+            timestamp: log.date(in: normalizer.calendar),
             day: day,
             state: .observed(value),
             source: source,
@@ -179,10 +180,11 @@ struct MedicationObservationAdapter {
         var events: [MetricRawEvent] = []
 
         for log in logs {
-            let day = normalizer.day(containing: log.date)
+            let stableDate = log.date(in: normalizer.calendar)
+            let day = normalizer.day(containing: stableDate)
             let identity = ObservationAdapterSupport.recordID(
                 log.id,
-                fallback: ObservationAdapterSupport.fallback(date: log.date, discriminator: "medications")
+                fallback: ObservationAdapterSupport.fallback(date: stableDate, discriminator: "medications")
             )
 
             if let adherence {
@@ -207,7 +209,7 @@ struct MedicationObservationAdapter {
                 }
                 observations.append(MetricObservation(
                     metricID: adherence.id,
-                    timestamp: log.date,
+                    timestamp: stableDate,
                     day: day,
                     state: state,
                     source: source,
@@ -227,7 +229,7 @@ struct MedicationObservationAdapter {
                 )
                 observations.append(MetricObservation(
                     metricID: definition.id,
-                    timestamp: log.date,
+                    timestamp: stableDate,
                     day: day,
                     state: .observed(.boolean(true)),
                     source: source,
@@ -235,7 +237,7 @@ struct MedicationObservationAdapter {
                 ))
                 events.append(MetricRawEvent(
                     metricID: definition.id,
-                    timestamp: log.date,
+                    timestamp: stableDate,
                     day: day,
                     source: source,
                     attributes: ["medication": .text(definition.displayName)]

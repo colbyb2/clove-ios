@@ -63,7 +63,7 @@ final class HistoryDaySummaryRepo: HistoryDaySummaryRepositoryProtocol {
 
             var summaries: [Date: HistoryDaySummary] = [:]
             for log in source.logs {
-                let day = calendar.startOfDay(for: log.date)
+                let day = log.date(in: calendar)
                 summaries[day, default: HistoryDaySummary(date: day)].log = log
             }
             for entry in source.food {

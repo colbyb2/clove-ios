@@ -21,7 +21,7 @@ struct MoodMetricProvider: MetricProvider {
         return logs.compactMap { log in
             guard let mood = log.mood else { return nil }
             return MetricDataPoint(
-                date: log.date,
+                date: log.date(in: Calendar.current),
                 value: Double(mood),
                 rawValue: mood,
                 metricId: id
@@ -60,7 +60,7 @@ struct PainLevelMetricProvider: MetricProvider {
         return logs.compactMap { log in
             guard let painLevel = log.painLevel else { return nil }
             return MetricDataPoint(
-                date: log.date,
+                date: log.date(in: Calendar.current),
                 value: Double(painLevel),
                 rawValue: painLevel,
                 metricId: id
@@ -99,7 +99,7 @@ struct EnergyLevelMetricProvider: MetricProvider {
         return logs.compactMap { log in
             guard let energyLevel = log.energyLevel else { return nil }
             return MetricDataPoint(
-                date: log.date,
+                date: log.date(in: Calendar.current),
                 value: Double(energyLevel),
                 rawValue: energyLevel,
                 metricId: id
@@ -137,7 +137,7 @@ struct HydrationMetricProvider: MetricProvider {
         return logs.compactMap { log in
             guard let ounces = log.waterIntake, ounces > 0 else { return nil }
             return MetricDataPoint(
-                date: log.date,
+                date: log.date(in: Calendar.current),
                 value: Double(ounces),
                 rawValue: ounces,
                 metricId: id
@@ -184,7 +184,7 @@ struct FlareDayMetricProvider: MetricProvider {
         
         return logs.map { log in
             MetricDataPoint(
-                date: log.date,
+                date: log.date(in: Calendar.current),
                 value: log.isFlareDay ? 1.0 : 0.0,
                 rawValue: log.isFlareDay,
                 metricId: id
@@ -236,7 +236,7 @@ struct MedicationAdherenceMetricProvider: MetricProvider {
             guard let rate = adherenceRate else { return nil }
             
             return MetricDataPoint(
-                date: log.date,
+                date: log.date(in: Calendar.current),
                 value: rate,
                 rawValue: log.medicationAdherence,
                 metricId: id

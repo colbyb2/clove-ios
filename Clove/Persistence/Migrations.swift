@@ -24,8 +24,137 @@ enum Migrations {
         StableDynamicMetricIdentityMigration(),
         SavedAnalysisMigration(),
         AdvancedInsightsPersistenceMigration(),
+        DailyLogDayKeyMigration(),
         SymptomDisplayOrderMigration()
     ]
+}
+
+struct DailyLogDayKeyMigration: Migration {
+    var identifier: String { "dailyLogDayKey_091826" }
+    let calendar: Calendar
+
+    init(calendar: Calendar = .current) {
+        self.calendar = calendar
+    }
+
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "dailyLog") { table in
+            table.add(column: "dayKey", .text).notNull().defaults(to: "")
+        }
+
+        let datedRows = try Row.fetchAll(db, sql: "SELECT id, date FROM dailyLog ORDER BY id ASC")
+        for row in datedRows {
+            let id: Int64 = row["id"]
+            let date: Date = row["date"]
+            try db.execute(
+                sql: "UPDATE dailyLog SET dayKey = ? WHERE id = ?",
+                arguments: [LocalDayKey.make(for: date, calendar: calendar), id]
+            )
+        }
+
+        let logsByDay = Dictionary(grouping: try DailyLog.order(Column("id").asc).fetchAll(db), by: \.dayKey)
+        var duplicateCount = 0
+        for (dayKey, logs) in logsByDay where logs.count > 1 {
+            duplicateCount += logs.count - 1
+            let merged = merge(logs, dayKey: dayKey)
+            let duplicateIDs = logs.dropFirst().compactMap(\.id)
+            if !duplicateIDs.isEmpty {
+                try DailyLog.filter(duplicateIDs.contains(Column("id"))).deleteAll(db)
+            }
+            try merged.update(db)
+        }
+
+        try db.create(
+            index: "dailyLog_dayKey_unique",
+            on: "dailyLog",
+            columns: ["dayKey"],
+            unique: true
+        )
+
+        if duplicateCount > 0 {
+            print("DailyLog day-key migration merged \(duplicateCount) duplicate record(s)")
+        }
+    }
+
+    private func merge(_ logs: [DailyLog], dayKey: String) -> DailyLog {
+        let first = logs[0]
+        var mood = first.mood
+        var painLevel = first.painLevel
+        var energyLevel = first.energyLevel
+        var waterIntake = first.waterIntake
+        var weather = first.weather
+        var meals = first.meals
+        var activities = first.activities
+        var medications = first.medicationsTaken
+        var notes = first.notes.map { [$0] } ?? []
+        var flare = first.isFlareDay
+        var ratings = first.symptomRatings
+        var adherence = first.medicationAdherence
+
+        for log in logs.dropFirst() {
+            mood = log.mood ?? mood
+            painLevel = log.painLevel ?? painLevel
+            energyLevel = log.energyLevel ?? energyLevel
+            waterIntake = log.waterIntake ?? waterIntake
+            weather = log.weather ?? weather
+            meals = unique(meals + log.meals)
+            activities = unique(activities + log.activities)
+            medications = unique(medications + log.medicationsTaken)
+            if let note = log.notes, !note.isEmpty, !notes.contains(note) { notes.append(note) }
+            flare = flare || log.isFlareDay
+            ratings = mergeRatings(ratings + log.symptomRatings)
+            adherence = mergeAdherence(adherence + log.medicationAdherence)
+        }
+
+        return DailyLog(
+            id: first.id,
+            date: first.date,
+            dayKey: dayKey,
+            mood: mood,
+            painLevel: painLevel,
+            energyLevel: energyLevel,
+            waterIntake: waterIntake,
+            meals: meals,
+            activities: activities,
+            medicationsTaken: medications,
+            medicationAdherence: adherence,
+            notes: notes.isEmpty ? nil : notes.joined(separator: "\n\n"),
+            isFlareDay: flare,
+            weather: weather,
+            symptomRatings: ratings
+        )
+    }
+
+    private func unique(_ values: [String]) -> [String] {
+        var seen = Set<String>()
+        return values.filter { seen.insert($0).inserted }
+    }
+
+    private func mergeRatings(_ values: [SymptomRating]) -> [SymptomRating] {
+        var order: [String] = []
+        var merged: [String: SymptomRating] = [:]
+        for value in values {
+            let key = value.symptomId > 0
+                ? "id:\(value.symptomId)"
+                : "name:\(value.symptomName.lowercased())"
+            if merged[key] == nil { order.append(key) }
+            merged[key] = value
+        }
+        return order.compactMap { merged[$0] }
+    }
+
+    private func mergeAdherence(_ values: [MedicationAdherence]) -> [MedicationAdherence] {
+        var order: [String] = []
+        var merged: [String: MedicationAdherence] = [:]
+        for value in values {
+            let key = value.medicationId > 0
+                ? "id:\(value.medicationId)"
+                : "name:\(value.medicationName.lowercased())"
+            if merged[key] == nil { order.append(key) }
+            merged[key] = value
+        }
+        return order.compactMap { merged[$0] }
+    }
 }
 
 struct SymptomDisplayOrderMigration: Migration {

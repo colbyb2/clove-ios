@@ -14,10 +14,10 @@ final class MockLogsRepository: LogsRepositoryProtocol {
     func saveLog(_ log: DailyLog) -> Bool {
         saveCallCount += 1
         if shouldSucceed {
-            // Remove existing log for the same date if it exists
-            let calendar = Calendar.current
-            logs.removeAll { calendar.isDate($0.date, inSameDayAs: log.date) }
-            logs.append(log)
+            var normalized = log
+            normalized.dayKey = LocalDayKey.make(for: log.date)
+            logs.removeAll { $0.dayKey == normalized.dayKey }
+            logs.append(normalized)
             return true
         }
         return false
@@ -26,7 +26,8 @@ final class MockLogsRepository: LogsRepositoryProtocol {
     func saveWaterIntake(_ ounces: Int?, for date: Date) -> Bool {
         guard shouldSucceed else { return false }
 
-        if let index = logs.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: date) }) {
+        let dayKey = LocalDayKey.make(for: date)
+        if let index = logs.firstIndex(where: { $0.dayKey == dayKey }) {
             logs[index].waterIntake = ounces
         } else if let ounces {
             logs.append(DailyLog(date: date, waterIntake: ounces))
@@ -39,12 +40,14 @@ final class MockLogsRepository: LogsRepositoryProtocol {
     }
 
     func getLogForDate(_ date: Date) -> DailyLog? {
-        let calendar = Calendar.current
-        return logs.first { calendar.isDate($0.date, inSameDayAs: date) }
+        let dayKey = LocalDayKey.make(for: date)
+        return logs.first { $0.dayKey == dayKey }
     }
 
     func getLogsInRange(from startDate: Date, to endDate: Date) -> [DailyLog] {
-        return logs.filter { $0.date >= startDate && $0.date <= endDate }
+        let startKey = LocalDayKey.make(for: startDate)
+        let endKey = LocalDayKey.make(for: endDate)
+        return logs.filter { $0.dayKey >= startKey && $0.dayKey <= endKey }
     }
 
     /// Convenience factory for creating a mock with sample data

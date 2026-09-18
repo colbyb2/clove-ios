@@ -55,12 +55,12 @@ actor OptimizedDataLoader {
         let allLogs = await getAllLogsForSession()
         
         guard period != .allTime, let dateRange = period.dateRange else {
-            return allLogs.sorted { $0.date < $1.date }
+            return allLogs.sorted { $0.dayKey < $1.dayKey }
         }
         
         return allLogs.filter { log in
-            dateRange.contains(log.date)
-        }.sorted { $0.date < $1.date }
+            dateRange.contains(log.date(in: Calendar.current))
+        }.sorted { $0.dayKey < $1.dayKey }
     }
     
     /// Get data point count for a specific condition (optimized query)
@@ -110,13 +110,13 @@ actor OptimizedDataLoader {
             let logs = LogsRepo.shared.getLogs()
             
             guard period != .allTime, let dateRange = period.dateRange else {
-                continuation.resume(returning: logs.sorted { $0.date < $1.date })
+                continuation.resume(returning: logs.sorted { $0.dayKey < $1.dayKey })
                 return
             }
             
             let filteredLogs = logs.filter { log in
-                dateRange.contains(log.date)
-            }.sorted { $0.date < $1.date }
+                dateRange.contains(log.date(in: Calendar.current))
+            }.sorted { $0.dayKey < $1.dayKey }
             
             continuation.resume(returning: filteredLogs)
         }
@@ -124,7 +124,7 @@ actor OptimizedDataLoader {
     
     private func loadAllLogsFromDatabase() async -> [DailyLog] {
         return await withCheckedContinuation { continuation in
-            let logs = LogsRepo.shared.getLogs().sorted { $0.date < $1.date }
+            let logs = LogsRepo.shared.getLogs().sorted { $0.dayKey < $1.dayKey }
             continuation.resume(returning: logs)
         }
     }
@@ -169,7 +169,7 @@ extension OptimizedDataLoader {
 extension OptimizedDataLoader {
     /// Get available symptoms across all logs (cached), returns [Symptom name : isBinary]
     func getAvailableSymptoms() async -> [String: Bool] {
-        let logs = await getAllLogsForSession().sorted { $0.date > $1.date }
+        let logs = await getAllLogsForSession().sorted { $0.dayKey > $1.dayKey }
         var symptoms: [String:Bool] = [:]
 
         for log in logs {

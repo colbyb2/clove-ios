@@ -237,7 +237,9 @@ final class CloveArchiveManager {
             try Self.insert(archive.payload.trackedSymptoms, into: db)
             try Self.insert(archive.payload.trackedMedications, into: db)
             try Self.insert(archive.payload.userSettings, into: db)
-            try Self.insert(archive.payload.dailyLogs, into: db)
+            for log in archive.payload.dailyLogs {
+                try log.upsert(db)
+            }
             try Self.insert(archive.payload.medicationHistory, into: db)
             try Self.insert(archive.payload.bowelMovements, into: db)
             try Self.insert(archive.payload.foodEntries, into: db)

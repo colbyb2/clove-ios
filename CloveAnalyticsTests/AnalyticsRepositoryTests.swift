@@ -7,9 +7,9 @@ final class AnalyticsRepositoryTests: XCTestCase {
         let start = AnalyticsTestDates.date(2023, 6, 10)
         let end = AnalyticsTestDates.date(2023, 6, 12)
         try database.write { db in
-            try DailyLog(id: 1, date: start, mood: 4).insert(db)
-            try DailyLog(id: 2, date: end.addingTimeInterval(-1), mood: 7).insert(db)
-            try DailyLog(id: 3, date: end, mood: 10).insert(db)
+            try DailyLog(id: 1, date: start, dayKey: "2023-06-10", mood: 4).insert(db)
+            try DailyLog(id: 2, date: end.addingTimeInterval(-1), dayKey: "2023-06-11", mood: 7).insert(db)
+            try DailyLog(id: 3, date: end, dayKey: "2023-06-12", mood: 10).insert(db)
         }
         let repository = DefaultAnalyticsRepository(
             sourceLoader: GRDBAnalyticsSourceLoader(databaseManager: database),

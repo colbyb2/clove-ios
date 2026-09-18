@@ -264,21 +264,9 @@ class DataImportManager {
     }
 
     private func saveDailyLog(_ log: DailyLog, in db: Database) throws {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: log.date)
-        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
-            throw ImportError.databaseError("Could not calculate the imported log date range")
-        }
-
-        if let existing = try DailyLog
-            .filter(Column("date") >= startOfDay && Column("date") < endOfDay)
-            .fetchOne(db) {
-            var updated = log
-            updated.id = existing.id
-            try updated.update(db)
-        } else {
-            try log.insert(db)
-        }
+        var normalized = log
+        normalized.dayKey = LocalDayKey.make(for: log.date)
+        try normalized.upsert(db)
     }
     
     // MARK: - Helper Methods
