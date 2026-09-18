@@ -4,7 +4,7 @@ class ImportValidator {
     
     // Expected column order based on DataManager export format
     static let expectedColumns: [String] = [
-        "Date", "Mood", "Pain Level", "Energy Level", "Flare Day", 
+        "Date", "Mood", "Pain Level", "Energy Level", "Hydration (oz)", "Flare Day",
         "Weather", "Bowel Movements", "Medications", "Meals", "Activities", "Notes"
     ]
     
@@ -14,14 +14,8 @@ class ImportValidator {
             throw ImportError.missingRequiredColumns(["Date"])
         }
         
-        // Check for unexpected columns
-        let expectedSet = Set(expectedColumns)
-        let actualSet = Set(headers)
-        let unexpectedColumns = actualSet.subtracting(expectedSet)
-        
-        if !unexpectedColumns.isEmpty {
-            throw ImportError.unexpectedColumns(Array(unexpectedColumns))
-        }
+        // Any non-standard columns are symptom columns. This mirrors the export
+        // format, which appends each selected symptom after the standard fields.
     }
     
     static func validateRowData(_ row: [String], headers: [String], rowNumber: Int) throws {
@@ -50,6 +44,13 @@ class ImportValidator {
         case "Mood", "Pain Level", "Energy Level":
             if let intValue = Int(value), intValue >= 1 && intValue <= 10 {
                 // Valid
+            } else {
+                throw ImportError.invalidDataValue(column: column, value: value, row: row)
+            }
+
+        case "Hydration (oz)":
+            if let ounces = Int(value), ounces >= 0 {
+                // Valid hydration amount
             } else {
                 throw ImportError.invalidDataValue(column: column, value: value, row: row)
             }

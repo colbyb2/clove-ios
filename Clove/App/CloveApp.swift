@@ -51,6 +51,13 @@ struct CloveApp: App {
             .environment(\.dependencies, container)
             .foregroundStyle(CloveColors.primaryText)
             .toastable()
+            .task {
+                // SwiftUI owns @State storage. Resolving the launch phase after
+                // the root view is installed prevents a fresh AppState value
+                // from replacing a phase assigned during App initialization.
+                guard appState.phase == .loading else { return }
+                appState.phase = onboardingCompleted ? .main : .onboarding
+            }
         }
     }
     
@@ -65,11 +72,6 @@ struct CloveApp: App {
         }
         _ = AnalyticsRolloutCoordinator.shared.prepareDatabase(container.databaseManager)
 
-        if !onboardingCompleted {
-            appState.phase = .onboarding
-        } else {
-            appState.phase = .main
-        }
     }
 }
 
