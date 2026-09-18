@@ -449,7 +449,7 @@ struct TodayView: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Symptoms").font(.system(size: 22, weight: .semibold, design: .rounded))
-                Text("Tracked symptoms are available every day")
+                Text("Unanswered symptoms are not included in your data")
                     .font(.caption)
                     .foregroundStyle(CloveColors.secondaryText)
             }

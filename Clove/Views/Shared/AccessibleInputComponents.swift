@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Accessible Rating Input
 struct AccessibleRatingInput: View {
-    @Binding var value: Double
+    @Binding var value: Double?
     var label: String
     var icon: String? = nil
     var minValue: Int = 0
@@ -45,10 +45,21 @@ struct AccessibleRatingInput: View {
                 
                 Spacer()
                 
-                // Current value display
-                Text("\(Int(value))")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(Theme.shared.accent)
+                if let value {
+                    Text("\(Int(value))")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(Theme.shared.accent)
+
+                    Button("Clear") { self.value = nil }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .accessibilityHint("Marks \(label) as unanswered")
+                } else {
+                    Text("Not answered")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
                 
                 if showAlternativeControls {
                     // Toggle input method button
@@ -70,17 +81,31 @@ struct AccessibleRatingInput: View {
                 }
             }
             
-            // Input control
-            if useSliderInput {
+            if value == nil {
+                Button {
+                    value = Double(minValue + (maxValue - minValue) / 2)
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                } label: {
+                    Label("Add \(label) rating", systemImage: "plus.circle.fill")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Theme.shared.accent)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(
+                            RoundedRectangle(cornerRadius: CloveCorners.medium)
+                                .fill(Theme.shared.accent.opacity(0.1))
+                        )
+                }
+                .accessibilityHint("Starts at the middle of the scale; adjust it to match how you feel")
+            } else if useSliderInput {
                 AccessibleSlider(
-                    value: $value,
+                    value: answeredValue,
                     minValue: minValue,
                     maxValue: maxValue,
                     step: step
                 )
             } else {
                 PlusMinusControls(
-                    value: $value,
+                    value: answeredValue,
                     minValue: minValue,
                     maxValue: maxValue,
                     step: step,
@@ -90,7 +115,14 @@ struct AccessibleRatingInput: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(label) rating")
-        .accessibilityValue("\(Int(value)) out of \(maxValue)")
+        .accessibilityValue(value.map { "\(Int($0)) out of \(maxValue)" } ?? "Not answered")
+    }
+
+    private var answeredValue: Binding<Double> {
+        Binding(
+            get: { value ?? Double(minValue + (maxValue - minValue) / 2) },
+            set: { value = $0 }
+        )
     }
 }
 
@@ -330,12 +362,13 @@ struct AccessibleStepperButton: View {
 // MARK: - Binary Yes/No Input
 
 struct BinarySymptomInput: View {
-    @Binding var value: Double
+    @Binding var value: Double?
     let label: String
     let icon: String?
     var onDelete: (() -> Void)? = nil
 
-    private var isPresent: Bool { value > 0 }
+    private var isYes: Bool { value.map { $0 > 0 } ?? false }
+    private var isNo: Bool { value == 0 }
 
     var body: some View {
         VStack(spacing: CloveSpacing.medium) {
@@ -348,6 +381,18 @@ struct BinarySymptomInput: View {
                 }
                 Text(label)
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
+
+                if value == nil {
+                    Text("Not answered")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(CloveColors.secondaryText)
+                } else {
+                    Button("Clear") { value = nil }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .accessibilityHint("Marks \(label) as unanswered")
+                }
                 
                 if let onDelete {
                     Menu {
@@ -375,7 +420,7 @@ struct BinarySymptomInput: View {
                 SelectionCard(
                     title: "No",
                     icon: "xmark",
-                    isSelected: !isPresent,
+                    isSelected: isNo,
                     color: Color.gray
                 ) { value = 0 }
 
@@ -383,12 +428,15 @@ struct BinarySymptomInput: View {
                 SelectionCard(
                     title: "Yes",
                     icon: "checkmark",
-                    isSelected: isPresent,
+                    isSelected: isYes,
                     color: Theme.shared.accent
                 ) { value = 10 }
             }
             .frame(height: 45) // Fixed comfortable height
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(label) symptom")
+        .accessibilityValue(value == nil ? "Not answered" : (isYes ? "Yes" : "No"))
     }
 
     // Helper View for consistency
@@ -426,8 +474,9 @@ struct BinarySymptomInput: View {
 }
 
 fileprivate struct ContentPreview: View {
-    @State var rating: Double = 5
-    @State var binaryValue: Double = 0
+    @State var rating: Double? = nil
+    @State var binaryValue: Double? = nil
+    @State var stepperRating: Double = 5
     var body: some View {
         VStack(spacing: 30) {
             AccessibleRatingInput(
@@ -446,7 +495,7 @@ fileprivate struct ContentPreview: View {
             )
 
             PlusMinusControls(
-                value: $rating,
+                value: $stepperRating,
                 minValue: 0,
                 maxValue: 10,
                 step: 1,

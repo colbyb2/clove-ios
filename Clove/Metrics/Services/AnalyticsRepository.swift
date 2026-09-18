@@ -333,6 +333,14 @@ struct DefaultAnalyticsRepository: AnalyticsRepository {
         interval: DateInterval,
         possibleDayCount: Int
     ) -> MetricCoverage {
+        let answeredObservations = observations.filter {
+            switch $0.state {
+            case .observed, .explicitNone:
+                return true
+            case .missing, .notApplicable:
+                return false
+            }
+        }
         let observedCount = observations.filter {
             if case .observed = $0.state { return true }
             return false
@@ -341,7 +349,7 @@ struct DefaultAnalyticsRepository: AnalyticsRepository {
             metricID: metricID,
             interval: interval,
             possibleDayCount: possibleDayCount,
-            sourceDayCount: Set(observations.map { normalizer.dayKey(for: $0.day) }).count,
+            sourceDayCount: Set(answeredObservations.map { normalizer.dayKey(for: $0.day) }).count,
             observedCount: observedCount,
             missingCount: observations.filter { $0.state == .missing }.count,
             explicitNoneCount: observations.filter { $0.state == .explicitNone }.count,

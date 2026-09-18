@@ -5,9 +5,11 @@ import SwiftUI
 /// should be performed by the ViewModel and passed in via initializers.
 @Observable
 class LogData {
-    var mood: Double = 5
-    var painLevel: Double = 5
-    var energyLevel: Double = 5
+    /// Nil means the user has not answered this input for the selected day.
+    /// Zero remains a valid, explicitly selected answer.
+    var mood: Double? = nil
+    var painLevel: Double? = nil
+    var energyLevel: Double? = nil
     var waterIntake: Int = 0
     var isFlareDay: Bool = false
     var weather: String? = nil
@@ -35,15 +37,9 @@ class LogData {
     ///   - log: The DailyLog to populate from
     ///   - bowelMovements: Bowel movements for this date (loaded externally by ViewModel)
     init(from log: DailyLog, bowelMovements: [BowelMovement] = []) {
-        if let logMood = log.mood {
-            self.mood = Double(logMood)
-        }
-        if let logPain = log.painLevel {
-            self.painLevel = Double(logPain)
-        }
-        if let logEnergy = log.energyLevel {
-            self.energyLevel = Double(logEnergy)
-        }
+        self.mood = log.mood.map(Double.init)
+        self.painLevel = log.painLevel.map(Double.init)
+        self.energyLevel = log.energyLevel.map(Double.init)
         self.waterIntake = log.waterIntake ?? 0
         self.isFlareDay = log.isFlareDay
         self.weather = log.weather

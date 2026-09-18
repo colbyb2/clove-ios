@@ -100,7 +100,7 @@ class TodayViewModel {
    }
    
    var currentMoodSymbol: String {
-      CloveSymbols.mood(for: logData.mood)
+      logData.mood.map(CloveSymbols.mood(for:)) ?? CloveSymbols.mood
    }
    
    func load() {
@@ -154,7 +154,8 @@ class TodayViewModel {
       let trackedSymptomIds = Set(currentTrackedSymptoms.compactMap { $0.id })
       var updatedRatings: [SymptomRatingVM] = []
 
-      // For each currently tracked symptom, find existing rating or create default
+      // For each tracked symptom, retain an existing answer or create an
+      // explicitly unanswered control for this day.
       for symptom in currentTrackedSymptoms {
          if let existingRating = logData.symptomRatings.first(where: { $0.symptomId == symptom.id }) {
             // Keep existing rating but update name and isBinary in case they changed
@@ -163,11 +164,11 @@ class TodayViewModel {
             updatedRating.isBinary = symptom.isBinary
             updatedRatings.append(updatedRating)
          } else {
-            // Create new rating with default value
+            // Showing a tracked symptom must not invent an observation.
             updatedRatings.append(SymptomRatingVM(
                symptomId: symptom.id ?? 0,
                symptomName: symptom.name,
-               ratingDouble: 5,
+               ratingDouble: nil,
                isBinary: symptom.isBinary
             ))
          }
@@ -242,7 +243,7 @@ class TodayViewModel {
          notes: settings.trackNotes ? logData.notes : nil,
          isFlareDay: logData.isFlareDay,
          weather: settings.trackWeather ? logData.weather : nil,
-         symptomRatings: settings.trackSymptoms ? logData.symptomRatings.map { $0.toModel() } : []
+         symptomRatings: settings.trackSymptoms ? logData.symptomRatings.compactMap { $0.toModel() } : []
       )
 
       let result = logsRepository.saveLog(log)
@@ -316,7 +317,7 @@ class TodayViewModel {
             log.medicationAdherenceJSON = Self.encodeJSON(adherence)
             log.medicationsTaken = adherence.filter(\.wasTaken).map(\.medicationName)
          case .symptomRatings:
-            let ratings = settings.trackSymptoms ? logData.symptomRatings.map { $0.toModel() } : []
+            let ratings = settings.trackSymptoms ? logData.symptomRatings.compactMap { $0.toModel() } : []
             log.symptomRatingsJSON = Self.encodeJSON(ratings)
          }
       }
@@ -338,8 +339,8 @@ class TodayViewModel {
       }
    }
 
-   private static func rating(from value: Double) -> Int? {
-      guard value.isFinite else { return nil }
+   private static func rating(from value: Double?) -> Int? {
+      guard let value, value.isFinite else { return nil }
       return min(10, max(0, Int(value.rounded())))
    }
 
@@ -431,9 +432,9 @@ class TodayViewModel {
 }
 
 private struct AutoSaveSnapshot {
-   var mood: Double
-   var painLevel: Double
-   var energyLevel: Double
+   var mood: Double?
+   var painLevel: Double?
+   var energyLevel: Double?
    var isFlareDay: Bool
    var weather: String?
    var notes: String?
