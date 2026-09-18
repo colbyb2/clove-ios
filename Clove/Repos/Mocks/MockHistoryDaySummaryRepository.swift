@@ -2,6 +2,7 @@ import Foundation
 
 final class MockHistoryDaySummaryRepository: HistoryDaySummaryRepositoryProtocol {
     var summaries: [Date: HistoryDaySummary]
+    var shouldReadSucceed = true
 
     init(
         logs: [DailyLog] = [],
@@ -32,5 +33,16 @@ final class MockHistoryDaySummaryRepository: HistoryDaySummaryRepositoryProtocol
 
     func getDaySummaries() -> [Date: HistoryDaySummary] {
         summaries
+    }
+
+    func loadDaySummaries() throws -> [Date: HistoryDaySummary] {
+        guard shouldReadSucceed else {
+            throw RepositoryError(
+                operation: .read,
+                resource: "history",
+                diagnostic: "Injected mock read failure."
+            )
+        }
+        return summaries
     }
 }

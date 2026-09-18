@@ -36,7 +36,14 @@ struct HistoryDaySummary {
 }
 
 protocol HistoryDaySummaryRepositoryProtocol {
+    func loadDaySummaries() throws -> [Date: HistoryDaySummary]
     func getDaySummaries() -> [Date: HistoryDaySummary]
+}
+
+extension HistoryDaySummaryRepositoryProtocol {
+    func loadDaySummaries() throws -> [Date: HistoryDaySummary] {
+        getDaySummaries()
+    }
 }
 
 final class HistoryDaySummaryRepo: HistoryDaySummaryRepositoryProtocol {
@@ -51,6 +58,15 @@ final class HistoryDaySummaryRepo: HistoryDaySummaryRepositoryProtocol {
     }
 
     func getDaySummaries() -> [Date: HistoryDaySummary] {
+        do {
+            return try loadDaySummaries()
+        } catch {
+            print("Error loading History day summaries: \(error)")
+            return [:]
+        }
+    }
+
+    func loadDaySummaries() throws -> [Date: HistoryDaySummary] {
         do {
             let source = try databaseManager.read { db in
                 (
@@ -80,8 +96,7 @@ final class HistoryDaySummaryRepo: HistoryDaySummaryRepositoryProtocol {
             }
             return summaries
         } catch {
-            print("Error loading History day summaries: \(error)")
-            return [:]
+            throw RepositoryError(operation: .read, resource: "history", underlyingError: error)
         }
     }
 }

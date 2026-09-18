@@ -69,12 +69,64 @@ final class TodaySaveStateTests: XCTestCase {
         XCTAssertEqual(logs.getLogForDate(originalDate)?.mood, 6)
     }
 
+    func testFailedReadKeepsLastKnownGoodDayUntilRetrySucceeds() {
+        let logs = MockLogsRepository()
+        logs.logs = [DailyLog(date: Date(), mood: 7)]
+        let viewModel = makeViewModel(logs: logs)
+        viewModel.load()
+
+        let loadedDate = viewModel.selectedDate
+        logs.shouldReadSucceed = false
+        let requestedDate = Calendar.current.date(byAdding: .day, value: -2, to: loadedDate)!
+        viewModel.selectedDate = requestedDate
+        viewModel.loadLogData(for: requestedDate)
+
+        XCTAssertEqual(viewModel.logData.mood, 7)
+        XCTAssertTrue(Calendar.current.isDate(viewModel.selectedDate, inSameDayAs: loadedDate))
+        XCTAssertNotNil(viewModel.loadError)
+        XCTAssertTrue(viewModel.hasLoadedData)
+
+        logs.shouldReadSucceed = true
+        viewModel.retryLoad()
+
+        XCTAssertNil(viewModel.loadError)
+        XCTAssertEqual(viewModel.logData.mood, 7)
+    }
+
+    func testInitialReadFailureIsNotPresentedAsSuccessfulEmptyData() {
+        let logs = MockLogsRepository()
+        logs.shouldReadSucceed = false
+        let viewModel = makeViewModel(logs: logs)
+
+        viewModel.load()
+
+        XCTAssertFalse(viewModel.hasLoadedData)
+        XCTAssertNotNil(viewModel.loadError)
+    }
+
+    func testInjectedWriteFailureExposesTypedErrorAndKeepsEdit() {
+        let logs = MockLogsRepository()
+        let viewModel = makeViewModel(logs: logs)
+        viewModel.load()
+        logs.shouldWriteSucceed = false
+
+        viewModel.logData.mood = 4
+        viewModel.scheduleAutoSave(for: .mood)
+
+        XCTAssertFalse(viewModel.flushPendingChanges())
+        XCTAssertEqual(viewModel.saveState, .failed)
+        XCTAssertEqual(viewModel.saveError?.operation, .write)
+        XCTAssertEqual(viewModel.logData.mood, 4)
+    }
+
     private func makeViewModel(
         logs: MockLogsRepository,
-        settings: UserSettings = .default
+        settings: UserSettings = .default,
+        symptoms: MockSymptomsRepository = MockSymptomsRepository()
     ) -> TodayViewModel {
         let dependencies = MockDependencyContainer(
             logsRepository: logs,
+            symptomsRepository: symptoms,
             settingsRepository: MockUserSettingsRepository(settings: settings)
         )
         return TodayViewModel(

@@ -12,7 +12,16 @@ struct HistoryCalendarView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            
+            if let error = viewModel.loadError {
+                RepositoryErrorView(
+                    title: "We couldn't load your history",
+                    error: error,
+                    onRetry: viewModel.loadData
+                )
+                .padding()
+            }
+
+            if viewModel.hasLoadedData {
             // Horizontal scrollable category picker
             CategoryPickerView(
                 categories: viewModel.availableCategories,
@@ -53,7 +62,12 @@ struct HistoryCalendarView: View {
                     .padding(.horizontal)
                     .padding(.bottom)
             }
-            
+            } else if viewModel.loadError == nil {
+                ProgressView("Loading your history...")
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 48)
+            }
+
             Spacer()
         }
         .background(CloveColors.background)

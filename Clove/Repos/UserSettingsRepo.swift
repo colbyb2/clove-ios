@@ -17,12 +17,20 @@ final class UserSettingsRepo {
 
     func getSettings() -> UserSettings? {
         do {
+            return try loadSettings()
+        } catch {
+            print("Error loading settings: \(error)")
+            return nil
+        }
+    }
+
+    func loadSettings() throws -> UserSettings? {
+        do {
             return try databaseManager.read { db in
                 try UserSettings.fetchOne(db)
             }
         } catch {
-            print("Error loading settings: \(error)")
-            return nil
+            throw RepositoryError(operation: .read, resource: "settings", underlyingError: error)
         }
     }
 

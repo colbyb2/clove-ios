@@ -2,6 +2,9 @@ import Foundation
 
 /// Protocol defining operations for symptom tracking management
 protocol SymptomsRepositoryProtocol {
+    /// A throwing read keeps a failed query distinct from a real empty list.
+    func loadTrackedSymptoms() throws -> [TrackedSymptom]
+
     /// Retrieves all tracked symptoms
     /// - Returns: Array of tracked symptoms
     func getTrackedSymptoms() -> [TrackedSymptom]
@@ -31,4 +34,10 @@ protocol SymptomsRepositoryProtocol {
     /// - Parameter id: The ID of the symptom to delete
     /// - Returns: True if successful, false otherwise
     func deleteSymptom(id: Int64) -> Bool
+}
+
+extension SymptomsRepositoryProtocol {
+    func loadTrackedSymptoms() throws -> [TrackedSymptom] {
+        getTrackedSymptoms()
+    }
 }

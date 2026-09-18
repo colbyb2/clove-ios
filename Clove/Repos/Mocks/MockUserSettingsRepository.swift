@@ -7,6 +7,7 @@ final class MockUserSettingsRepository: UserSettingsRepositoryProtocol {
 
     /// Controls whether operations succeed or fail
     var shouldSucceed: Bool = true
+    var shouldReadSucceed: Bool = true
 
     /// Initializes with optional settings
     init(settings: UserSettings? = nil) {
@@ -14,6 +15,17 @@ final class MockUserSettingsRepository: UserSettingsRepositoryProtocol {
     }
 
     func getSettings() -> UserSettings? {
+        return settings
+    }
+
+    func loadSettings() throws -> UserSettings? {
+        guard shouldSucceed && shouldReadSucceed else {
+            throw RepositoryError(
+                operation: .read,
+                resource: "settings",
+                diagnostic: "Injected mock read failure."
+            )
+        }
         return settings
     }
 

@@ -7,6 +7,7 @@ final class MockSymptomsRepository: SymptomsRepositoryProtocol {
 
     /// Controls whether operations succeed or fail
     var shouldSucceed: Bool = true
+    var shouldReadSucceed: Bool = true
 
     func getTrackedSymptoms() -> [TrackedSymptom] {
         symptoms.sorted {
@@ -14,6 +15,17 @@ final class MockSymptomsRepository: SymptomsRepositoryProtocol {
                 ? ($0.id ?? 0) < ($1.id ?? 0)
                 : $0.displayOrder < $1.displayOrder
         }
+    }
+
+    func loadTrackedSymptoms() throws -> [TrackedSymptom] {
+        guard shouldSucceed && shouldReadSucceed else {
+            throw RepositoryError(
+                operation: .read,
+                resource: "tracked symptoms",
+                diagnostic: "Injected mock read failure."
+            )
+        }
+        return getTrackedSymptoms()
     }
 
     func saveTrackedSymptoms(_ symptoms: [TrackedSymptom]) -> Bool {

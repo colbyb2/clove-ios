@@ -21,14 +21,22 @@ final class SymptomsRepo {
 
     func getTrackedSymptoms() -> [TrackedSymptom] {
         do {
+            return try loadTrackedSymptoms()
+        } catch {
+            print("Error loading tracked symptoms: \(error)")
+            return []
+        }
+    }
+
+    func loadTrackedSymptoms() throws -> [TrackedSymptom] {
+        do {
             return try databaseManager.read { db in
                 try TrackedSymptom
                     .order(Column("displayOrder").asc, Column("id").asc)
                     .fetchAll(db)
             }
         } catch {
-            print("Error loading tracked symptoms: \(error)")
-            return []
+            throw RepositoryError(operation: .read, resource: "tracked symptoms", underlyingError: error)
         }
     }
 

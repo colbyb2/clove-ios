@@ -66,4 +66,34 @@ final class HistoryDaySummaryTests: XCTestCase {
         XCTAssertNotEqual(view.getCalendarRecords()[foodDay]?.color, Color.clear)
         XCTAssertNotEqual(view.getCalendarRecords()[activityDay]?.color, Color.clear)
     }
+
+    func testHistoryReadFailurePreservesLastKnownGoodCalendarUntilRetry() {
+        let loggedDate = AnalyticsTestDates.date(2026, 9, 8, hour: 12)
+        let summaryRepository = MockHistoryDaySummaryRepository(
+            logs: [DailyLog(date: loggedDate, mood: 8)]
+        )
+        let viewModel = HistoryCalendarViewModel(
+            daySummaryRepository: summaryRepository,
+            settingsRepository: MockUserSettingsRepository(),
+            symptomsRepository: MockSymptomsRepository(),
+            cycleRepository: MockCycleRepository(),
+            cycleManager: MockCycleManager()
+        )
+        let day = Calendar.current.startOfDay(for: loggedDate)
+
+        XCTAssertEqual(viewModel.logsByDate[day]?.mood, 8)
+        summaryRepository.summaries = [:]
+        summaryRepository.shouldReadSucceed = false
+        viewModel.loadData()
+
+        XCTAssertEqual(viewModel.logsByDate[day]?.mood, 8)
+        XCTAssertNotNil(viewModel.loadError)
+        XCTAssertTrue(viewModel.hasLoadedData)
+
+        summaryRepository.shouldReadSucceed = true
+        viewModel.loadData()
+
+        XCTAssertTrue(viewModel.logsByDate.isEmpty)
+        XCTAssertNil(viewModel.loadError)
+    }
 }

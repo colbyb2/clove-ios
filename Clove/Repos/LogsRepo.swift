@@ -17,15 +17,10 @@ class LogsRepo {
       self.analyticsRevisionSource = analyticsRevisionSource
       self.calendar = calendar
    }
-   
+
    func saveLog(_ log: DailyLog) -> Bool {
       do {
-         try databaseManager.write { db in
-            var normalizedLog = log
-            normalizedLog.dayKey = LocalDayKey.make(for: log.date, calendar: calendar)
-            try normalizedLog.upsert(db)
-         }
-         analyticsRevisionSource.bump(reason: .dailyLog)
+         try persistLog(log)
          return true
       } catch {
          print("Error saving log: \(error)")
@@ -34,6 +29,56 @@ class LogsRepo {
    }
 
    func saveWaterIntake(_ ounces: Int?, for date: Date) -> Bool {
+      do {
+         try persistWaterIntake(ounces, for: date)
+         return true
+      } catch {
+         print("Error saving water intake: \(error)")
+         return false
+      }
+   }
+
+   func getLogs() -> [DailyLog] {
+      do {
+         return try loadLogs()
+      } catch {
+         print("Error getting logs: \(error)")
+         return []
+      }
+   }
+
+   func getLogForDate(_ date: Date) -> DailyLog? {
+      do {
+         return try loadLog(for: date)
+      } catch {
+         print("Error getting log for date: \(error)")
+         return nil
+      }
+   }
+
+   func getLogsInRange(from startDate: Date, to endDate: Date) -> [DailyLog] {
+      do {
+         return try loadLogsInRange(from: startDate, to: endDate)
+      } catch {
+         print("Error getting logs in range: \(error)")
+         return []
+      }
+   }
+
+   func persistLog(_ log: DailyLog) throws {
+      do {
+         try databaseManager.write { db in
+            var normalizedLog = log
+            normalizedLog.dayKey = LocalDayKey.make(for: log.date, calendar: calendar)
+            try normalizedLog.upsert(db)
+         }
+         analyticsRevisionSource.bump(reason: .dailyLog)
+      } catch {
+         throw RepositoryError(operation: .write, resource: "daily log", underlyingError: error)
+      }
+   }
+
+   func persistWaterIntake(_ ounces: Int?, for date: Date) throws {
       do {
          try databaseManager.write { db in
             let dayKey = LocalDayKey.make(for: date, calendar: calendar)
@@ -51,37 +96,33 @@ class LogsRepo {
             }
          }
          analyticsRevisionSource.bump(reason: .dailyLog)
-         return true
       } catch {
-         print("Error saving water intake: \(error)")
-         return false
+         throw RepositoryError(operation: .write, resource: "hydration", underlyingError: error)
       }
    }
-   
-   func getLogs() -> [DailyLog] {
+
+   func loadLogs() throws -> [DailyLog] {
       do {
          return try databaseManager.read { db in
             try DailyLog.order(Column("dayKey").asc).fetchAll(db)
          }
       } catch {
-         print("Error getting logs: \(error)")
-         return []
+         throw RepositoryError(operation: .read, resource: "daily logs", underlyingError: error)
       }
    }
-   
-   func getLogForDate(_ date: Date) -> DailyLog? {
+
+   func loadLog(for date: Date) throws -> DailyLog? {
       do {
          return try databaseManager.read { db in
             let dayKey = LocalDayKey.make(for: date, calendar: calendar)
             return try DailyLog.filter(Column("dayKey") == dayKey).fetchOne(db)
          }
       } catch {
-         print("Error getting log for date: \(error)")
-         return nil
+         throw RepositoryError(operation: .read, resource: "daily log", underlyingError: error)
       }
    }
 
-   func getLogsInRange(from startDate: Date, to endDate: Date) -> [DailyLog] {
+   func loadLogsInRange(from startDate: Date, to endDate: Date) throws -> [DailyLog] {
       do {
          return try databaseManager.read { db in
             let startKey = LocalDayKey.make(for: startDate, calendar: calendar)
@@ -92,8 +133,7 @@ class LogsRepo {
                .fetchAll(db)
          }
       } catch {
-         print("Error getting logs in range: \(error)")
-         return []
+         throw RepositoryError(operation: .read, resource: "daily logs", underlyingError: error)
       }
    }
 }

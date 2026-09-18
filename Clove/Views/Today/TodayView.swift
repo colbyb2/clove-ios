@@ -30,10 +30,15 @@ struct TodayView: View {
                         self.viewModel.loadLogData(for: newDate)
                     }
 
-                    DailySaveStatusView(
-                        state: viewModel.saveState,
-                        onRetry: viewModel.retrySave
-                    )
+                    if let error = viewModel.loadError {
+                        RepositoryErrorView(error: error, onRetry: viewModel.retryLoad)
+                    }
+
+                    if viewModel.hasLoadedData {
+                        DailySaveStatusView(
+                            state: viewModel.saveState,
+                            onRetry: viewModel.retrySave
+                        )
 
                     // Yesterday's Summary (only show if data exists or it's helpful for context)
                     if viewModel.yesterdayLog != nil
@@ -333,6 +338,11 @@ struct TodayView: View {
                                     color: Theme.shared.accent.opacity(0.3), radius: 4, x: 0, y: 2)
                         )
                     }
+                    } else if viewModel.loadError == nil {
+                        ProgressView("Loading your health data...")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 48)
+                    }
 
                 }
                 .padding()
@@ -364,7 +374,7 @@ struct TodayView: View {
         .onChange(of: viewModel.logData.symptomRatings) { _, _ in viewModel.scheduleAutoSave(for: .symptomRatings) }
         .sheet(isPresented: $showEditSymptoms) {
             EditSymptomsSheet(
-                trackedSymptoms: SymptomsRepo.shared.getTrackedSymptoms(),
+                trackedSymptoms: viewModel.trackedSymptoms,
                 refresh: viewModel.loadTrackedSymptoms
             )
         }
@@ -531,7 +541,7 @@ struct TodayView: View {
     private func promoteOneTimeSymptom(at index: Int) {
         guard viewModel.logData.symptomRatings.indices.contains(index) else { return }
         let rating = viewModel.logData.symptomRatings[index]
-        if let existing = SymptomsRepo.shared.getTrackedSymptoms().first(where: {
+        if let existing = viewModel.trackedSymptoms.first(where: {
             $0.name.caseInsensitiveCompare(rating.symptomName) == .orderedSame
         }), let id = existing.id {
             viewModel.logData.symptomRatings[index].symptomId = id
@@ -539,7 +549,8 @@ struct TodayView: View {
         }
         let originalID = rating.symptomId
         SymptomManager.shared.addSymptom(name: rating.symptomName, isBinary: rating.isBinary) {
-            guard let id = SymptomsRepo.shared.getTrackedSymptoms().first(where: {
+            viewModel.loadTrackedSymptoms()
+            guard let id = viewModel.trackedSymptoms.first(where: {
                 $0.name.caseInsensitiveCompare(rating.symptomName) == .orderedSame
             })?.id,
             let currentIndex = viewModel.logData.symptomRatings.firstIndex(where: { $0.symptomId == originalID }) else { return }

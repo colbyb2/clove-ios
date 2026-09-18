@@ -40,6 +40,10 @@ class TodayViewModel {
 
    var yesterdayLog: DailyLog? = nil
    var cycleEntry: Cycle? = nil
+   private(set) var trackedSymptoms: [TrackedSymptom] = []
+   private(set) var loadError: RepositoryError?
+   private(set) var saveError: RepositoryError?
+   private(set) var hasLoadedData = false
    private(set) var saveState: SaveState = .saved
    var isSaving: Bool { saveState == .saving }
    private var autoSaveTask: Task<Void, Never>?
@@ -110,10 +114,16 @@ class TodayViewModel {
    }
    
    func load() {
-      loadSettings()
-      loadTrackedSymptoms()
+      do {
+         settings = try settingsRepository.loadSettings() ?? .default
+      } catch {
+         loadError = repositoryError(error, operation: .read, resource: "settings")
+         return
+      }
       loadLogData(for: selectedDate)
-      loadYesterdayLog()
+      if loadError == nil {
+         loadYesterdayLog()
+      }
    }
    
    func loadLogData(for date: Date) {
@@ -123,8 +133,26 @@ class TodayViewModel {
          selectedDate = loadedDate
          return
       }
-      if hasLoadedLogData, Calendar.current.isDate(date, inSameDayAs: loadedDate) {
+      if hasLoadedLogData,
+         loadError == nil,
+         Calendar.current.isDate(date, inSameDayAs: loadedDate) {
          selectedDate = loadedDate
+         return
+      }
+
+      let previousDate = loadedDate
+      let hadLoadedData = hasLoadedLogData
+
+      let loadedLog: DailyLog?
+      let loadedSymptoms: [TrackedSymptom]
+      do {
+         loadedLog = try logsRepository.loadLog(for: date)
+         loadedSymptoms = try symptomsRepository.loadTrackedSymptoms()
+      } catch {
+         loadError = repositoryError(error, operation: .read, resource: "health data")
+         if hadLoadedData {
+            selectedDate = previousDate
+         }
          return
       }
 
@@ -133,6 +161,7 @@ class TodayViewModel {
       defer { isLoadingLogData = false }
       self.selectedDate = date
       loadedDate = date
+      trackedSymptoms = loadedSymptoms
 
       // Load bowel movements for this date (externally, not in LogData)
       let bowelMovements = bowelMovementRepository.getBowelMovementsForDate(date)
@@ -140,7 +169,7 @@ class TodayViewModel {
       // Load cycle entry for this date (externally, not in LogData)
       loadCycleEntry(for: date)
 
-      if let data = logsRepository.getLogForDate(date) {
+      if let data = loadedLog {
          self.logData = LogData(from: data, bowelMovements: bowelMovements)
       } else {
          // No existing data for this date, create new LogData with default values
@@ -159,18 +188,31 @@ class TodayViewModel {
       modifiedAutoSaveFields.removeAll()
       saveState = .saved
       hasLoadedLogData = true
+      hasLoadedData = true
+      loadError = nil
    }
    
    func loadSettings() {
-      self.settings = settingsRepository.getSettings() ?? .default
+      do {
+         self.settings = try settingsRepository.loadSettings() ?? .default
+         loadError = nil
+      } catch {
+         loadError = repositoryError(error, operation: .read, resource: "settings")
+      }
    }
    
    func loadTrackedSymptoms() {
-      syncSymptomRatingsWithTrackedSymptoms()
+      do {
+         trackedSymptoms = try symptomsRepository.loadTrackedSymptoms()
+         syncSymptomRatingsWithTrackedSymptoms()
+         loadError = nil
+      } catch {
+         loadError = repositoryError(error, operation: .read, resource: "tracked symptoms")
+      }
    }
    
    private func syncSymptomRatingsWithTrackedSymptoms() {
-      let currentTrackedSymptoms = symptomsRepository.getTrackedSymptoms()
+      let currentTrackedSymptoms = trackedSymptoms
       let trackedSymptomIds = Set(currentTrackedSymptoms.compactMap { $0.id })
       var updatedRatings: [SymptomRatingVM] = []
 
@@ -235,7 +277,15 @@ class TodayViewModel {
    
    func loadYesterdayLog() {
       let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-      self.yesterdayLog = logsRepository.getLogForDate(yesterday)
+      do {
+         self.yesterdayLog = try logsRepository.loadLog(for: yesterday)
+      } catch {
+         loadError = repositoryError(error, operation: .read, resource: "yesterday's log")
+      }
+   }
+
+   func retryLoad() {
+      load()
    }
    
    func saveLog(showFeedback: Bool = true) {
@@ -266,12 +316,12 @@ class TodayViewModel {
          symptomRatings: settings.trackSymptoms ? logData.symptomRatings.compactMap { $0.toModel() } : []
       )
 
-      let result = logsRepository.saveLog(log)
-
-      if result {
+      do {
+         try logsRepository.persistLog(log)
          autoSaveBaseline = AutoSaveSnapshot(logData: logData)
          modifiedAutoSaveFields.removeAll()
          saveState = .saved
+         saveError = nil
          if showFeedback {
             let message = "Log saved successfully"
             toastManager.showToast(message: message, color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
@@ -281,8 +331,9 @@ class TodayViewModel {
          if showFeedback { Task {
             await AppReviewManager.shared.promptForReviewIfEligible()
          } }
-      } else {
+      } catch {
          saveState = .failed
+         saveError = repositoryError(error, operation: .write, resource: "daily log")
          if showFeedback {
             toastManager.showToast(message: "Changes couldn't be saved. Tap Retry.", color: CloveColors.error)
          }
@@ -327,7 +378,14 @@ class TodayViewModel {
       saveState = .saving
 
       let fieldsToSave = modifiedAutoSaveFields
-      var log = logsRepository.getLogForDate(loadedDate) ?? DailyLog(date: loadedDate)
+      var log: DailyLog
+      do {
+         log = try logsRepository.loadLog(for: loadedDate) ?? DailyLog(date: loadedDate)
+      } catch {
+         saveState = .failed
+         saveError = repositoryError(error, operation: .read, resource: "daily log before saving")
+         return false
+      }
 
       for field in fieldsToSave {
          switch field {
@@ -355,16 +413,18 @@ class TodayViewModel {
          }
       }
 
-      let result = logsRepository.saveLog(log)
-
-      if result {
+      do {
+         try logsRepository.persistLog(log)
          autoSaveBaseline.update(fieldsToSave, from: logData)
          modifiedAutoSaveFields.subtract(fieldsToSave)
          saveState = modifiedAutoSaveFields.isEmpty ? .saved : .saving
-      } else {
+         saveError = nil
+         return true
+      } catch {
          saveState = .failed
+         saveError = repositoryError(error, operation: .write, resource: "daily log")
+         return false
       }
-      return result
    }
 
    func saveHydration() {
@@ -407,6 +467,17 @@ class TodayViewModel {
       }
       return json
    }
+
+   private func repositoryError(
+      _ error: Error,
+      operation: RepositoryOperation,
+      resource: String
+   ) -> RepositoryError {
+      if let repositoryError = error as? RepositoryError {
+         return repositoryError
+      }
+      return RepositoryError(operation: operation, resource: resource, underlyingError: error)
+   }
    
    // MARK: - Symptom Management
    
@@ -415,7 +486,7 @@ class TodayViewModel {
       guard !trimmedName.isEmpty else { return }
       
       // Check if symptom already exists
-      if symptomsRepository.getTrackedSymptoms().contains(where: { $0.name.lowercased() == trimmedName.lowercased() }) {
+      if trackedSymptoms.contains(where: { $0.name.lowercased() == trimmedName.lowercased() }) {
          toastManager.showToast(message: "Symptom already exists", color: CloveColors.error, icon: Image(systemName: "exclamationmark.triangle"))
          return
       }
@@ -436,7 +507,7 @@ class TodayViewModel {
       guard !trimmedName.isEmpty else { return }
 
       // Check if another symptom already has this name
-      if symptomsRepository.getTrackedSymptoms().contains(where: { $0.name.lowercased() == trimmedName.lowercased() && $0.id != id }) {
+      if trackedSymptoms.contains(where: { $0.name.lowercased() == trimmedName.lowercased() && $0.id != id }) {
          toastManager.showToast(message: "Symptom name already exists", color: CloveColors.error, icon: Image(systemName: "exclamationmark.triangle"))
          return
       }

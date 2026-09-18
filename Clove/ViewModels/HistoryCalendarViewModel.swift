@@ -20,6 +20,8 @@ class HistoryCalendarViewModel {
    var selectedCategory: TrackingCategory = .allData
    var userSettings: UserSettings = .default
    var trackedSymptoms: [TrackedSymptom] = []
+   private(set) var loadError: RepositoryError?
+   private(set) var hasLoadedData = false
 
    let calendar = Calendar.current
    
@@ -110,18 +112,41 @@ class HistoryCalendarViewModel {
    }
    
    func loadData() {
-      loadDaySummaries()
+      do {
+         let summaries = try daySummaryRepository.loadDaySummaries()
+         let settings = try settingsRepository.loadSettings() ?? .default
+         let symptoms = try symptomsRepository.loadTrackedSymptoms()
+
+         daySummariesByDate = summaries
+         logsByDate = summaries.compactMapValues(\.log)
+         bowelMovementsByDate = summaries.compactMapValues { summary in
+            summary.bowelMovements.isEmpty ? nil : summary.bowelMovements
+         }
+         userSettings = settings
+         trackedSymptoms = symptoms
+         loadError = nil
+         hasLoadedData = true
+      } catch {
+         loadError = repositoryError(error)
+         return
+      }
+
       loadCycles()
-      loadUserSettings()
-      loadTrackedSymptoms()
       loadCyclePrediction()
    }
 
    func loadDaySummaries() {
-      daySummariesByDate = daySummaryRepository.getDaySummaries()
-      logsByDate = daySummariesByDate.compactMapValues(\.log)
-      bowelMovementsByDate = daySummariesByDate.compactMapValues { summary in
-         summary.bowelMovements.isEmpty ? nil : summary.bowelMovements
+      do {
+         let summaries = try daySummaryRepository.loadDaySummaries()
+         daySummariesByDate = summaries
+         logsByDate = summaries.compactMapValues(\.log)
+         bowelMovementsByDate = summaries.compactMapValues { summary in
+            summary.bowelMovements.isEmpty ? nil : summary.bowelMovements
+         }
+         loadError = nil
+         hasLoadedData = true
+      } catch {
+         loadError = repositoryError(error)
       }
    }
 
@@ -132,11 +157,21 @@ class HistoryCalendarViewModel {
    }
 
    func loadUserSettings() {
-      self.userSettings = settingsRepository.getSettings() ?? .default
+      do {
+         self.userSettings = try settingsRepository.loadSettings() ?? .default
+         loadError = nil
+      } catch {
+         loadError = repositoryError(error)
+      }
    }
 
    func loadTrackedSymptoms() {
-      self.trackedSymptoms = symptomsRepository.getTrackedSymptoms()
+      do {
+         self.trackedSymptoms = try symptomsRepository.loadTrackedSymptoms()
+         loadError = nil
+      } catch {
+         loadError = repositoryError(error)
+      }
    }
 
    func loadCyclePrediction() {
@@ -166,6 +201,13 @@ class HistoryCalendarViewModel {
 
    func hasAnyData(for date: Date) -> Bool {
       daySummariesByDate[date.stripTime()]?.hasAnyData ?? false
+   }
+
+   private func repositoryError(_ error: Error) -> RepositoryError {
+      if let repositoryError = error as? RepositoryError {
+         return repositoryError
+      }
+      return RepositoryError(operation: .read, resource: "history", underlyingError: error)
    }
 }
 
