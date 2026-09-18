@@ -1,86 +1,43 @@
 # Privacy Policy for Clove
 
-**Effective Date:** July 29th, 2025
+**Effective Date:** September 18, 2026
 
-Clove is a free and open-source mobile application designed to help individuals track symptoms, mood, and other health-related information. This privacy policy outlines how your data is handled when using Clove.
+## Summary
 
----
+Clove is a free, open-source health tracker designed to work without an account or Clove-operated server. Health records and preferences you enter are stored locally on your device. Clove does not send them to the developer, analytics providers, advertisers, or data brokers.
 
-## 1. Data Collection
+## Data Stored on Your Device
 
-Clove does **not** collect any personal information or user data. The app operates entirely offline, and all data you enter is stored locally on your device. No information is transmitted or stored on external servers.
+Clove stores the information you choose to enter, such as symptoms, mood, pain, energy, medications, meals, activities, notes, cycle information, and app preferences. This information is used on your device to provide tracking, history, charts, and insights.
 
----
+## Local Diagnostics
 
-## 2. Data Storage
+Clove can store aggregate reliability, interaction, and performance counters locally on your device. These counters do not include health values, notes, dates, metric names, or personal identifiers. They are not transmitted. You can disable Local Diagnostics in Settings, which also clears the stored counters.
 
-All information entered into Clove — including mood, symptoms, pain levels, meals, medications, notes, and any other tracked metrics — is stored locally on your device using a secure local database (SQLite). 
+## Permissions
 
-Clove does not use cloud storage or remote servers.
+Clove may request notification permission for reminders you configure. Notifications are scheduled locally. Clove does not request access to contacts, photos, HealthKit, or your location.
 
----
+## Exports and Backups
 
-## 3. Account and Authentication
+CSV exports and Clove backup files are created only when you request them. You choose where to share or save each file. After a file leaves Clove, its privacy depends on the destination and anyone you share it with. Clove does not automatically upload or synchronize these files. Backups created by iOS, Finder, or device-management software are controlled by those systems, not by Clove.
 
-Clove does not require you to:
+## Security
 
-- Create an account  
-- Log in  
-- Provide any identifying information  
+Clove stores its database inside the app's iOS sandbox and relies on the protections provided by your device and iOS. Clove does not add database-level encryption to its SQLite database. Protect your device with a passcode or biometric lock and treat exported files as sensitive health information.
 
-There is no authentication or user profile system. Your data is not linked to any identity.
+## Third-Party Code and Services
 
----
+Clove uses the open-source GRDB library to access its local SQLite database. GRDB runs within the app and does not receive your data. Clove contains no advertising SDK, remote analytics SDK, or developer-operated cloud sync.
 
-## 4. Third-Party Services
+## Deleting Your Data
 
-Clove does not use:
+Clove has no account to delete and holds no server copy of your records. Deleting Clove removes its local app data from that device. Files you exported and copies retained in device or computer backups must be deleted from those locations separately.
 
-- Third-party analytics  
-- Advertising SDKs  
-- Data processors  
-- External APIs  
+## Children
 
-No third-party code has access to your data.
+Clove is not intended for use by children under 18 without the involvement of a parent or guardian.
 
----
+## Changes and Contact
 
-## 5. Permissions
-
-Clove may request optional permissions such as:
-
-- Local notifications (e.g., reminders to log symptoms)
-
-These are used solely for local functionality and never leave your device.
-
----
-
-## 6. Open Source
-
-Clove is fully open source and transparent. The entire source code is available for public review, allowing anyone to inspect how the app handles data.
-
-There are no hidden data transmissions or telemetry.
-
----
-
-## 7. Data Deletion
-
-You are in full control of your data.
-
-- All data is stored on your device
-- Uninstalling the app will permanently delete all stored data
-- No external backups or copies are made unless you create them
-
----
-
-## 8. Children’s Privacy
-
-Clove is not intended for use by children under the age of 18 WITHOUT parental supervision.
-
----
-
-## 9. Changes to This Policy
-
-If changes are made to this privacy policy in the future, they will be reflected in an updated version included with the app.
-
-Clove’s commitment to local-only data storage and full user privacy will remain unchanged.
+This policy will be updated when Clove's data practices materially change. Questions or concerns can be submitted through the [public project issue tracker](https://github.com/colbyb2/clove-ios/issues).

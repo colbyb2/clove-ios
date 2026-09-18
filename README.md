@@ -46,8 +46,8 @@ Clove is a comprehensive, privacy-focused iOS health tracking application built 
 ### 🔐 Privacy & Security
 - **Local Data Storage**: All health data stays on your device - no cloud storage or data sharing
 - **No User Accounts**: No registration, login, or personal information required
-- **HIPAA-Conscious Design**: Built with healthcare privacy best practices in mind
-- **Secure Database**: Encrypted local SQLite database with GRDB framework
+- **No Remote Tracking**: No advertising or remote analytics SDKs
+- **Clear Security Boundary**: Standard SQLite storage inside the iOS app sandbox; Clove does not add database-level encryption
 
 ## 🛠 Technical Architecture
 
@@ -300,7 +300,7 @@ dependencies: [
 ### Data Privacy Principles
 - **Local-First**: All health data stored exclusively on device
 - **No Cloud Sync**: No remote data transmission or storage
-- **No Analytics**: No usage analytics or telemetry
+- **Local Diagnostics Only**: Optional aggregate reliability counters remain on the device and contain no health values or identifiers
 - **No Ads**: No advertising or tracking technologies
 
 ## 🌍 Accessibility

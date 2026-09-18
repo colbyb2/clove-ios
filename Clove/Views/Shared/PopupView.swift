@@ -148,52 +148,7 @@ struct LegalPopupView: View {
 // MARK: - Usage Examples
 extension PopupView {
     static func privacyPolicy() -> some View {
-        let longMessage = """
-        Privacy Policy
-        
-        Last updated: [Date]
-        
-        This Privacy Policy describes how we collect, use, and protect your personal information when you use our chronic illness tracking application.
-        
-        Information We Collect:
-        • Health data you voluntarily input (symptoms, mood, pain levels)
-        • Usage analytics to improve app performance
-        • Device information for compatibility purposes
-        
-        How We Use Your Information:
-        • To provide personalized health tracking features
-        • To generate insights about your health patterns
-        • To improve our services and user experience
-        • To ensure app security and prevent misuse
-        
-        Data Protection:
-        • All health data is encrypted both in transit and at rest
-        • We use industry-standard security measures
-        • Your data is never sold to third parties
-        • You maintain full control over your data
-        
-        Your Rights:
-        • Access your personal data at any time
-        • Request deletion of your account and data
-        • Export your data in a portable format
-        • Opt out of non-essential data collection
-        
-        Contact Us:
-        If you have questions about this Privacy Policy, please contact us at privacy@example.com
-        
-        Changes to This Policy:
-        We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.
-        
-        By continuing to use our app, you acknowledge that you have read and understood this Privacy Policy.
-        """
-        
-        return PopupView(
-            popup: Popup(
-                id: "privacy",
-                title: "Privacy Policy",
-                message: longMessage
-            )
-        )
+        PopupView(popup: ClovePrivacyPolicy.popup)
     }
 }
 

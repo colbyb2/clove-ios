@@ -313,6 +313,9 @@ private struct HelpAndAboutSettingsView: View {
             }
 
             Section("About") {
+                Button { showPrivacyPolicy() } label: {
+                    SettingsButtonRow(icon: "hand.raised.fill", color: .blue, title: "Privacy Policy")
+                }
                 Button { showTermsAndConditions() } label: {
                     SettingsButtonRow(icon: "doc.text.fill", color: .gray, title: "Terms & Conditions")
                 }
@@ -327,6 +330,10 @@ private struct HelpAndAboutSettingsView: View {
         if let termsPopup = Popups.all.first(where: { $0.id == "termsAndConditions" }) {
             PopupManager.shared.currentPopup = termsPopup
         }
+    }
+
+    private func showPrivacyPolicy() {
+        PopupManager.shared.currentPopup = ClovePrivacyPolicy.popup
     }
 }
 

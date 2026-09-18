@@ -110,7 +110,7 @@ enum Popups {
               message: """
               Terms and Conditions of Use
               
-              Last Updated: July 24th, 2025
+              Last Updated: September 18, 2026
               
               IMPORTANT: Please read these Terms and Conditions carefully before using this application.
               
@@ -158,7 +158,7 @@ enum Popups {
               
               Technical Risks:
               • Software bugs, crashes, or unexpected behavior may occur
-              • Data synchronization issues or loss may happen
+              • Import, export, migration, or data loss issues may happen
               • App performance may vary across different devices and operating systems
               • Updates may change functionality or require data migration
               
@@ -200,10 +200,10 @@ enum Popups {
               • Require professional interpretation within proper medical context
               
               11. PRIVACY AND DATA SECURITY
-              While we implement reasonable security measures:
-              • No system is 100% secure against all potential threats
-              • You are responsible for protecting your device and app access
-              • Consider the sensitivity of health data you choose to store
+              • Clove stores your records locally and does not transmit them to the developer
+              • Clove uses standard SQLite and does not add database-level encryption
+              • You are responsible for protecting your device, app access, and exported files
+              • The complete current Privacy Policy is available in Settings under Help & About
               
               12. AGE RESTRICTIONS
               This App is intended for users 18 years of age and older. Users under 18 should:
@@ -226,8 +226,7 @@ enum Popups {
               15. CONTACT INFORMATION
               For questions about these Terms:
               • Review the open source documentation
-              • Consult community forums and support channels
-              • Contact the development team through official channels
+              • Use the public project issue tracker at https://github.com/colbyb2/clove-ios/issues
               
               16. FINAL ACKNOWLEDGMENT
               By using this App, you confirm that you:
