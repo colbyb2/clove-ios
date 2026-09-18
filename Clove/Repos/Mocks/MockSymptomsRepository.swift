@@ -9,12 +9,20 @@ final class MockSymptomsRepository: SymptomsRepositoryProtocol {
     var shouldSucceed: Bool = true
 
     func getTrackedSymptoms() -> [TrackedSymptom] {
-        return symptoms
+        symptoms.sorted {
+            $0.displayOrder == $1.displayOrder
+                ? ($0.id ?? 0) < ($1.id ?? 0)
+                : $0.displayOrder < $1.displayOrder
+        }
     }
 
     func saveTrackedSymptoms(_ symptoms: [TrackedSymptom]) -> Bool {
         if shouldSucceed {
-            self.symptoms = symptoms
+            self.symptoms = symptoms.enumerated().map { index, symptom in
+                var ordered = symptom
+                ordered.displayOrder = index
+                return ordered
+            }
             return true
         }
         return false
@@ -22,7 +30,9 @@ final class MockSymptomsRepository: SymptomsRepositoryProtocol {
 
     func saveSymptom(_ symptom: TrackedSymptom) -> Bool {
         if shouldSucceed {
-            symptoms.append(symptom)
+            var ordered = symptom
+            ordered.displayOrder = (symptoms.map(\.displayOrder).max() ?? -1) + 1
+            symptoms.append(ordered)
             return true
         }
         return false
@@ -31,11 +41,24 @@ final class MockSymptomsRepository: SymptomsRepositoryProtocol {
     func updateSymptom(id: Int64, name: String, isBinary: Bool) -> Bool {
         if shouldSucceed {
             if let index = symptoms.firstIndex(where: { $0.id == id }) {
-                symptoms[index] = TrackedSymptom(id: id, name: name, isBinary: isBinary)
+                symptoms[index].name = name
+                symptoms[index].isBinary = isBinary
             }
             return true
         }
         return false
+    }
+
+    func reorderSymptoms(_ symptoms: [TrackedSymptom]) -> Bool {
+        guard shouldSucceed,
+              Set(symptoms.compactMap(\.id)) == Set(self.symptoms.compactMap(\.id)),
+              symptoms.count == self.symptoms.count else { return false }
+        self.symptoms = symptoms.enumerated().map { index, symptom in
+            var ordered = symptom
+            ordered.displayOrder = index
+            return ordered
+        }
+        return true
     }
 
     func deleteSymptom(id: Int64) -> Bool {

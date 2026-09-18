@@ -209,11 +209,27 @@ class MetricRegistry {
         let dataLoader = OptimizedDataLoader.shared
         let symptoms: [String:Bool] = await dataLoader.getAvailableSymptoms()
         let trackedSymptoms = symptomsRepo.getTrackedSymptoms()
-
-        return symptoms.map { (symptomName, isBinary) in
-            let isActive = trackedSymptoms.filter( { $0.name.lowercased() == symptomName.lowercased() }).count > 0
-            return SymptomMetricProvider(symptomName: symptomName, isActive: isActive, isBinary: isBinary)
+        var availableByName: [String: (name: String, isBinary: Bool)] = [:]
+        for (name, isBinary) in symptoms {
+            availableByName[name.lowercased()] = (name: name, isBinary: isBinary)
         }
+        var usedNames: Set<String> = []
+        var providers = trackedSymptoms.compactMap { symptom -> SymptomMetricProvider? in
+            let key = symptom.name.lowercased()
+            guard let available = availableByName[key] else { return nil }
+            usedNames.insert(key)
+            return SymptomMetricProvider(
+                symptomName: available.name,
+                isActive: true,
+                isBinary: available.isBinary
+            )
+        }
+        providers.append(contentsOf: availableByName
+            .filter { !usedNames.contains($0.key) }
+            .map(\.value)
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            .map { SymptomMetricProvider(symptomName: $0.name, isActive: false, isBinary: $0.isBinary) })
+        return providers
     }
     
     private func generateMedicationMetrics() async -> [any MetricProvider] {

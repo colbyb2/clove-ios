@@ -24,6 +24,9 @@ protocol SymptomsRepositoryProtocol {
     /// - Returns: True if successful, false otherwise
     func updateSymptom(id: Int64, name: String, isBinary: Bool) -> Bool
 
+    /// Atomically persists the complete symptom display order.
+    func reorderSymptoms(_ symptoms: [TrackedSymptom]) -> Bool
+
     /// Deletes a symptom
     /// - Parameter id: The ID of the symptom to delete
     /// - Returns: True if successful, false otherwise

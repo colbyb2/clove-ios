@@ -159,6 +159,7 @@ class DataImportManager {
         in db: Database
     ) throws -> (createdCount: Int, idsByName: [String: Int64]) {
         let existingSymptoms = try TrackedSymptom.fetchAll(db)
+        var nextDisplayOrder = (existingSymptoms.map(\.displayOrder).max() ?? -1) + 1
         var idsByName = Dictionary(
             uniqueKeysWithValues: existingSymptoms.compactMap { symptom in
                 symptom.id.map { (symptom.name, $0) }
@@ -168,8 +169,9 @@ class DataImportManager {
 
         for symptomName in symptomColumns {
             if idsByName[symptomName] == nil {
-                let newSymptom = TrackedSymptom(name: symptomName)
+                let newSymptom = TrackedSymptom(name: symptomName, displayOrder: nextDisplayOrder)
                 try newSymptom.insert(db)
+                nextDisplayOrder += 1
                 let id = db.lastInsertedRowID
                 idsByName[symptomName] = id
                 try DynamicMetricIdentityStore.registerAlias(

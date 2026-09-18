@@ -23,8 +23,32 @@ enum Migrations {
         AutoSaveSettingMigration(),
         StableDynamicMetricIdentityMigration(),
         SavedAnalysisMigration(),
-        AdvancedInsightsPersistenceMigration()
+        AdvancedInsightsPersistenceMigration(),
+        SymptomDisplayOrderMigration()
     ]
+}
+
+struct SymptomDisplayOrderMigration: Migration {
+    var identifier: String { "symptomDisplayOrder_091826" }
+
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "trackedSymptom") { table in
+            table.add(column: "displayOrder", .integer).notNull().defaults(to: 0)
+        }
+        let rows = try Row.fetchAll(db, sql: "SELECT id FROM trackedSymptom ORDER BY id ASC")
+        for (displayOrder, row) in rows.enumerated() {
+            let id: Int64 = row["id"]
+            try db.execute(
+                sql: "UPDATE trackedSymptom SET displayOrder = ? WHERE id = ?",
+                arguments: [displayOrder, id]
+            )
+        }
+        try db.create(
+            index: "trackedSymptom_displayOrder",
+            on: "trackedSymptom",
+            columns: ["displayOrder", "id"]
+        )
+    }
 }
 
 struct AdvancedInsightsPersistenceMigration: Migration {

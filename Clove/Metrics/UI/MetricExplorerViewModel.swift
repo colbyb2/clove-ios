@@ -9,6 +9,7 @@ class MetricExplorerViewModel {
     var metricSummaries: [MetricSummary] = []
     var isLoading = false
     var errorMessage: String?
+    private var symptomDisplayOrder: [String: Int] = [:]
     
     private let metricRegistry = MetricRegistry.shared
     
@@ -25,6 +26,9 @@ class MetricExplorerViewModel {
         
         let summaries = await metricRegistry.getMetricSummaries()
         self.metricSummaries = summaries
+        self.symptomDisplayOrder = Dictionary(uniqueKeysWithValues: SymptomsRepo.shared.getTrackedSymptoms().map {
+            ($0.name.lowercased(), $0.displayOrder)
+        })
         
         isLoading = false
     }
@@ -50,6 +54,11 @@ class MetricExplorerViewModel {
         return filtered.sorted { metric1, metric2 in
             if metric1.isAvailable != metric2.isAvailable {
                 return metric1.isAvailable && !metric2.isAvailable
+            }
+            if metric1.category == .symptoms, metric2.category == .symptoms {
+                let firstOrder = symptomDisplayOrder[metric1.displayName.lowercased()] ?? .max
+                let secondOrder = symptomDisplayOrder[metric2.displayName.lowercased()] ?? .max
+                if firstOrder != secondOrder { return firstOrder < secondOrder }
             }
             return metric1.displayName < metric2.displayName
         }

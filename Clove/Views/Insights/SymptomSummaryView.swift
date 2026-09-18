@@ -21,7 +21,7 @@ struct SymptomSummaryView: View {
       return trackedSymptoms.filter { symptom in
          guard let id = symptom.id else { return false }
          return symptomIds.contains(id)
-      }.sorted { $0.name < $1.name }
+      }
    }
    
    // Helper to get symptom name by ID

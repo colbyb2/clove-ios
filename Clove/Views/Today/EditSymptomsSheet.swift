@@ -25,7 +25,7 @@ struct EditSymptomsSheet: View {
     var refresh: () -> Void = {}
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 // Subtle gradient background
                 LinearGradient(
@@ -40,22 +40,22 @@ struct EditSymptomsSheet: View {
                 .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: CloveSpacing.xlarge) {
-                        // Modern header
+                    VStack(spacing: CloveSpacing.large) {
                         ModernSymptomHeaderView()
                             .opacity(headerOpacity)
                             .offset(y: headerOffset)
                         
                         // Symptoms list
                         ModernSymptomListView(
-                            trackedSymptoms: trackedSymptoms,
+                            trackedSymptoms: $trackedSymptoms,
                             editingSymptom: editingSymptom,
                             editingName: $editingName,
                             editingIsBinary: $editingIsBinary,
                             onEdit: startEditing,
                             onSave: saveEdit,
                             onCancel: cancelEdit,
-                            onDelete: deleteSymptoms
+                            onDelete: deleteSymptoms,
+                            onReorder: persistSymptomOrder
                         )
                         .opacity(listOpacity)
                         .offset(y: listOffset)
@@ -107,19 +107,13 @@ struct EditSymptomsSheet: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
+                    Button("Done") {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                             dismiss()
                         }
                         onDone()
-                    } label: {
-                        Text("Done")
-                            .font(CloveFonts.body())
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Theme.shared.accent)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
                     }
+                    .fontWeight(.semibold)
                 }
             }
         }
@@ -229,44 +223,49 @@ struct EditSymptomsSheet: View {
             }
         }
     }
+
+    private func persistSymptomOrder(_ symptoms: [TrackedSymptom]) -> Bool {
+        let success = SymptomsRepo.shared.reorderSymptoms(symptoms)
+        if success {
+            refresh()
+            UISelectionFeedbackGenerator().selectionChanged()
+        } else {
+            ToastManager.shared.showToast(
+                message: "Could not save symptom order",
+                color: CloveColors.error,
+                icon: Image(systemName: "exclamationmark.triangle")
+            )
+        }
+        return success
+    }
 }
 
 // MARK: - Modern Views
 
 struct ModernSymptomHeaderView: View {
     var body: some View {
-        VStack(spacing: CloveSpacing.medium) {
-            // Icon and title
-            HStack(spacing: CloveSpacing.medium) {
-                ZStack {
-                    Circle()
-                        .fill(Theme.shared.accent.opacity(0.1))
-                        .frame(width: 50, height: 50)
-                    
-                    Image(systemName: "bandage.fill")
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundStyle(Theme.shared.accent)
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Tracked Symptoms")
-                        .font(.system(.title2, design: .rounded, weight: .bold))
-                        .foregroundStyle(CloveColors.primaryText)
-                    
-                    Text("These appear in your daily tracker until you remove them")
-                        .font(.system(.subheadline, design: .rounded))
-                        .foregroundStyle(CloveColors.secondaryText)
-                }
-                
-                Spacer()
+        HStack(alignment: .top, spacing: CloveSpacing.medium) {
+            Image(systemName: "bandage.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(Theme.shared.accent)
+                .frame(width: 42, height: 42)
+                .background(Theme.shared.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Tracked Symptoms")
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                    .foregroundStyle(CloveColors.primaryText)
+
+                Text("Press and drag the grip to choose how symptoms appear throughout Clove.")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+
+            Spacer(minLength: 0)
         }
-        .padding(CloveSpacing.large)
-        .background(
-            RoundedRectangle(cornerRadius: CloveCorners.large)
-                .fill(CloveColors.card)
-                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
-        )
+        .padding(.horizontal, 4)
+        .padding(.vertical, CloveSpacing.small)
     }
 }
 
@@ -465,7 +464,7 @@ struct ModernAddSymptomFormView: View {
 }
 
 struct ModernSymptomListView: View {
-    let trackedSymptoms: [TrackedSymptom]
+    @Binding var trackedSymptoms: [TrackedSymptom]
     let editingSymptom: TrackedSymptom?
     @Binding var editingName: String
     @Binding var editingIsBinary: Bool
@@ -473,6 +472,7 @@ struct ModernSymptomListView: View {
     let onSave: () -> Void
     let onCancel: () -> Void
     let onDelete: (IndexSet) -> Void
+    let onReorder: ([TrackedSymptom]) -> Bool
     
     var body: some View {
         VStack(alignment: .leading, spacing: CloveSpacing.large) {
@@ -501,10 +501,11 @@ struct ModernSymptomListView: View {
                 ModernSymptomEmptyStateView()
             } else {
                 VStack(spacing: CloveSpacing.medium) {
-                    ForEach(trackedSymptoms, id: \.id) { symptom in
+                    ForEach(Array(trackedSymptoms.enumerated()), id: \.element.id) { index, symptom in
                         ModernSymptomCard(
                             symptom: symptom,
                             isEditing: editingSymptom?.id == symptom.id,
+                            dragIdentifier: String(symptom.id ?? 0),
                             editingName: $editingName,
                             editingIsBinary: $editingIsBinary,
                             onEdit: { onEdit(symptom) },
@@ -516,16 +517,49 @@ struct ModernSymptomListView: View {
                                 }
                             }
                         )
+                        .dropDestination(for: String.self) { identifiers, _ in
+                            guard let rawID = identifiers.first,
+                                  let sourceID = Int64(rawID),
+                                  let targetID = symptom.id else { return false }
+                            return move(sourceID: sourceID, before: targetID)
+                        }
                     }
                 }
             }
         }
+    }
+
+    private func move(sourceID: Int64, before targetID: Int64) -> Bool {
+        guard sourceID != targetID,
+              let source = trackedSymptoms.firstIndex(where: { $0.id == sourceID }),
+              let originalTarget = trackedSymptoms.firstIndex(where: { $0.id == targetID }) else { return false }
+        let isMovingDown = source < originalTarget
+        var reordered = trackedSymptoms
+        let moved = reordered.remove(at: source)
+        guard let destination = reordered.firstIndex(where: { $0.id == targetID }) else { return false }
+        reordered.insert(moved, at: isMovingDown ? destination + 1 : destination)
+        return save(reordered)
+    }
+
+    @discardableResult
+    private func save(_ symptoms: [TrackedSymptom]) -> Bool {
+        let ordered = symptoms.enumerated().map { index, symptom in
+            var updated = symptom
+            updated.displayOrder = index
+            return updated
+        }
+        guard onReorder(ordered) else { return false }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            trackedSymptoms = ordered
+        }
+        return true
     }
 }
 
 struct ModernSymptomCard: View {
     let symptom: TrackedSymptom
     let isEditing: Bool
+    let dragIdentifier: String
     @Binding var editingName: String
     @Binding var editingIsBinary: Bool
     let onEdit: () -> Void
@@ -623,18 +657,26 @@ struct ModernSymptomCard: View {
                     }
                 }
             } else {
-                // Display mode
-                HStack(spacing: CloveSpacing.medium) {
-                    // Icon
-                    ZStack {
-                        Circle()
-                            .fill(Theme.shared.accent.opacity(0.1))
-                            .frame(width: 40, height: 40)
-                        
-                        Image(systemName: "bandage.fill")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Theme.shared.accent)
-                    }
+                HStack(spacing: 12) {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Theme.shared.accent)
+                        .frame(width: 42, height: 48)
+                        .background(Theme.shared.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                        .contentShape(Rectangle())
+                        .draggable(dragIdentifier) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "line.3.horizontal")
+                                Text(symptom.name)
+                                    .lineLimit(1)
+                            }
+                            .font(.system(.body, design: .rounded, weight: .semibold))
+                            .foregroundStyle(CloveColors.primaryText)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(CloveColors.card, in: RoundedRectangle(cornerRadius: 12))
+                        }
+                        .accessibilityLabel("Drag to reorder \(symptom.name)")
                     
                     // Name
                     VStack(alignment: .leading, spacing: 2) {
@@ -649,46 +691,32 @@ struct ModernSymptomCard: View {
                     
                     Spacer()
                     
-                    // Actions
-                    HStack(spacing: CloveSpacing.small) {
-                        Button("Edit") {
-                            onEdit()
-                        }
-                        .font(.system(.caption, design: .rounded, weight: .medium))
-                        .foregroundStyle(Theme.shared.accent)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule()
-                                .fill(Theme.shared.accent.opacity(0.1))
-                        )
-                        
-                        Button(action: onDelete) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 14))
-                                .foregroundStyle(.white)
-                                .frame(width: 28, height: 28)
-                                .background(
-                                    Circle()
-                                        .fill(Color.red.opacity(0.8))
-                                )
-                        }
+                    Menu {
+                        Button("Edit Symptom", systemImage: "pencil", action: onEdit)
+                        Button("Delete Symptom", systemImage: "trash", role: .destructive, action: onDelete)
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(CloveColors.secondaryText)
+                            .frame(width: 40, height: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Actions for \(symptom.name)")
                 }
             }
         }
         .padding(CloveSpacing.medium)
         .background(
             RoundedRectangle(cornerRadius: CloveCorners.large)
-                .fill(isEditing ? Theme.shared.accent.opacity(0.05) : CloveColors.card)
+                .fill(CloveColors.card)
                 .overlay(
                     RoundedRectangle(cornerRadius: CloveCorners.large)
                         .stroke(
-                            isEditing ? Theme.shared.accent.opacity(0.2) : Color.clear,
+                            isEditing ? Theme.shared.accent.opacity(0.35) : CloveColors.secondaryText.opacity(0.12),
                             lineWidth: 1
                         )
                 )
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
         )
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isEditing)
     }

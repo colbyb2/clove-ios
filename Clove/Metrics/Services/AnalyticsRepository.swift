@@ -131,7 +131,9 @@ struct GRDBAnalyticsSourceLoader: AnalyticsSourceLoading {
                 sql: "SELECT * FROM cycle WHERE date >= ? AND date < ? ORDER BY date ASC, id ASC",
                 arguments: bounds
             )
-            let symptoms = try TrackedSymptom.order(Column("id").asc).fetchAll(db)
+            let symptoms = try TrackedSymptom
+                .order(Column("displayOrder").asc, Column("id").asc)
+                .fetchAll(db)
             let medications = try TrackedMedication.order(Column("id").asc).fetchAll(db)
             let identities = try DynamicMetricIdentity
                 .order(Column("family").asc, Column("id").asc)
@@ -212,7 +214,7 @@ struct DefaultAnalyticsRepository: AnalyticsRepository {
 
         return AnalyticsDataset(
             interval: request.interval,
-            definitions: definitions.sorted { $0.id.rawValue < $1.id.rawValue },
+            definitions: definitions,
             observations: observations,
             rawEvents: rawEvents,
             coverage: coverage,
@@ -269,9 +271,17 @@ struct DefaultAnalyticsRepository: AnalyticsRepository {
             factory: MetricCatalog.mealOccurrence
         ))
 
+        let symptomOrder = Dictionary(uniqueKeysWithValues: snapshot.trackedSymptoms.compactMap {
+            symptom in symptom.id.map { (MetricID(rawValue: "symptom:\($0)"), symptom.displayOrder) }
+        })
         return Dictionary(grouping: result, by: \.id)
             .compactMap { $0.value.first }
-            .sorted { $0.id.rawValue < $1.id.rawValue }
+            .sorted { lhs, rhs in
+                if let lhsOrder = symptomOrder[lhs.id], let rhsOrder = symptomOrder[rhs.id], lhsOrder != rhsOrder {
+                    return lhsOrder < rhsOrder
+                }
+                return lhs.id.rawValue < rhs.id.rawValue
+            }
     }
 
     private func eventDefinitions(
