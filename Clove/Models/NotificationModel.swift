@@ -1,34 +1,105 @@
 import Foundation
 
+enum NotificationWeekday: Int, Codable, CaseIterable, Identifiable {
+   case sunday = 1
+   case monday
+   case tuesday
+   case wednesday
+   case thursday
+   case friday
+   case saturday
+
+   var id: Int { rawValue }
+
+   var shortName: String {
+      Calendar.current.shortWeekdaySymbols[rawValue - 1]
+   }
+}
+
+protocol LocalNotificationScheduling {
+   func scheduleRepeatingNotification(
+      id: String,
+      title: String,
+      body: String,
+      hour: Int,
+      minute: Int,
+      weekdays: [Int]
+   )
+   func cancelNotification(id: String)
+}
 
 struct ScheduledNotification: Codable, Identifiable {
+   static let defaultBody = "Don't forget to log your daily progress!"
+
    let id: String
    let title: String
    let body: String
    let hour: Int
    let minute: Int
    let isEnabled: Bool
+   let weekdays: [Int]
    let createdAt: Date
    
-   init(title: String, body: String, hour: Int, minute: Int, isEnabled: Bool = true) {
+   init(
+      title: String,
+      body: String,
+      hour: Int,
+      minute: Int,
+      isEnabled: Bool = true,
+      weekdays: [Int] = NotificationWeekday.allCases.map(\.rawValue)
+   ) {
       self.id = UUID().uuidString
       self.title = title
       self.body = body
       self.hour = hour
       self.minute = minute
       self.isEnabled = isEnabled
+      self.weekdays = Self.normalizedWeekdays(weekdays)
       self.createdAt = Date()
    }
    
    // Custom initializer to preserve existing ID
-   init(id: String, title: String, body: String, hour: Int, minute: Int, isEnabled: Bool, createdAt: Date) {
+   init(
+      id: String,
+      title: String,
+      body: String,
+      hour: Int,
+      minute: Int,
+      isEnabled: Bool,
+      weekdays: [Int] = NotificationWeekday.allCases.map(\.rawValue),
+      createdAt: Date
+   ) {
       self.id = id
       self.title = title
       self.body = body
       self.hour = hour
       self.minute = minute
       self.isEnabled = isEnabled
+      self.weekdays = Self.normalizedWeekdays(weekdays)
       self.createdAt = createdAt
+   }
+
+   private enum CodingKeys: String, CodingKey {
+      case id, title, body, hour, minute, isEnabled, weekdays, createdAt
+   }
+
+   init(from decoder: Decoder) throws {
+      let container = try decoder.container(keyedBy: CodingKeys.self)
+      id = try container.decode(String.self, forKey: .id)
+      title = try container.decode(String.self, forKey: .title)
+      body = try container.decode(String.self, forKey: .body)
+      hour = try container.decode(Int.self, forKey: .hour)
+      minute = try container.decode(Int.self, forKey: .minute)
+      isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
+      weekdays = Self.normalizedWeekdays(
+         try container.decodeIfPresent([Int].self, forKey: .weekdays)
+            ?? NotificationWeekday.allCases.map(\.rawValue)
+      )
+      createdAt = try container.decode(Date.self, forKey: .createdAt)
+   }
+
+   private static func normalizedWeekdays(_ weekdays: [Int]) -> [Int] {
+      Array(Set(weekdays.filter { (1...7).contains($0) })).sorted()
    }
    
    var timeString: String {
@@ -44,6 +115,18 @@ struct ScheduledNotification: Codable, Identifiable {
       }
       return "\(hour):\(String(format: "%02d", minute))"
    }
+
+   var daysString: String {
+      if weekdays.count == 7 { return "Every day" }
+      if weekdays == [2, 3, 4, 5, 6] { return "Weekdays" }
+      if weekdays == [1, 7] { return "Weekends" }
+      return weekdays.compactMap(NotificationWeekday.init(rawValue:)).map(\.shortName).joined(separator: ", ")
+   }
+
+   var displayNote: String {
+      let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+      return trimmed.isEmpty ? Self.defaultBody : trimmed
+   }
 }
 
 @Observable
@@ -52,9 +135,18 @@ class NotificationStore {
    
    var notifications: [ScheduledNotification] = []
    
-   private let userDefaults = UserDefaults.standard
+   private let userDefaults: UserDefaults
+   private let notificationScheduler: any LocalNotificationScheduling
+   private let storageKey: String
    
-   private init() {
+   init(
+      userDefaults: UserDefaults = .standard,
+      notificationScheduler: any LocalNotificationScheduling = NotificationManager.shared,
+      storageKey: String = Constants.NOTIFICATIONS_KEY
+   ) {
+      self.userDefaults = userDefaults
+      self.notificationScheduler = notificationScheduler
+      self.storageKey = storageKey
       loadNotifications()
    }
    
@@ -63,7 +155,7 @@ class NotificationStore {
    func saveNotifications() {
       do {
          let encoded = try JSONEncoder().encode(notifications)
-         userDefaults.set(encoded, forKey: Constants.NOTIFICATIONS_KEY)
+         userDefaults.set(encoded, forKey: storageKey)
          print("✅ NotificationStore: Saved \(notifications.count) notifications")
       } catch {
          print("❌ NotificationStore: Failed to save notifications - \(error)")
@@ -71,7 +163,7 @@ class NotificationStore {
    }
    
    func loadNotifications() {
-      guard let data = userDefaults.data(forKey: Constants.NOTIFICATIONS_KEY) else {
+      guard let data = userDefaults.data(forKey: storageKey) else {
          print("📝 NotificationStore: No existing notifications found")
          return
       }
@@ -94,12 +186,13 @@ class NotificationStore {
       
       // Schedule the actual notification
       if notification.isEnabled {
-         NotificationManager.shared.scheduleRepeatingNotification(
+         notificationScheduler.scheduleRepeatingNotification(
             id: notification.id,
             title: notification.title,
             body: notification.body,
             hour: notification.hour,
-            minute: notification.minute
+            minute: notification.minute,
+            weekdays: notification.weekdays
          )
          print("🔔 NotificationStore: Scheduled notification for \(notification.timeString)")
       }
@@ -108,7 +201,7 @@ class NotificationStore {
    func updateNotification(_ notification: ScheduledNotification) {
       if let index = notifications.firstIndex(where: { $0.id == notification.id }) {
          // Cancel existing notification
-         NotificationManager.shared.cancelNotification(id: notification.id)
+         notificationScheduler.cancelNotification(id: notification.id)
          
          // Update the notification (ID is already preserved in the passed notification)
          notifications[index] = notification
@@ -117,12 +210,13 @@ class NotificationStore {
          
          // Reschedule if enabled
          if notification.isEnabled {
-            NotificationManager.shared.scheduleRepeatingNotification(
+            notificationScheduler.scheduleRepeatingNotification(
                id: notification.id,
                title: notification.title,
                body: notification.body,
                hour: notification.hour,
-               minute: notification.minute
+               minute: notification.minute,
+               weekdays: notification.weekdays
             )
             print("🔔 NotificationStore: Rescheduled notification for \(notification.timeString)")
          }
@@ -133,7 +227,7 @@ class NotificationStore {
    
    func deleteNotification(_ notification: ScheduledNotification) {
       // Cancel the notification
-      NotificationManager.shared.cancelNotification(id: notification.id)
+      notificationScheduler.cancelNotification(id: notification.id)
       
       // Remove from array
       notifications.removeAll { $0.id == notification.id }
@@ -144,7 +238,7 @@ class NotificationStore {
    func toggleNotification(_ notification: ScheduledNotification) {
       if let index = notifications.firstIndex(where: { $0.id == notification.id }) {
          // Cancel existing notification
-         NotificationManager.shared.cancelNotification(id: notification.id)
+         notificationScheduler.cancelNotification(id: notification.id)
          
          // Create updated notification preserving the original ID
          let updatedNotification = ScheduledNotification(
@@ -154,6 +248,7 @@ class NotificationStore {
             hour: notification.hour,
             minute: notification.minute,
             isEnabled: !notification.isEnabled,
+            weekdays: notification.weekdays,
             createdAt: notification.createdAt
          )
          
@@ -164,12 +259,13 @@ class NotificationStore {
          
          // Schedule if now enabled
          if updatedNotification.isEnabled {
-            NotificationManager.shared.scheduleRepeatingNotification(
+            notificationScheduler.scheduleRepeatingNotification(
                id: notification.id,
                title: notification.title,
                body: notification.body,
                hour: notification.hour,
-               minute: notification.minute
+               minute: notification.minute,
+               weekdays: notification.weekdays
             )
             print("🔔 NotificationStore: Scheduled notification for \(notification.timeString)")
          }

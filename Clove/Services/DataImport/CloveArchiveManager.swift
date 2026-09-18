@@ -275,7 +275,8 @@ final class CloveArchiveManager {
                 title: notification.title,
                 body: notification.body,
                 hour: notification.hour,
-                minute: notification.minute
+                minute: notification.minute,
+                weekdays: notification.weekdays
             )
         }
     }

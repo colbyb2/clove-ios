@@ -255,7 +255,7 @@ struct OnboardingNotificationView: View {
                     
                     let newReminder = ScheduledNotification(
                         title: "Daily Log Reminder",
-                        body: "Don't forget to log your daily progress!",
+                        body: ScheduledNotification.defaultBody,
                         hour: hour,
                         minute: minute,
                         isEnabled: true
