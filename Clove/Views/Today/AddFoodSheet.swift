@@ -8,11 +8,18 @@ struct AddFoodSheet: View {
     @State private var searchText = ""
     @State private var selectedCategory: MealCategory = .snack
     @State private var showingAddCustomFood = false
+    @State private var entryDate: Date
 
     private let repo = FoodEntryRepo.shared
 
     @State private var favorites: [FoodEntry] = []
     @State private var recentFoods: [String] = []
+
+    init(date: Date, onSave: @escaping () -> Void) {
+        self.date = date
+        self.onSave = onSave
+        _entryDate = State(initialValue: CalendarEventTime.currentTime(on: date))
+    }
 
     var body: some View {
         NavigationView {
@@ -22,6 +29,8 @@ struct AddFoodSheet: View {
 
                 // Category tabs
                 categoryTabs
+
+                timePicker
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: CloveSpacing.large) {
@@ -64,7 +73,7 @@ struct AddFoodSheet: View {
                 AddCustomFoodSheet(
                     initialName: searchText,
                     initialCategory: selectedCategory,
-                    date: date
+                    date: entryDate
                 ) {
                     loadData()
                     onSave()
@@ -119,6 +128,20 @@ struct AddFoodSheet: View {
             }
             .padding(.horizontal)
         }
+        .padding(.bottom, CloveSpacing.small)
+    }
+
+    private var timePicker: some View {
+        HStack {
+            Label("Time", systemImage: "clock")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(CloveColors.secondaryText)
+            Spacer()
+            DatePicker("Time", selection: $entryDate, displayedComponents: .hourAndMinute)
+                .labelsHidden()
+                .datePickerStyle(.compact)
+        }
+        .padding(.horizontal)
         .padding(.bottom, CloveSpacing.small)
     }
 
@@ -273,7 +296,7 @@ struct AddFoodSheet: View {
         let entry = FoodEntry(
             name: trimmed,
             category: category,
-            date: date
+            date: entryDate
         )
 
         if repo.save(entry) != nil {

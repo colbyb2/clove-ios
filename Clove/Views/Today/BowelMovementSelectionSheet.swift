@@ -92,7 +92,7 @@ struct BowelMovementSelectionSheet: View {
         .onAppear {
             notes = existingMovement?.notes ?? ""
             selectedType = existingMovement?.bristolStoolType
-            movementDate = existingMovement?.date ?? date
+            movementDate = existingMovement?.date ?? CalendarEventTime.currentTime(on: date)
             withAnimation(.easeOut(duration: 0.5).delay(0.1)) {
                 animateIn = true
             }

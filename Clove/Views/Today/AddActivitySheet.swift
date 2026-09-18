@@ -8,11 +8,18 @@ struct AddActivitySheet: View {
     @State private var searchText = ""
     @State private var selectedCategory: ActivityCategory = .exercise
     @State private var showingAddCustomActivity = false
+    @State private var entryDate: Date
 
     private let repo = ActivityEntryRepo.shared
 
     @State private var favorites: [ActivityEntry] = []
     @State private var recentActivities: [String] = []
+
+    init(date: Date, onSave: @escaping () -> Void) {
+        self.date = date
+        self.onSave = onSave
+        _entryDate = State(initialValue: CalendarEventTime.currentTime(on: date))
+    }
 
     var body: some View {
         NavigationView {
@@ -22,6 +29,8 @@ struct AddActivitySheet: View {
 
                 // Category tabs
                 categoryTabs
+
+                timePicker
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: CloveSpacing.large) {
@@ -64,7 +73,7 @@ struct AddActivitySheet: View {
                 AddCustomActivitySheet(
                     initialName: searchText,
                     initialCategory: selectedCategory,
-                    date: date
+                    date: entryDate
                 ) {
                     loadData()
                     onSave()
@@ -119,6 +128,20 @@ struct AddActivitySheet: View {
             }
             .padding(.horizontal)
         }
+        .padding(.bottom, CloveSpacing.small)
+    }
+
+    private var timePicker: some View {
+        HStack {
+            Label("Time", systemImage: "clock")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(CloveColors.secondaryText)
+            Spacer()
+            DatePicker("Time", selection: $entryDate, displayedComponents: .hourAndMinute)
+                .labelsHidden()
+                .datePickerStyle(.compact)
+        }
+        .padding(.horizontal)
         .padding(.bottom, CloveSpacing.small)
     }
 
@@ -267,7 +290,7 @@ struct AddActivitySheet: View {
         let entry = ActivityEntry(
             name: trimmed,
             category: category,
-            date: date,
+            date: entryDate,
             duration: duration,
             intensity: intensity
         )
