@@ -3,8 +3,12 @@ import SwiftUI
 struct HistoryCalendarView: View {
     @Environment(\.dependencies) private var dependencies
     @AppStorage(Constants.HYDRATION_GOAL_OUNCES) private var hydrationGoalOunces = 64
-    @State private var viewModel = HistoryCalendarViewModel()
+    @State private var viewModel: HistoryCalendarViewModel
     @State private var currentMonth = Date()
+
+    init(viewModel: HistoryCalendarViewModel = HistoryCalendarViewModel()) {
+        _viewModel = State(initialValue: viewModel)
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -30,9 +34,9 @@ struct HistoryCalendarView: View {
             .sheet(item: $viewModel.selectedDate) { date in
                 if let log = viewModel.log(for: date) {
                     DailyLogDetailView(log: log)
-                } else if !viewModel.bowelMovements(for: date).isEmpty {
-                    // Bowel movements are stored separately from DailyLog. A date-only
-                    // log lets the existing detail screen load and display those records.
+                } else if viewModel.hasAnyData(for: date) {
+                    // Current food, activity, and bowel records are stored separately
+                    // from DailyLog. A date-only log lets detail load those records.
                     DailyLogDetailView(log: DailyLog(date: date))
                 } else {
                     EmptyLogView(date: date)
@@ -77,11 +81,8 @@ struct HistoryCalendarView: View {
     }
     
     func getCalendarRecords() -> [Date: CalendarRecord] {
-        // Get all unique dates from logs, cycles, and predictions
-        var allDates = Set(viewModel.logsByDate.keys).union(Set(viewModel.cyclesByDate.keys))
-        if viewModel.userSettings.trackBowelMovements {
-            allDates.formUnion(viewModel.bowelMovementsByDate.keys)
-        }
+        // Day summaries include DailyLog plus current food, activity, and bowel tables.
+        var allDates = Set(viewModel.daySummariesByDate.keys).union(Set(viewModel.cyclesByDate.keys))
         
         // Add predicted cycle dates if prediction exists
         let predictedDates = getPredictedCycleDates()
@@ -102,11 +103,14 @@ struct HistoryCalendarView: View {
                 color = .clear
             } else if viewModel.selectedCategory == .bowelMovements {
                 color = bowelMovementColor(for: viewModel.bowelMovements(for: date))
+            } else if viewModel.selectedCategory == .meals {
+                color = viewModel.hasMeals(for: date) ? Theme.shared.accent.opacity(0.75) : .clear
+            } else if viewModel.selectedCategory == .activities {
+                color = viewModel.hasActivities(for: date) ? Theme.shared.accent.opacity(0.75) : .clear
+            } else if viewModel.selectedCategory == .allData {
+                color = viewModel.hasAnyData(for: date) ? Theme.shared.accent.opacity(0.7) : .clear
             } else if let log {
                 color = getLogColor(log: log)
-            } else if viewModel.selectedCategory == .allData,
-                      !viewModel.bowelMovements(for: date).isEmpty {
-                color = Theme.shared.accent.opacity(0.7)
             } else {
                 color = .clear
             }
@@ -209,12 +213,12 @@ struct HistoryCalendarView: View {
             }
             
         case .meals:
-            if !log.meals.isEmpty {
+            if viewModel.hasMeals(for: log.date) {
                 return Theme.shared.accent.opacity(0.75)
             }
             
         case .activities:
-            if !log.activities.isEmpty {
+            if viewModel.hasActivities(for: log.date) {
                 return Theme.shared.accent.opacity(0.75)
             }
             

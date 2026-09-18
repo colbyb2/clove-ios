@@ -4,15 +4,15 @@ import GRDB
 @Observable
 class HistoryCalendarViewModel {
    // MARK: - Dependencies
-   private let logsRepository: LogsRepositoryProtocol
+   private let daySummaryRepository: HistoryDaySummaryRepositoryProtocol
    private let settingsRepository: UserSettingsRepositoryProtocol
    private let symptomsRepository: SymptomsRepositoryProtocol
-   private let bowelMovementRepository: BowelMovementRepositoryProtocol
    private let cycleRepository: CycleRepositoryProtocol
    private let cycleManager: CycleManaging
 
    // MARK: - State
    var logsByDate: [Date: DailyLog] = [:]
+   var daySummariesByDate: [Date: HistoryDaySummary] = [:]
    var bowelMovementsByDate: [Date: [BowelMovement]] = [:]
    var cyclesByDate: [Date: Cycle] = [:]
    var cyclePrediction: CyclePrediction? = nil
@@ -65,10 +65,9 @@ class HistoryCalendarViewModel {
    /// Convenience initializer using production singletons
    convenience init() {
       self.init(
-         logsRepository: LogsRepo.shared,
+         daySummaryRepository: HistoryDaySummaryRepo.shared,
          settingsRepository: UserSettingsRepo.shared,
          symptomsRepository: SymptomsRepo.shared,
-         bowelMovementRepository: BowelMovementRepo.shared,
          cycleRepository: CycleRepo.shared,
          cycleManager: CycleManager()
       )
@@ -76,17 +75,15 @@ class HistoryCalendarViewModel {
 
    /// Designated initializer with full dependency injection
    init(
-      logsRepository: LogsRepositoryProtocol,
+      daySummaryRepository: HistoryDaySummaryRepositoryProtocol,
       settingsRepository: UserSettingsRepositoryProtocol,
       symptomsRepository: SymptomsRepositoryProtocol,
-      bowelMovementRepository: BowelMovementRepositoryProtocol,
       cycleRepository: CycleRepositoryProtocol,
       cycleManager: CycleManaging
    ) {
-      self.logsRepository = logsRepository
+      self.daySummaryRepository = daySummaryRepository
       self.settingsRepository = settingsRepository
       self.symptomsRepository = symptomsRepository
-      self.bowelMovementRepository = bowelMovementRepository
       self.cycleRepository = cycleRepository
       self.cycleManager = cycleManager
       loadData()
@@ -98,36 +95,34 @@ class HistoryCalendarViewModel {
          logsRepository: withSampleData ? MockLogsRepository.withSampleData(days: 30) : MockLogsRepository(),
          symptomsRepository: MockSymptomsRepository.withDefaultSymptoms()
       )
+      let summaryRepository = MockHistoryDaySummaryRepository(
+         logs: container.logsRepository.getLogs(),
+         foodEntries: withSampleData ? MockFoodEntryRepository.withSampleData(days: 7).getAllEntries() : [],
+         activityEntries: withSampleData ? MockActivityEntryRepository.withSampleData(days: 7).getAllEntries() : []
+      )
       return HistoryCalendarViewModel(
-         logsRepository: container.logsRepository,
+         daySummaryRepository: summaryRepository,
          settingsRepository: container.settingsRepository,
          symptomsRepository: container.symptomsRepository,
-         bowelMovementRepository: container.bowelMovementRepository,
          cycleRepository: container.cycleRepository,
          cycleManager: MockCycleManager()
       )
    }
    
    func loadData() {
-      loadLogs()
-      loadBowelMovements()
+      loadDaySummaries()
       loadCycles()
       loadUserSettings()
       loadTrackedSymptoms()
       loadCyclePrediction()
    }
 
-   func loadLogs() {
-      let logs = logsRepository.getLogs()
-      // Use merging initializer to handle duplicate dates - keep the most recent entry (last one)
-      self.logsByDate = Dictionary(logs.map { ($0.date.stripTime(), $0) }, uniquingKeysWith: { _, last in last })
-   }
-
-   func loadBowelMovements() {
-      bowelMovementsByDate = Dictionary(
-         grouping: bowelMovementRepository.getAllBowelMovements(),
-         by: { $0.date.stripTime() }
-      )
+   func loadDaySummaries() {
+      daySummariesByDate = daySummaryRepository.getDaySummaries()
+      logsByDate = daySummariesByDate.compactMapValues(\.log)
+      bowelMovementsByDate = daySummariesByDate.compactMapValues { summary in
+         summary.bowelMovements.isEmpty ? nil : summary.bowelMovements
+      }
    }
 
    func loadCycles() {
@@ -159,6 +154,18 @@ class HistoryCalendarViewModel {
 
    func bowelMovements(for date: Date) -> [BowelMovement] {
       bowelMovementsByDate[date.stripTime()] ?? []
+   }
+
+   func hasMeals(for date: Date) -> Bool {
+      daySummariesByDate[date.stripTime()]?.hasMeals ?? false
+   }
+
+   func hasActivities(for date: Date) -> Bool {
+      daySummariesByDate[date.stripTime()]?.hasActivities ?? false
+   }
+
+   func hasAnyData(for date: Date) -> Bool {
+      daySummariesByDate[date.stripTime()]?.hasAnyData ?? false
    }
 }
 
