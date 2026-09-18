@@ -1,11 +1,24 @@
 import Foundation
+import GRDB
 import SwiftUI
 
 @Observable
 class DataImportManager {
-    static let shared = DataImportManager()
-    
-    private init() {}
+    static let shared = DataImportManager(
+        databaseManager: DatabaseManager.shared,
+        analyticsRevisionSource: AnalyticsRevisionSource.shared
+    )
+
+    private let databaseManager: DatabaseManaging
+    private let analyticsRevisionSource: any AnalyticsRevisionProviding
+
+    init(
+        databaseManager: DatabaseManaging,
+        analyticsRevisionSource: any AnalyticsRevisionProviding = AnalyticsRevisionSource.shared
+    ) {
+        self.databaseManager = databaseManager
+        self.analyticsRevisionSource = analyticsRevisionSource
+    }
     
     var isImporting: Bool = false
     var importProgress: Double = 0.0
@@ -45,7 +58,7 @@ class DataImportManager {
         }
     }
     
-    private func performImport(from fileURL: URL) async throws -> ImportResult {
+    func performImport(from fileURL: URL) async throws -> ImportResult {
         // Step 1: Parse CSV
         await updateProgress(0.1)
         let parsedData = try CSVParser.parseCSV(from: fileURL)
@@ -69,109 +82,122 @@ class DataImportManager {
     }
     
     private func performAtomicImport(parsedData: ParsedCSVData, symptomColumns: [String]) async throws -> ImportResult {
-        var importedLogsCount = 0
-        var createdSymptomsCount = 0
-        var createdBowelMovementsCount = 0
-        var skippedRowsCount = 0
-        var warnings: [String] = []
-        
-        // Step 1: Clear existing data (as warned)
         await updateProgress(0.5)
-        try clearExistingData()
-        
-        // Step 2: Create symptoms that don't exist
-        await updateProgress(0.6)
-        createdSymptomsCount = try createMissingSymptoms(symptomColumns)
-        
-        // Step 3: Import logs
-        await updateProgress(0.7)
-        let totalRows = parsedData.rows.count
-        
-        for (index, row) in parsedData.rows.enumerated() {
-            do {
-                let (dailyLog, bowelMovementCount) = try createDailyLogFromRow(
-                    row: row, 
-                    headers: parsedData.headers, 
+
+        let result = try databaseManager.writeReturning { db in
+            try clearExistingData(in: db)
+
+            let symptomImport = try createMissingSymptoms(symptomColumns, in: db)
+            var importedLogsCount = 0
+            var createdBowelMovementsCount = 0
+
+            for row in parsedData.rows {
+                let importedRow = try createImportedRow(
+                    row: row,
                     columnMap: parsedData.columnMap,
-                    symptomColumns: symptomColumns
+                    symptomColumns: symptomColumns,
+                    symptomIDsByName: symptomImport.idsByName
                 )
-                
-                // Save the daily log
-                if LogsRepo.shared.saveLog(dailyLog) {
-                    importedLogsCount += 1
-                    createdBowelMovementsCount += bowelMovementCount
-                } else {
-                    skippedRowsCount += 1
-                    warnings.append("Failed to save log for date: \(dailyLog.date)")
+
+                for entry in importedRow.foodEntries {
+                    var identifiedEntry = entry
+                    identifiedEntry.analyticsIdentityID = try DynamicMetricIdentityStore.resolveID(
+                        family: .meal,
+                        name: entry.name,
+                        in: db
+                    )
+                    try identifiedEntry.insert(db)
                 }
-                
-                // Update progress
-                let rowProgress = 0.7 + (Double(index + 1) / Double(totalRows)) * 0.3
-                await updateProgress(rowProgress)
-                
-            } catch {
-                skippedRowsCount += 1
-                warnings.append("Skipped row \(index + 2): \(error.localizedDescription)")
+
+                for entry in importedRow.activityEntries {
+                    var identifiedEntry = entry
+                    identifiedEntry.analyticsIdentityID = try DynamicMetricIdentityStore.resolveID(
+                        family: .activity,
+                        name: entry.name,
+                        in: db
+                    )
+                    try identifiedEntry.insert(db)
+                }
+
+                for movement in importedRow.bowelMovements {
+                    try movement.insert(db)
+                }
+
+                try saveDailyLog(importedRow.dailyLog, in: db)
+                importedLogsCount += 1
+                createdBowelMovementsCount += importedRow.bowelMovements.count
             }
+
+            return ImportResult(
+                success: true,
+                importedLogsCount: importedLogsCount,
+                createdSymptomsCount: symptomImport.createdCount,
+                createdBowelMovementsCount: createdBowelMovementsCount,
+                skippedRowsCount: 0,
+                errors: [],
+                warnings: []
+            )
         }
-        
+
+        analyticsRevisionSource.bump(reason: .dataImport)
         await updateProgress(1.0)
-        
-        return ImportResult(
-            success: true,
-            importedLogsCount: importedLogsCount,
-            createdSymptomsCount: createdSymptomsCount,
-            createdBowelMovementsCount: createdBowelMovementsCount,
-            skippedRowsCount: skippedRowsCount,
-            errors: [],
-            warnings: warnings
+        return result
+    }
+
+    private func clearExistingData(in db: Database) throws {
+        try db.execute(sql: "DELETE FROM dailyLog")
+        try db.execute(sql: "DELETE FROM bowelMovement")
+        try db.execute(sql: "DELETE FROM foodEntry")
+        try db.execute(sql: "DELETE FROM activityEntry")
+
+        // Symptoms and medications remain because CSV imports may reference
+        // existing definitions that are not themselves fully represented in CSV.
+    }
+
+    private func createMissingSymptoms(
+        _ symptomColumns: [String],
+        in db: Database
+    ) throws -> (createdCount: Int, idsByName: [String: Int64]) {
+        let existingSymptoms = try TrackedSymptom.fetchAll(db)
+        var idsByName = Dictionary(
+            uniqueKeysWithValues: existingSymptoms.compactMap { symptom in
+                symptom.id.map { (symptom.name, $0) }
+            }
         )
-    }
-    
-    private func clearExistingData() throws {
-        let dbManager = DatabaseManager.shared
-
-        try dbManager.write { db in
-            // Clear all existing logs
-            try db.execute(sql: "DELETE FROM dailyLog")
-
-            // Clear all bowel movements
-            try db.execute(sql: "DELETE FROM bowelMovement")
-
-            // Clear all food entries
-            try db.execute(sql: "DELETE FROM foodEntry")
-
-            // Clear all activity entries
-            try db.execute(sql: "DELETE FROM activityEntry")
-
-            // Note: We don't clear symptoms or medications as they might be reused
-        }
-        AnalyticsRevisionSource.shared.bump(reason: .dataImport)
-    }
-    
-    private func createMissingSymptoms(_ symptomColumns: [String]) throws -> Int {
-        let existingSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
-        let existingNames = Set(existingSymptoms.map { $0.name })
-        
         var createdCount = 0
+
         for symptomName in symptomColumns {
-            if !existingNames.contains(symptomName) {
+            if idsByName[symptomName] == nil {
                 let newSymptom = TrackedSymptom(name: symptomName)
-                if SymptomsRepo.shared.saveSymptom(newSymptom) {
-                    createdCount += 1
-                }
+                try newSymptom.insert(db)
+                let id = db.lastInsertedRowID
+                idsByName[symptomName] = id
+                try DynamicMetricIdentityStore.registerAlias(
+                    family: .symptom,
+                    sourceID: id,
+                    name: symptomName,
+                    in: db
+                )
+                createdCount += 1
             }
         }
-        
-        return createdCount
+
+        return (createdCount, idsByName)
     }
-    
-    private func createDailyLogFromRow(
+
+    private struct ImportedRow {
+        let dailyLog: DailyLog
+        let foodEntries: [FoodEntry]
+        let activityEntries: [ActivityEntry]
+        let bowelMovements: [BowelMovement]
+    }
+
+    private func createImportedRow(
         row: [String],
-        headers: [String],
         columnMap: [String: Int],
-        symptomColumns: [String]
-    ) throws -> (DailyLog, Int) {
+        symptomColumns: [String],
+        symptomIDsByName: [String: Int64]
+    ) throws -> ImportedRow {
         
         // Parse date (required)
         guard let dateIndex = columnMap["Date"],
@@ -193,32 +219,22 @@ class DataImportManager {
         let activitiesData = getValue("Activities", row: row, columnMap: columnMap)
         let notes = getValue("Notes", row: row, columnMap: columnMap)
 
-        // Parse and save food entries from the new format
+        // Parse related entries without saving. Persistence happens only after
+        // every mutation is inside the database transaction.
         let foodEntries = parseFoodEntries(mealsData, for: date)
-        for foodEntry in foodEntries {
-            _ = FoodEntryRepo.shared.save(foodEntry)
-        }
-
-        // Parse and save activity entries from the new format
         let activityEntries = parseActivityEntries(activitiesData, for: date)
-        for activityEntry in activityEntries {
-            _ = ActivityEntryRepo.shared.save(activityEntry)
-        }
 
         // Parse symptom ratings
-        let symptomRatings = try parseSymptomRatings(row: row, columnMap: columnMap, symptomColumns: symptomColumns)
+        let symptomRatings = parseSymptomRatings(
+            row: row,
+            columnMap: columnMap,
+            symptomColumns: symptomColumns,
+            symptomIDsByName: symptomIDsByName
+        )
 
         // Parse bowel movements and create them
         let bowelMovementsData = getValue("Bowel Movements", row: row, columnMap: columnMap)
         let bowelMovements = try parseBowelMovements(bowelMovementsData, for: date)
-
-        // Save bowel movements
-        var savedBowelMovementCount = 0
-        for movement in bowelMovements {
-            if BowelMovementRepo.shared.save([movement]) {
-                savedBowelMovementCount += 1
-            }
-        }
 
         // Create daily log (meals and activities are now in separate tables)
         let dailyLog = DailyLog(
@@ -237,7 +253,30 @@ class DataImportManager {
             symptomRatings: symptomRatings
         )
 
-        return (dailyLog, savedBowelMovementCount)
+        return ImportedRow(
+            dailyLog: dailyLog,
+            foodEntries: foodEntries,
+            activityEntries: activityEntries,
+            bowelMovements: bowelMovements
+        )
+    }
+
+    private func saveDailyLog(_ log: DailyLog, in db: Database) throws {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: log.date)
+        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
+            throw ImportError.databaseError("Could not calculate the imported log date range")
+        }
+
+        if let existing = try DailyLog
+            .filter(Column("date") >= startOfDay && Column("date") < endOfDay)
+            .fetchOne(db) {
+            var updated = log
+            updated.id = existing.id
+            try updated.update(db)
+        } else {
+            try log.insert(db)
+        }
     }
     
     // MARK: - Helper Methods
@@ -268,19 +307,19 @@ class DataImportManager {
         return value.components(separatedBy: ";").map { $0.trimmingCharacters(in: .whitespaces) }
     }
     
-    private func parseSymptomRatings(row: [String], columnMap: [String: Int], symptomColumns: [String]) throws -> [SymptomRating] {
+    private func parseSymptomRatings(
+        row: [String],
+        columnMap: [String: Int],
+        symptomColumns: [String],
+        symptomIDsByName: [String: Int64]
+    ) -> [SymptomRating] {
         var ratings: [SymptomRating] = []
-        
-        // Get all tracked symptoms to map names to IDs
-        let trackedSymptoms = SymptomsRepo.shared.getTrackedSymptoms()
-        
+
         for symptomName in symptomColumns {
             let value = getValue(symptomName, row: row, columnMap: columnMap)
             guard !value.isEmpty, let rating = Int(value) else { continue }
-            
-            // Find symptom ID
-            if let symptom = trackedSymptoms.first(where: { $0.name == symptomName }),
-               let symptomId = symptom.id {
+
+            if let symptomId = symptomIDsByName[symptomName] {
                 ratings.append(SymptomRating(
                     symptomId: symptomId,
                     symptomName: symptomName,

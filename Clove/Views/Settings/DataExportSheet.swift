@@ -6,6 +6,7 @@ struct DataExportSheet: View {
     @State private var selectedSymptoms: Set<Int64> = []
     @State private var availableSymptoms: [TrackedSymptom] = []
     @State private var isLoading = false
+    @State private var isBackupLoading = false
     @State private var showShareSheet = false
     @State private var exportedFileURL: URL?
     @State private var showErrorAlert = false
@@ -24,10 +25,62 @@ struct DataExportSheet: View {
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
                                 .foregroundStyle(CloveColors.primaryText)
                             
-                            Text("Select which data you'd like to include in your CSV export. This file can be opened in spreadsheet apps or shared with healthcare providers.")
+                            Text("Create a complete backup for restoring Clove, or export selected data as a CSV for spreadsheets and healthcare providers.")
                                 .font(.system(size: 16))
                                 .foregroundStyle(CloveColors.secondaryText)
                                 .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        VStack(alignment: .leading, spacing: CloveSpacing.medium) {
+                            HStack(alignment: .top, spacing: CloveSpacing.medium) {
+                                Image(systemName: "archivebox.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundStyle(Theme.shared.accent)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Full Clove Backup")
+                                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(CloveColors.primaryText)
+                                    Text("Best for restoring Clove. Includes all logs, settings, reminders, medications, cycle data, and saved insights.")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(CloveColors.secondaryText)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+
+                            Button(action: createFullBackup) {
+                                HStack {
+                                    if isBackupLoading {
+                                        ProgressView().tint(.white)
+                                    } else {
+                                        Image(systemName: "archivebox")
+                                    }
+                                    Text(isBackupLoading ? "Creating Backup..." : "Create Full Backup")
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 46)
+                                .background(
+                                    RoundedRectangle(cornerRadius: CloveCorners.medium)
+                                        .fill(Theme.shared.accent)
+                                )
+                            }
+                            .disabled(isBackupLoading || isLoading)
+                        }
+                        .padding(CloveSpacing.medium)
+                        .background(
+                            RoundedRectangle(cornerRadius: CloveCorners.medium)
+                                .fill(CloveColors.card)
+                        )
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("CSV Export")
+                                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                                .foregroundStyle(CloveColors.primaryText)
+                            Text("For spreadsheets and sharing selected data.")
+                                .font(.system(size: 14))
+                                .foregroundStyle(CloveColors.secondaryText)
                         }
                         
                         // Main categories section
@@ -261,6 +314,31 @@ struct DataExportSheet: View {
                         color: CloveColors.error,
                         icon: Image(systemName: "exclamationmark.triangle")
                     )
+                }
+            }
+        }
+    }
+
+    private func createFullBackup() {
+        isBackupLoading = true
+        Task {
+            do {
+                let url = try CloveArchiveManager.shared.createArchiveFile()
+                await MainActor.run {
+                    isBackupLoading = false
+                    exportedFileURL = url
+                    showShareSheet = true
+                    ToastManager.shared.showToast(
+                        message: "Full backup created successfully",
+                        color: CloveColors.success,
+                        icon: Image(systemName: "checkmark.circle")
+                    )
+                }
+            } catch {
+                await MainActor.run {
+                    isBackupLoading = false
+                    errorMessage = error.localizedDescription
+                    showErrorAlert = true
                 }
             }
         }

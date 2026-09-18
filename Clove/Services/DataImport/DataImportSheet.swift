@@ -10,7 +10,9 @@ struct DataImportView: View {
     @State private var isImporting = false
     @State private var importProgress: Double = 0.0
     @State private var importResult: ImportResult?
+    @State private var archiveResult: CloveArchiveRestoreResult?
     @State private var importError: ImportError?
+    @State private var archiveErrorMessage: String?
     @State private var importCompleted = false
     @State private var showExportSheet = false
     
@@ -66,7 +68,7 @@ struct DataImportView: View {
         .navigationBarTitleDisplayMode(.inline)
         .fileImporter(
             isPresented: $showFilePicker,
-            allowedContentTypes: [UTType.commaSeparatedText],
+            allowedContentTypes: [UTType.commaSeparatedText, UTType.json],
             allowsMultipleSelection: false
         ) { result in
             handleFileSelection(result)
@@ -90,7 +92,7 @@ struct DataImportView: View {
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(CloveColors.primaryText)
                     
-                    Text("Restore your health data from a Clove CSV export")
+                    Text("Restore a full Clove backup or import a Clove CSV export")
                         .font(.system(size: 16))
                         .foregroundStyle(CloveColors.secondaryText)
                 }
@@ -109,8 +111,8 @@ struct DataImportView: View {
             VStack(alignment: .leading, spacing: CloveSpacing.small) {
                 HowItWorksStep(
                     number: 1,
-                    title: "Select CSV File",
-                    description: "Choose a CSV file previously exported from Clove"
+                    title: "Select a Backup",
+                    description: "Choose a full Clove backup (JSON) or a Clove CSV export"
                 )
                 
                 HowItWorksStep(
@@ -122,7 +124,7 @@ struct DataImportView: View {
                 HowItWorksStep(
                     number: 3,
                     title: "Import",
-                    description: "Your logs, symptoms, and bowel movements will be restored"
+                    description: "A full backup restores everything; CSV restores the data it contains"
                 )
             }
         }
@@ -140,7 +142,7 @@ struct DataImportView: View {
                     .foregroundStyle(CloveColors.primaryText)
             }
             
-            Text("Importing will completely replace all existing data in Clove. Make sure to export a backup of your current data before proceeding. This action cannot be undone.")
+            Text("Restoring or importing replaces the existing Clove data covered by the selected file. Create a full backup first if you may need to undo it.")
                 .font(.system(size: 14))
                 .foregroundStyle(CloveColors.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -171,11 +173,11 @@ struct DataImportView: View {
                         .foregroundStyle(Theme.shared.accent)
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Choose CSV File")
+                        Text("Choose Backup or CSV")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(CloveColors.primaryText)
                         
-                        Text("Select a CSV file exported from Clove")
+                        Text("Select a JSON backup or CSV exported from Clove")
                             .font(.system(size: 14))
                             .foregroundStyle(CloveColors.secondaryText)
                     }
@@ -243,7 +245,7 @@ struct DataImportView: View {
                         .foregroundStyle(CloveColors.primaryText)
                         .lineLimit(2)
                     
-                    Text("CSV file ready for import")
+                    Text(isFullBackupSelected ? "Full Clove backup ready to restore" : "CSV file ready for import")
                         .font(.system(size: 14))
                         .foregroundStyle(CloveColors.secondaryText)
                 }
@@ -282,7 +284,7 @@ struct DataImportView: View {
                     .foregroundStyle(CloveColors.primaryText)
             }
             
-            Text("Importing will completely replace ALL existing data in Clove. This action cannot be undone. Make sure you've exported a backup first.")
+            Text(replacementWarning)
                 .font(.system(size: 14))
                 .foregroundStyle(CloveColors.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -305,7 +307,7 @@ struct DataImportView: View {
                         )
                 )
                 
-                Button("Import Data") {
+                Button(isFullBackupSelected ? "Restore Backup" : "Import Data") {
                     if let fileURL = selectedFileURL {
                         startImport(fileURL: fileURL)
                     }
@@ -333,11 +335,11 @@ struct DataImportView: View {
     private var importResultSection: some View {
         VStack(alignment: .leading, spacing: CloveSpacing.medium) {
             HStack(spacing: CloveSpacing.small) {
-                Image(systemName: importResult != nil ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                Image(systemName: importSucceeded ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                     .font(.system(size: 20))
-                    .foregroundStyle(importResult != nil ? CloveColors.success : CloveColors.error)
+                    .foregroundStyle(importSucceeded ? CloveColors.success : CloveColors.error)
                 
-                Text(importResult != nil ? "Import Successful" : "Import Failed")
+                Text(importSucceeded ? "Import Successful" : "Import Failed")
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundStyle(CloveColors.primaryText)
             }
@@ -361,10 +363,10 @@ struct DataImportView: View {
         .padding(CloveSpacing.medium)
         .background(
             RoundedRectangle(cornerRadius: CloveCorners.medium)
-                .fill((importResult != nil ? CloveColors.success : CloveColors.error).opacity(0.1))
+                .fill((importSucceeded ? CloveColors.success : CloveColors.error).opacity(0.1))
                 .overlay(
                     RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .stroke((importResult != nil ? CloveColors.success : CloveColors.error).opacity(0.3), lineWidth: 1)
+                        .stroke((importSucceeded ? CloveColors.success : CloveColors.error).opacity(0.3), lineWidth: 1)
                 )
         )
     }
@@ -385,7 +387,7 @@ struct DataImportView: View {
                         .fill(CloveColors.background)
                 )
                 
-                Button("Select CSV File") {
+                Button("Select File") {
                     showFilePicker = true
                 }
                 .foregroundStyle(.white)
@@ -420,7 +422,33 @@ struct DataImportView: View {
     private func startImport(fileURL: URL) {
         isImporting = true
         importProgress = 0.0
-        
+
+        if isFullBackupSelected {
+            Task {
+                do {
+                    let result = try CloveArchiveManager.shared.restoreArchive(from: fileURL)
+                    await MainActor.run {
+                        isImporting = false
+                        importProgress = 1
+                        importCompleted = true
+                        archiveResult = result
+                        ToastManager.shared.showToast(
+                            message: "Full backup restored successfully",
+                            color: CloveColors.success,
+                            icon: Image(systemName: "checkmark.circle")
+                        )
+                    }
+                } catch {
+                    await MainActor.run {
+                        isImporting = false
+                        importCompleted = true
+                        archiveErrorMessage = error.localizedDescription
+                    }
+                }
+            }
+            return
+        }
+
         importManager.importFromCSV(fileURL: fileURL) { result in
             DispatchQueue.main.async {
                 self.isImporting = false
@@ -444,7 +472,16 @@ struct DataImportView: View {
     }
     
     private var resultMessage: String {
-        if let result = importResult {
+        if let result = archiveResult {
+            return """
+            Full backup restored successfully!
+
+            • \(result.dailyLogCount) daily logs restored
+            • \(result.symptomCount) symptoms restored
+            • \(result.medicationCount) medications restored
+            • \(result.reminderCount) reminders restored
+            """
+        } else if let result = importResult {
             return """
             Import completed successfully!
             
@@ -455,9 +492,26 @@ struct DataImportView: View {
             """
         } else if let error = importError {
             return error.localizedDescription + "\n\n" + (error.recoverySuggestion ?? "")
+        } else if let archiveErrorMessage {
+            return archiveErrorMessage
         } else {
             return "Import completed"
         }
+    }
+
+    private var isFullBackupSelected: Bool {
+        selectedFileURL?.pathExtension.lowercased() == "json"
+    }
+
+    private var importSucceeded: Bool {
+        importResult != nil || archiveResult != nil
+    }
+
+    private var replacementWarning: String {
+        if isFullBackupSelected {
+            return "Restoring this full backup will completely replace all existing Clove data and settings. This cannot be undone."
+        }
+        return "Importing this CSV will replace existing daily logs, meals, activities, and bowel movements. App settings and medication definitions are preserved."
     }
 }
 

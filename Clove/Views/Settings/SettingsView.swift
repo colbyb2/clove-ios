@@ -272,13 +272,13 @@ private struct DataSettingsView: View {
                 Button { showExportSheet = true } label: {
                     SettingsButtonRow(icon: "square.and.arrow.up", color: .blue, title: "Export Data")
                 }
-                .accessibilityHint("Export health data as a CSV file")
+                .accessibilityHint("Create a full backup or export health data as a CSV file")
 
                 NavigationLink {
                     DataImportView()
                 } label: {
                     SettingsRowLabel(icon: "square.and.arrow.down", color: .green, title: "Import Data",
-                                     detail: "Import records from a CSV file")
+                                     detail: "Restore a backup or import CSV records")
                 }
             }
         }
