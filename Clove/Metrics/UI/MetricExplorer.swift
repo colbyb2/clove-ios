@@ -185,7 +185,7 @@ struct MetricExplorer: View {
                 .foregroundStyle(CloveColors.green)
                 .font(.caption)
             
-            Text("\(viewModel.metricSummaries.count) metrics available")
+            Text("\(viewModel.metricSummaries.count) metrics listed")
                 .font(CloveFonts.small())
                 .foregroundStyle(CloveColors.secondaryText)
             
@@ -445,20 +445,7 @@ struct MetricCardV2: View {
                     
                     Spacer()
                     
-                    if metric.isActive ?? true {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundStyle(CloveColors.success)
-                    } else {
-                        Text("Inactive")
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(Color.white)
-                            .padding(5)
-                            .background(
-                                RoundedRectangle(cornerRadius: CloveCorners.medium)
-                                    .fill(Color.red.opacity(0.5))
-                            )
-                    }
+                    availabilityBadge
                 }
                 
                 VStack(alignment: .leading, spacing: CloveSpacing.small) {
@@ -516,7 +503,30 @@ struct MetricCardV2: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
-        .opacity(metric.isAvailable ? 1.0 : 0.6)
+        .opacity(metric.availability == .deleted ? 0.72 : 1)
+    }
+
+    private var availabilityBadge: some View {
+        Label(metric.availability.label, systemImage: availabilityIcon)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(availabilityColor)
+            .lineLimit(1)
+    }
+
+    private var availabilityIcon: String {
+        switch metric.availability {
+        case .available: "checkmark.circle.fill"
+        case .noDataInRange: "calendar.badge.exclamationmark"
+        case .deleted: "archivebox.fill"
+        }
+    }
+
+    private var availabilityColor: Color {
+        switch metric.availability {
+        case .available: CloveColors.success
+        case .noDataInRange: .orange
+        case .deleted: CloveColors.secondaryText
+        }
     }
 }
 

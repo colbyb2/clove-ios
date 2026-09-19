@@ -16,7 +16,8 @@ extension MetricCatalog {
                 isBinary = false
             }
             return self.symptom(
-                id: MetricID(rawValue: symptom.id),
+                id: symptom.symptomID.map { DynamicMetricIdentityStore.canonicalID(family: .symptom, sourceID: $0) }
+                    ?? MetricID(rawValue: symptom.id),
                 name: symptom.symptomName,
                 isBinary: isBinary
             )

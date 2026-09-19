@@ -141,6 +141,20 @@ struct MetricStatistics {
 }
 
 /// Summary information about a metric (for UI display without loading full data)
+enum MetricAvailabilityState: String, Sendable, Hashable {
+    case available
+    case noDataInRange
+    case deleted
+
+    var label: String {
+        switch self {
+        case .available: "Available"
+        case .noDataInRange: "No data in range"
+        case .deleted: "Deleted"
+        }
+    }
+}
+
 struct MetricSummary: Identifiable, Sendable, Hashable {
     let id: String
     let displayName: String
@@ -151,6 +165,7 @@ struct MetricSummary: Identifiable, Sendable, Hashable {
     let lastValue: String?
     let isAvailable: Bool
     let isActive: Bool?
+    var availability: MetricAvailabilityState = .available
     
     // MARK: - Hashable
     func hash(into hasher: inout Hasher) {

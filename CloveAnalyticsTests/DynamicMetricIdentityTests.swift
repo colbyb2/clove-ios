@@ -58,7 +58,7 @@ final class DynamicMetricIdentityTests: XCTestCase {
         XCTAssertFalse(dataset.observations(for: canonical).isEmpty)
     }
 
-    func testDeletedHistoricalSymptomRemainsAnalyzableAndRecreationGetsNewID() throws {
+    func testSymptomIdentitySurvivesRenameRemovalAndReEnableAcrossAnalyticsSurfaces() throws {
         let database = try TestDatabaseManager()
         let revision = TestRevisionSource()
         let symptoms = SymptomsRepo(databaseManager: database, analyticsRevisionSource: revision)
@@ -71,10 +71,31 @@ final class DynamicMetricIdentityTests: XCTestCase {
                 symptomRatings: [SymptomRating(symptomId: originalID, symptomName: "Fatigue", rating: 6)]
             ).insert(db)
         }
+
+        XCTAssertTrue(symptoms.updateSymptom(id: originalID, name: "Exhaustion", isBinary: false))
+        let renamed = try XCTUnwrap(symptoms.getAllSymptoms().first { $0.id == originalID })
+        let activeProvider = try XCTUnwrap(SymptomMetricCatalog.providers(
+            storedSymptoms: symptoms.getAllSymptoms(),
+            logs: [DailyLog(
+                date: date,
+                symptomRatings: [SymptomRating(symptomId: originalID, symptomName: "Fatigue", rating: 6)]
+            )]
+        ).first { $0.symptomID == originalID })
+        XCTAssertEqual(activeProvider.id, "symptom:\(originalID)")
+        XCTAssertEqual(activeProvider.displayName, "Exhaustion")
+        XCTAssertEqual(MetricAvailabilityResolver.state(for: activeProvider, observedCount: 0), .noDataInRange)
+
         XCTAssertTrue(symptoms.deleteSymptom(id: originalID))
-        XCTAssertTrue(symptoms.saveSymptom(TrackedSymptom(name: "Fatigue")))
+        XCTAssertFalse(symptoms.getTrackedSymptoms().contains { $0.id == originalID })
+        let deletedProvider = try XCTUnwrap(SymptomMetricCatalog.providers(
+            storedSymptoms: symptoms.getAllSymptoms(),
+            logs: []
+        ).first { $0.symptomID == originalID })
+        XCTAssertEqual(MetricAvailabilityResolver.state(for: deletedProvider, observedCount: 1), .deleted)
+
+        XCTAssertTrue(symptoms.saveSymptom(TrackedSymptom(name: "Exhaustion")))
         let recreatedID = try XCTUnwrap(symptoms.getTrackedSymptoms().last?.id)
-        XCTAssertNotEqual(originalID, recreatedID)
+        XCTAssertEqual(originalID, recreatedID)
 
         let repository = DefaultAnalyticsRepository(
             sourceLoader: GRDBAnalyticsSourceLoader(databaseManager: database),
@@ -82,7 +103,20 @@ final class DynamicMetricIdentityTests: XCTestCase {
         )
         let dataset = try repository.load(AnalyticsRequest(interval: DateInterval(start: date, duration: 86_400)))
         let historicalID = DynamicMetricIdentityStore.canonicalID(family: .symptom, sourceID: originalID)
-        XCTAssertTrue(dataset.definitions.contains { $0.id == historicalID })
+        XCTAssertTrue(dataset.definitions.contains { $0.id == historicalID && $0.displayName == "Exhaustion" })
         XCTAssertEqual(dataset.observations(for: historicalID).count, 1)
+        XCTAssertEqual(dataset.metricAliases["symptom_fatigue"], [historicalID])
+        XCTAssertEqual(dataset.metricAliases["symptom_exhaustion"], [historicalID])
+
+        let currentProvider = try XCTUnwrap(SymptomMetricCatalog.providers(
+            storedSymptoms: [renamed],
+            logs: []
+        ).first)
+        let provider = MetricProviderResolver.resolve(
+            id: "symptom_fatigue",
+            metrics: [currentProvider.id: currentProvider],
+            aliases: ["symptom_fatigue": historicalID.rawValue]
+        )
+        XCTAssertEqual(provider?.id, historicalID.rawValue)
     }
 }

@@ -32,11 +32,25 @@ final class SymptomsRepo {
         do {
             return try databaseManager.read { db in
                 try TrackedSymptom
+                    .filter(Column("isActive") == true)
                     .order(Column("displayOrder").asc, Column("id").asc)
                     .fetchAll(db)
             }
         } catch {
             throw RepositoryError(operation: .read, resource: "tracked symptoms", underlyingError: error)
+        }
+    }
+
+    func getAllSymptoms() -> [TrackedSymptom] {
+        do {
+            return try databaseManager.read { db in
+                try TrackedSymptom
+                    .order(Column("displayOrder").asc, Column("id").asc)
+                    .fetchAll(db)
+            }
+        } catch {
+            print("Error loading symptom history: \(error)")
+            return []
         }
     }
 
@@ -46,8 +60,13 @@ final class SymptomsRepo {
                 for (displayOrder, symptom) in symptoms.enumerated() {
                     var saved = symptom
                     saved.displayOrder = displayOrder
+                    saved.isActive = true
                     try saved.save(db)
                     let id = saved.id ?? db.lastInsertedRowID
+                    try db.execute(
+                        sql: "UPDATE trackedSymptom SET isActive = 1 WHERE id = ?",
+                        arguments: [id]
+                    )
                     try DynamicMetricIdentityStore.registerAlias(
                         family: .symptom,
                         sourceID: id,
@@ -69,11 +88,38 @@ final class SymptomsRepo {
             try databaseManager.write { db in
                 var saved = symptom
                 if saved.id == nil {
+                    let normalizedName = saved.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    if var inactive = try TrackedSymptom
+                        .filter(Column("isActive") == false)
+                        .fetchAll(db)
+                        .first(where: {
+                            $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedName
+                        }) {
+                        inactive.name = saved.name
+                        inactive.isBinary = saved.isBinary
+                        inactive.isActive = true
+                        inactive.displayOrder = (try Int.fetchOne(
+                            db,
+                            sql: "SELECT MAX(displayOrder) FROM trackedSymptom WHERE isActive = 1"
+                        ) ?? -1) + 1
+                        try db.execute(
+                            sql: "UPDATE trackedSymptom SET name = ?, isBinary = ?, displayOrder = ?, isActive = 1 WHERE id = ?",
+                            arguments: [inactive.name, inactive.isBinary, inactive.displayOrder, inactive.id]
+                        )
+                        try DynamicMetricIdentityStore.registerAlias(
+                            family: .symptom,
+                            sourceID: inactive.id!,
+                            name: inactive.name,
+                            in: db
+                        )
+                        return
+                    }
                     saved.displayOrder = (try Int.fetchOne(
                         db,
-                        sql: "SELECT MAX(displayOrder) FROM trackedSymptom"
+                        sql: "SELECT MAX(displayOrder) FROM trackedSymptom WHERE isActive = 1"
                     ) ?? -1) + 1
                 }
+                saved.isActive = true
                 try saved.save(db)
                 let id = saved.id ?? db.lastInsertedRowID
                 try DynamicMetricIdentityStore.registerAlias(
@@ -95,7 +141,7 @@ final class SymptomsRepo {
         do {
             try databaseManager.write { db in
                 try db.execute(
-                    sql: "UPDATE trackedSymptom SET name = ?, isBinary = ? WHERE id = ?",
+                    sql: "UPDATE trackedSymptom SET name = ?, isBinary = ?, isActive = 1 WHERE id = ?",
                     arguments: [name, isBinary, id]
                 )
                 try DynamicMetricIdentityStore.registerAlias(
@@ -119,7 +165,7 @@ final class SymptomsRepo {
                 let requestedIDs = symptoms.compactMap(\.id)
                 let storedIDs = try Int64.fetchAll(
                     db,
-                    sql: "SELECT id FROM trackedSymptom ORDER BY displayOrder ASC, id ASC"
+                    sql: "SELECT id FROM trackedSymptom WHERE isActive = 1 ORDER BY displayOrder ASC, id ASC"
                 )
                 guard requestedIDs.count == symptoms.count,
                       Set(requestedIDs) == Set(storedIDs),
@@ -144,10 +190,10 @@ final class SymptomsRepo {
     func deleteSymptom(id: Int64) -> Bool {
         do {
             try databaseManager.write { db in
-                try db.execute(sql: "DELETE FROM trackedSymptom WHERE id = ?", arguments: [id])
+                try db.execute(sql: "UPDATE trackedSymptom SET isActive = 0 WHERE id = ?", arguments: [id])
                 let remainingIDs = try Int64.fetchAll(
                     db,
-                    sql: "SELECT id FROM trackedSymptom ORDER BY displayOrder ASC, id ASC"
+                    sql: "SELECT id FROM trackedSymptom WHERE isActive = 1 ORDER BY displayOrder ASC, id ASC"
                 )
                 for (displayOrder, remainingID) in remainingIDs.enumerated() {
                     try db.execute(

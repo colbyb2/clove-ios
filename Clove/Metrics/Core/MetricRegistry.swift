@@ -11,6 +11,7 @@ class MetricRegistry {
     // MARK: - Private Properties
     
     private var cachedMetrics: [String: any MetricProvider] = [:]
+    private var cachedMetricAliases: [String: String] = [:]
     private var cachedSummaries: [MetricSummary] = []
     private var lastCacheUpdate: Date = .distantPast
     private var lastSummaryUpdate: Date = .distantPast
@@ -66,23 +67,29 @@ class MetricRegistry {
     func getAllAvailableMetrics() async -> [any MetricProvider] {
         // Check cache validity
         if Date().timeIntervalSince(lastCacheUpdate) < cacheExpiry && !cachedMetrics.isEmpty {
-            return Array(cachedMetrics.values)
+            return cachedMetrics.values.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
         }
         
         await refreshMetricCache()
-        return Array(cachedMetrics.values)
+        return cachedMetrics.values.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
     }
     
     /// Get a specific metric by ID
     func getMetric(id: String) async -> (any MetricProvider)? {
-        // Check if metric is already cached
-        if let cached = cachedMetrics[id] {
+        if let cached = MetricProviderResolver.resolve(
+            id: id,
+            metrics: cachedMetrics,
+            aliases: cachedMetricAliases
+        ) {
             return cached
         }
         
-        // If not cached, refresh and try again
         await refreshMetricCache()
-        return cachedMetrics[id]
+        return MetricProviderResolver.resolve(
+            id: id,
+            metrics: cachedMetrics,
+            aliases: cachedMetricAliases
+        )
     }
     
     /// Get metrics by category
@@ -94,6 +101,7 @@ class MetricRegistry {
     /// Clear all caches (call when new data is logged)
     func invalidateCache() {
         cachedMetrics.removeAll()
+        cachedMetricAliases.removeAll()
         cachedSummaries.removeAll()
         lastCacheUpdate = .distantPast
         lastSummaryUpdate = .distantPast
@@ -135,14 +143,14 @@ class MetricRegistry {
                 dataPointCount: summaryValues.observedCount,
                 lastValue: summaryValues.lastValue,
                 isAvailable: summaryValues.observedCount > 0,
-                isActive: metric.category == .symptoms ? (metric as! SymptomMetricProvider).isActive : nil
+                isActive: metric.category == .symptoms ? (metric as! SymptomMetricProvider).isActive : nil,
+                availability: MetricAvailabilityResolver.state(for: metric, observedCount: summaryValues.observedCount)
             )
             
             summaries.append(summary)
         }
         
-        // Filter to only metrics with data
-        cachedSummaries = summaries.filter { $0.isAvailable }
+        cachedSummaries = summaries.filter { $0.category == .symptoms || $0.isAvailable }
         lastSummaryUpdate = Date()
     }
     
@@ -153,17 +161,23 @@ class MetricRegistry {
             AnalyticsRequest(interval: interval, includeRawEvents: false), granularity: .monthly
         ) else {
             cachedMetrics = [:]
+            cachedMetricAliases = [:]
             lastCacheUpdate = Date()
             return
         }
         var validMetrics: [String: any MetricProvider] = [:]
         for metric in allMetrics {
-            if !observations(for: metric, in: dataset).isEmpty {
+            if metric.category == .symptoms || !observations(for: metric, in: dataset).isEmpty {
                 validMetrics[metric.id] = metric
             }
         }
         
         cachedMetrics = validMetrics
+        cachedMetricAliases = dataset.metricAliases.reduce(into: [:]) { aliases, entry in
+            guard entry.value.count == 1, let canonical = entry.value.first,
+                  validMetrics[canonical.rawValue] != nil else { return }
+            aliases[entry.key] = canonical.rawValue
+        }
         lastCacheUpdate = Date()
     }
 
@@ -204,34 +218,15 @@ class MetricRegistry {
     }
     
     private func generateSymptomMetrics() async -> [any MetricProvider] {
-        // Generate metrics for tracked symptoms
         let symptomsRepo = SymptomsRepo.shared
         let dataLoader = OptimizedDataLoader.shared
-        let symptoms: [String:Bool] = await dataLoader.getAvailableSymptoms()
-        let trackedSymptoms = symptomsRepo.getTrackedSymptoms()
-        var availableByName: [String: (name: String, isBinary: Bool)] = [:]
-        for (name, isBinary) in symptoms {
-            availableByName[name.lowercased()] = (name: name, isBinary: isBinary)
-        }
-        var usedNames: Set<String> = []
-        var providers = trackedSymptoms.compactMap { symptom -> SymptomMetricProvider? in
-            let key = symptom.name.lowercased()
-            guard let available = availableByName[key] else { return nil }
-            usedNames.insert(key)
-            return SymptomMetricProvider(
-                symptomName: available.name,
-                isActive: true,
-                isBinary: available.isBinary
-            )
-        }
-        providers.append(contentsOf: availableByName
-            .filter { !usedNames.contains($0.key) }
-            .map(\.value)
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-            .map { SymptomMetricProvider(symptomName: $0.name, isActive: false, isBinary: $0.isBinary) })
-        return providers
+        let logs = await dataLoader.getAllLogsForSession().sorted { $0.dayKey > $1.dayKey }
+        return SymptomMetricCatalog.providers(
+            storedSymptoms: symptomsRepo.getAllSymptoms(),
+            logs: logs
+        )
     }
-    
+
     private func generateMedicationMetrics() async -> [any MetricProvider] {
         // Generate metrics for tracked medications
         let dataLoader = OptimizedDataLoader.shared
@@ -241,7 +236,7 @@ class MetricRegistry {
             MedicationMetricProvider(medicationName: medication)
         }
     }
-    
+
     private func generateActivityMetrics() async -> [any MetricProvider] {
         // Generate metrics for tracked activities
         let dataLoader = OptimizedDataLoader.shared
@@ -251,7 +246,7 @@ class MetricRegistry {
             ActivityMetricProvider(activityName: activity)
         }
     }
-    
+
     private func generateMealMetrics() async -> [any MetricProvider] {
         // Generate metrics for tracked meals
         let dataLoader = OptimizedDataLoader.shared
@@ -259,6 +254,56 @@ class MetricRegistry {
         
         return meals.map { meal in
             MealMetricProvider(mealName: meal)
+        }
+    }
+}
+
+enum MetricAvailabilityResolver {
+    static func state(for metric: any MetricProvider, observedCount: Int) -> MetricAvailabilityState {
+        if let symptom = metric as? SymptomMetricProvider, !symptom.isActive {
+            return .deleted
+        }
+        return observedCount > 0 ? .available : .noDataInRange
+    }
+}
+
+enum MetricProviderResolver {
+    static func resolve(
+        id: String,
+        metrics: [String: any MetricProvider],
+        aliases: [String: String]
+    ) -> (any MetricProvider)? {
+        if let exact = metrics[id] { return exact }
+        guard let canonical = aliases[id] else { return nil }
+        return metrics[canonical]
+    }
+}
+
+enum SymptomMetricCatalog {
+    static func providers(storedSymptoms: [TrackedSymptom], logs: [DailyLog]) -> [SymptomMetricProvider] {
+        var symptomsByID: [Int64: (name: String, isBinary: Bool, isActive: Bool, order: Int)] = [:]
+
+        for rating in logs.sorted(by: { $0.dayKey > $1.dayKey }).flatMap(\.symptomRatings)
+        where symptomsByID[rating.symptomId] == nil {
+            symptomsByID[rating.symptomId] = (rating.symptomName, rating.isBinary, false, .max)
+        }
+        for symptom in storedSymptoms {
+            guard let id = symptom.id else { continue }
+            symptomsByID[id] = (symptom.name, symptom.isBinary, symptom.isActive, symptom.displayOrder)
+        }
+
+        return symptomsByID.map { id, value in
+            SymptomMetricProvider(
+                symptomID: id,
+                symptomName: value.name,
+                isActive: value.isActive,
+                isBinary: value.isBinary
+            )
+        }.sorted { lhs, rhs in
+            let lhsOrder = symptomsByID[lhs.symptomID!]?.order ?? .max
+            let rhsOrder = symptomsByID[rhs.symptomID!]?.order ?? .max
+            if lhsOrder != rhsOrder { return lhsOrder < rhsOrder }
+            return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
         }
     }
 }

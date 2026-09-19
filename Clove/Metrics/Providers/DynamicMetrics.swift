@@ -4,10 +4,14 @@ import SwiftUI
 // MARK: - Symptom Metric Provider
 
 struct SymptomMetricProvider: MetricProvider {
+    let symptomID: Int64?
     let symptomName: String
     let isActive: Bool
     
-    var id: String { "symptom_\(symptomName.lowercased().replacingOccurrences(of: " ", with: "_"))" }
+    var id: String {
+        symptomID.map { "symptom:\($0)" }
+            ?? DynamicMetricIdentityStore.legacyID(family: .symptom, name: symptomName)
+    }
     var displayName: String { symptomName }
     var description: String { "Tracking \(symptomName.lowercased()) severity" }
     let icon = CloveSymbols.symptom
@@ -18,7 +22,8 @@ struct SymptomMetricProvider: MetricProvider {
     
     private let dataLoader = OptimizedDataLoader.shared
     
-    init(symptomName: String, isActive: Bool = true, isBinary: Bool = false) {
+    init(symptomID: Int64? = nil, symptomName: String, isActive: Bool = true, isBinary: Bool = false) {
+        self.symptomID = symptomID
         self.symptomName = symptomName
         self.isActive = isActive
         self.dataType = isBinary ? .binary : .continuous(range: 0...10)
@@ -29,7 +34,10 @@ struct SymptomMetricProvider: MetricProvider {
         let logs = await dataLoader.filterSessionLogs(for: period)
         
         return logs.compactMap { log in
-            guard let symptomRating = log.symptomRatings.first(where: { $0.symptomName == symptomName }) else { return nil }
+            guard let symptomRating = log.symptomRatings.first(where: { rating in
+                symptomID.map { rating.symptomId == $0 }
+                    ?? (rating.symptomName.caseInsensitiveCompare(symptomName) == .orderedSame)
+            }) else { return nil }
             
             return MetricDataPoint(
                 date: log.date(in: Calendar.current),
@@ -42,7 +50,10 @@ struct SymptomMetricProvider: MetricProvider {
     
     func getDataPointCount(for period: TimePeriod) async -> Int {
         return await dataLoader.getDataPointCount(for: period) { log in
-            log.symptomRatings.contains { $0.symptomName == symptomName }
+            log.symptomRatings.contains { rating in
+                symptomID.map { rating.symptomId == $0 }
+                    ?? (rating.symptomName.caseInsensitiveCompare(symptomName) == .orderedSame)
+            }
         }
     }
     

@@ -227,12 +227,14 @@ struct DefaultAnalyticsRepository: AnalyticsRepository {
         var result = MetricCatalog.staticDefinitions
 
         var symptomsByID: [Int64: (name: String, isBinary: Bool)] = [:]
+        for rating in snapshot.logs.flatMap(\.symptomRatings) {
+            symptomsByID[rating.symptomId] = (rating.symptomName, rating.isBinary)
+        }
+        // The stored definition is authoritative after a rename; historical logs retain the old
+        // display name but still point at the same durable symptom ID.
         for symptom in snapshot.trackedSymptoms {
             guard let id = symptom.id else { continue }
             symptomsByID[id] = (symptom.name, symptom.isBinary)
-        }
-        for rating in snapshot.logs.flatMap(\.symptomRatings) {
-            symptomsByID[rating.symptomId] = (rating.symptomName, rating.isBinary)
         }
         result.append(contentsOf: symptomsByID.keys.sorted().map { id in
             let value = symptomsByID[id]!
