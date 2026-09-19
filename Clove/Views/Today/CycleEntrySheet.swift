@@ -8,6 +8,7 @@ struct CycleEntrySheet: View {
 
     @State private var selectedFlow: FlowLevel?
     @State private var isStartOfCycle: Bool = false
+    @State private var isEndOfCycle: Bool = false
     @State private var hasCramps: Bool = false
     @State private var animateIn = false
 
@@ -94,6 +95,19 @@ struct CycleEntrySheet: View {
                             ) {
                                 triggerHaptic(style: .light)
                                 isStartOfCycle.toggle()
+                                if isStartOfCycle { isEndOfCycle = false }
+                            }
+
+                            DetailSelectionRow(
+                                title: "Period Ended",
+                                subtitle: "Mark the final day, even if days were missed",
+                                icon: "checkmark.circle.fill",
+                                color: .pink,
+                                isSelected: isEndOfCycle
+                            ) {
+                                triggerHaptic(style: .light)
+                                isEndOfCycle.toggle()
+                                if isEndOfCycle { isStartOfCycle = false }
                             }
 
                             // Cramps Toggle
@@ -140,6 +154,7 @@ struct CycleEntrySheet: View {
             if let entry = existingEntry {
                 selectedFlow = entry.flow
                 isStartOfCycle = entry.isStartOfCycle
+                isEndOfCycle = entry.isEndOfCycle == true
                 hasCramps = entry.hasCramps
             }
             withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
@@ -160,6 +175,7 @@ struct CycleEntrySheet: View {
             date: date,
             flow: flow,
             isStartOfCycle: isStartOfCycle,
+            isEndOfCycle: isEndOfCycle,
             hasCramps: hasCramps
         )
 

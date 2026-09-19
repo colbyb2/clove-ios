@@ -25,8 +25,19 @@ enum Migrations {
         SavedAnalysisMigration(),
         AdvancedInsightsPersistenceMigration(),
         DailyLogDayKeyMigration(),
+        CycleEndMarkerMigration(),
         SymptomDisplayOrderMigration()
     ]
+}
+
+struct CycleEndMarkerMigration: Migration {
+    var identifier: String { "cycleEndMarker_091826" }
+
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "cycle") { table in
+            table.add(column: "isEndOfCycle", .boolean).notNull().defaults(to: false)
+        }
+    }
 }
 
 struct DailyLogDayKeyMigration: Migration {

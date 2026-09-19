@@ -151,7 +151,7 @@ struct HistoryCalendarView: View {
         let calendar = Calendar.current
         var dates: Set<Date> = []
         
-        for dayOffset in 0..<prediction.length {
+        for dayOffset in 0..<(prediction.length ?? 1) {
             if let date = calendar.date(byAdding: .day, value: dayOffset, to: prediction.startDate) {
                 dates.insert(calendar.startOfDay(for: date))
             }

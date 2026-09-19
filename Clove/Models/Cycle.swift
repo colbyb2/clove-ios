@@ -38,6 +38,7 @@ struct Cycle: Codable, FetchableRecord, PersistableRecord, Identifiable {
     var date: Date
     var flow: FlowLevel
     var isStartOfCycle: Bool
+    var isEndOfCycle: Bool?
     var hasCramps: Bool
     
     init(
@@ -45,12 +46,14 @@ struct Cycle: Codable, FetchableRecord, PersistableRecord, Identifiable {
         date: Date = Date(),
         flow: FlowLevel,
         isStartOfCycle: Bool = false,
+        isEndOfCycle: Bool = false,
         hasCramps: Bool = false
     ) {
         self.id = id
         self.date = date
         self.flow = flow
         self.isStartOfCycle = isStartOfCycle
+        self.isEndOfCycle = isEndOfCycle
         self.hasCramps = hasCramps
     }
     
@@ -63,6 +66,7 @@ struct Cycle: Codable, FetchableRecord, PersistableRecord, Identifiable {
         static let date = Column(CodingKeys.date)
         static let flow = Column(CodingKeys.flow)
         static let isStartOfCycle = Column(CodingKeys.isStartOfCycle)
+        static let isEndOfCycle = Column(CodingKeys.isEndOfCycle)
         static let hasCramps = Column(CodingKeys.hasCramps)
     }
 }

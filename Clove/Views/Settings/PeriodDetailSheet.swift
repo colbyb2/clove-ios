@@ -3,6 +3,14 @@ import SwiftUI
 struct PeriodDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
     let period: Period
+    let onChange: () -> Void
+    @State private var selectedEntry: Cycle?
+    @State private var showingRepairSheet = false
+
+    init(period: Period, onChange: @escaping () -> Void = {}) {
+        self.period = period
+        self.onChange = onChange
+    }
 
     var body: some View {
         NavigationView {
@@ -38,7 +46,9 @@ struct PeriodDetailSheet: View {
 
                             ForEach(Array(period.entries.enumerated()), id: \.element.id) {
                                 index, entry in
-                                DayDetailCard(entry: entry, dayNumber: index + 1)
+                                DayDetailCard(entry: entry, dayNumber: index + 1) {
+                                    selectedEntry = entry
+                                }
                                     .padding(.horizontal, CloveSpacing.large)
                             }
                         }
@@ -58,11 +68,30 @@ struct PeriodDetailSheet: View {
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
+                    HStack {
+                        Button {
+                            showingRepairSheet = true
+                        } label: {
+                            Image(systemName: "calendar.badge.plus")
+                        }
+                        .accessibilityLabel("Add a missing period day")
+
+                        Button("Done") {
+                            dismiss()
+                        }
+                        .foregroundStyle(Color.pink)
                     }
-                    .foregroundStyle(Color.pink)
                 }
+            }
+        }
+        .sheet(item: $selectedEntry) { entry in
+            CycleEntrySheet(date: entry.date, existingEntry: entry) {
+                onChange()
+            }
+        }
+        .sheet(isPresented: $showingRepairSheet) {
+            CycleRepairSheet(period: period) {
+                onChange()
             }
         }
     }
@@ -243,8 +272,10 @@ struct PeriodDetailSheet: View {
 struct DayDetailCard: View {
     let entry: Cycle
     let dayNumber: Int
+    let onEdit: () -> Void
 
     var body: some View {
+        Button(action: onEdit) {
         HStack(spacing: CloveSpacing.medium) {
             // Day number badge
             VStack(spacing: 4) {
@@ -287,6 +318,10 @@ struct DayDetailCard: View {
                         SmallBadge(text: "First Day", color: Color.pink)
                     }
 
+                    if entry.isEndOfCycle == true {
+                        SmallBadge(text: "Final Day", color: Color.purple)
+                    }
+
                     if entry.hasCramps {
                         SmallBadge(text: "Cramps", color: CloveColors.error)
                     }
@@ -294,6 +329,10 @@ struct DayDetailCard: View {
             }
 
             Spacer()
+
+            Image(systemName: "pencil")
+                .font(.caption.bold())
+                .foregroundStyle(Theme.shared.accent)
         }
         .padding(CloveSpacing.medium)
         .background(
@@ -305,6 +344,8 @@ struct DayDetailCard: View {
                 )
                 .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
         )
+        }
+        .buttonStyle(.plain)
     }
 
     private func formatDate(_ date: Date) -> String {
@@ -330,6 +371,48 @@ struct DayDetailCard: View {
         case .medium: return "drop.fill"
         case .heavy: return "drop.fill"
         case .veryHeavy: return "drop.fill"
+        }
+    }
+}
+
+private struct CycleRepairSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let period: Period
+    let onSave: () -> Void
+    @State private var selectedDate: Date
+    @State private var showingEntrySheet = false
+
+    init(period: Period, onSave: @escaping () -> Void) {
+        self.period = period
+        self.onSave = onSave
+        _selectedDate = State(initialValue: period.endDate)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    DatePicker("Missing day", selection: $selectedDate, displayedComponents: .date)
+                } footer: {
+                    Text("Choose a day you missed, then add its flow and start/end markers.")
+                }
+            }
+            .navigationTitle("Add Missing Day")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Continue") { showingEntrySheet = true }
+                }
+            }
+            .sheet(isPresented: $showingEntrySheet) {
+                CycleEntrySheet(date: selectedDate, existingEntry: nil) {
+                    onSave()
+                    dismiss()
+                }
+            }
         }
     }
 }

@@ -4,6 +4,7 @@ struct CycleOverviewView: View {
     @State private var settingsViewModel = UserSettingsViewModel()
     @State private var periods: [Period] = []
     @State private var cyclePrediction: CyclePrediction? = nil
+    @State private var predictionAnalysis: CyclePredictionAnalysis? = nil
     @State private var selectedPeriod: Period? = nil
     @State private var showPredictionDisclaimer: Bool = false
     @State private var cycleStatistics: CycleStatistics? = nil
@@ -25,6 +26,11 @@ struct CycleOverviewView: View {
                         predictionCard
                             .padding(.horizontal)
                             .padding(.top, 10)
+
+                        if let predictionAnalysis {
+                            dataQualityCard(predictionAnalysis)
+                                .padding(.horizontal)
+                        }
 
                         // Cycle Statistics Card
                         if cycleStatistics != nil {
@@ -91,7 +97,9 @@ struct CycleOverviewView: View {
             }
         }
         .sheet(item: $selectedPeriod) { period in
-            PeriodDetailSheet(period: period)
+            PeriodDetailSheet(period: period) {
+                loadData()
+            }
         }
         .alert("Period Prediction", isPresented: $showPredictionDisclaimer) {
             Button("OK", role: .cancel) {}
@@ -209,7 +217,7 @@ struct CycleOverviewView: View {
                             .font(.system(.caption, weight: .medium))
                             .foregroundStyle(CloveColors.secondaryText)
 
-                        Text("~ \(prediction.length) Days")
+                        Text(prediction.length.map { "~ \($0) Days" } ?? "Needs end dates")
                             .font(.system(.headline, design: .rounded, weight: .semibold))
                             .foregroundStyle(CloveColors.primaryText)
                     }
@@ -219,11 +227,12 @@ struct CycleOverviewView: View {
             } else {
                 // Not enough data state
                 VStack(spacing: 12) {
-                    Text("Not Enough Data")
+                    Text("Forecast Unavailable")
                         .font(.system(.headline, design: .rounded))
                         .foregroundStyle(CloveColors.primaryText)
 
-                    Text("Log at least 2 full cycles to unlock predictions.")
+                    Text(predictionAnalysis?.unavailableExplanation
+                        ?? "Log period starts to build a forecast.")
                         .font(.system(.caption))
                         .foregroundStyle(CloveColors.secondaryText)
                         .multilineTextAlignment(.center)
@@ -242,6 +251,71 @@ struct CycleOverviewView: View {
                 )
                 .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
         )
+    }
+
+    private func dataQualityCard(_ analysis: CyclePredictionAnalysis) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Data Quality", systemImage: "checklist")
+                    .font(.system(.headline, design: .rounded))
+                Spacer()
+            }
+
+            HStack(spacing: 10) {
+                qualityMetric("Starts", value: analysis.detectedStarts.count)
+                qualityMetric("Accepted", value: analysis.acceptedIntervals.count)
+                qualityMetric("Excluded", value: analysis.excludedIntervals.count)
+                qualityMetric("Completed", value: analysis.completedPeriodDurations.count)
+            }
+
+            Text(analysis.requirementText)
+                .font(.caption)
+                .foregroundStyle(CloveColors.secondaryText)
+
+            if !analysis.excludedIntervals.isEmpty {
+                Divider()
+                ForEach(analysis.excludedIntervals) { interval in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(interval.days)-day interval excluded")
+                            .font(.caption.bold())
+                            .foregroundStyle(CloveColors.primaryText)
+                        Text(interval.reason)
+                            .font(.caption2)
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
+                }
+            }
+
+            if analysis.incompletePeriodCount > 0 {
+                Label(
+                    "\(analysis.incompletePeriodCount) period\(analysis.incompletePeriodCount == 1 ? "" : "s") need an end marker for reliable duration.",
+                    systemImage: "calendar.badge.exclamationmark"
+                )
+                .font(.caption)
+                .foregroundStyle(CloveColors.secondaryText)
+            }
+
+            Text("Tap a History entry to correct its start or end marker without deleting it.")
+                .font(.caption)
+                .foregroundStyle(Theme.shared.accent)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: 20))
+    }
+
+    private func qualityMetric(_ title: String, value: Int) -> some View {
+        VStack(spacing: 3) {
+            Text("\(value)")
+                .font(.system(.headline, design: .rounded, weight: .bold))
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(CloveColors.secondaryText)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 9)
+        .background(CloveColors.background.opacity(0.55), in: RoundedRectangle(cornerRadius: 12))
     }
 
     private var emptyStateView: some View {
@@ -275,17 +349,23 @@ struct CycleOverviewView: View {
     private func loadData() {
         let allCycles = cycleRepo.getAllCycles()
         periods = groupIntoPeriods(allCycles)
-        cyclePrediction = cycleManager.getNextCycle()
+        let analysis = cycleManager.getPredictionAnalysis()
+        predictionAnalysis = analysis
+        cyclePrediction = analysis.prediction
 
         // Load cycle statistics
-        if let avgCycleLength = cycleManager.getAverageCycleLength(),
-            let avgPeriodDuration = cycleManager.getAveragePeriodDuration(),
-            let regularity = cycleManager.getCycleRegularity()
+        if !analysis.acceptedIntervals.isEmpty
         {
+            let avgCycleLength = Double(analysis.acceptedIntervals.reduce(0, +))
+                / Double(analysis.acceptedIntervals.count)
+            let avgPeriodDuration = analysis.completedPeriodDurations.isEmpty
+                ? nil
+                : Double(analysis.completedPeriodDurations.reduce(0, +))
+                    / Double(analysis.completedPeriodDurations.count)
             cycleStatistics = CycleStatistics(
                 averageCycleLength: avgCycleLength,
                 averagePeriodDuration: avgPeriodDuration,
-                regularity: regularity
+                regularity: cycleManager.getCycleRegularity() ?? .insufficientData
             )
         } else {
             cycleStatistics = nil
@@ -306,7 +386,10 @@ struct CycleOverviewView: View {
             if let last = lastDate {
                 let daysBetween =
                     calendar.dateComponents([.day], from: last, to: cycleDate).day ?? 0
-                isNewPeriod = cycle.isStartOfCycle || daysBetween > 1
+                let currentHasMarkedStart = currentPeriodEntries.contains { $0.isStartOfCycle }
+                let previousWasMarkedEnd = currentPeriodEntries.last?.isEndOfCycle == true
+                isNewPeriod = cycle.isStartOfCycle || previousWasMarkedEnd
+                    || (!currentHasMarkedStart && daysBetween > 1)
             } else {
                 isNewPeriod = true
             }
@@ -384,7 +467,8 @@ struct CycleOverviewView: View {
                         // Average Period Duration
                         StatCard(
                             title: "Avg Period",
-                            value: String(format: "%.0f days", stats.averagePeriodDuration),
+                            value: stats.averagePeriodDuration.map { String(format: "%.0f days", $0) }
+                                ?? "Needs end",
                             icon: "timer",
                             color: .pink
                         )
@@ -533,7 +617,7 @@ struct PeriodCard: View {
 
 struct CycleStatistics {
     let averageCycleLength: Double
-    let averagePeriodDuration: Double
+    let averagePeriodDuration: Double?
     let regularity: CycleRegularity
 }
 

@@ -43,6 +43,7 @@ enum CycleRegularity {
 
 protocol CycleManaging {
     func getNextCycle() -> CyclePrediction?
+    func getPredictionAnalysis() -> CyclePredictionAnalysis
     func getAverageCycleLength() -> Double?
     func getAveragePeriodDuration() -> Double?
     func getCycleRegularity() -> CycleRegularity?
@@ -50,149 +51,108 @@ protocol CycleManaging {
 
 struct CycleManager: CycleManaging {
     private let maxLookbackCycles = 6
-    
     private let minValidCycleLength = 15 //days
     private let maxValidCycleLength = 40 //days
-    
+    private let cycleRepository: CycleRepositoryProtocol
+    private let calendar: Calendar
+
+    init(
+        cycleRepository: CycleRepositoryProtocol = CycleRepo.shared,
+        calendar: Calendar = .current
+    ) {
+        self.cycleRepository = cycleRepository
+        self.calendar = calendar
+    }
+
     func getNextCycle() -> CyclePrediction? {
-        let cycles = CycleRepo.shared.getCycles(for: .year)
-        return calculateCycle(from: cycles)
+        getPredictionAnalysis().prediction
     }
-    
-    private func calculateCycle(from entries: [Cycle]) -> CyclePrediction? {
-        let startDates = entries
+
+    func getPredictionAnalysis() -> CyclePredictionAnalysis {
+        analyze(entries: cycleRepository.getAllCycles())
+    }
+
+    func analyze(entries: [Cycle]) -> CyclePredictionAnalysis {
+        let startDates = uniqueDays(entries
             .filter { $0.isStartOfCycle }
-            .map { $0.date }
-            .sorted()
-        
-        guard startDates.count >= 2, let lastPeriodDate = startDates.last else {
-            return nil
-        }
-        
-        var recentCycleLengths: [Int] = []
-        
-        for i in (1..<startDates.count).reversed() {
-            let current = startDates[i]
-            let previous = startDates[i - 1]
-            
-            if let days = Calendar.current.dateComponents([.day], from: previous, to: current).day {
-                if days >= minValidCycleLength && days <= maxValidCycleLength {
-                    recentCycleLengths.append(days)
+            .map(\.date))
+
+        var acceptedIntervals: [Int] = []
+        var excludedIntervals: [CycleIntervalExclusion] = []
+
+        if startDates.count >= 2 {
+            for index in 1..<startDates.count {
+                let previous = startDates[index - 1]
+                let current = startDates[index]
+                let days = calendar.dateComponents([.day], from: previous, to: current).day ?? 0
+                if (minValidCycleLength...maxValidCycleLength).contains(days) {
+                    acceptedIntervals.append(days)
+                } else {
+                    excludedIntervals.append(CycleIntervalExclusion(
+                        earlierStart: previous,
+                        laterStart: current,
+                        days: days,
+                        reason: days < minValidCycleLength
+                            ? "Starts are less than \(minValidCycleLength) days apart"
+                            : "Starts are more than \(maxValidCycleLength) days apart"
+                    ))
                 }
             }
-            
-            if recentCycleLengths.count >= maxLookbackCycles {
-                break
+        }
+
+        let recentIntervals = Array(acceptedIntervals.suffix(maxLookbackCycles))
+        let durationResult = completedPeriodDurations(entries: entries, starts: startDates)
+        var prediction: CyclePrediction?
+        if let lastStart = startDates.last, !recentIntervals.isEmpty {
+            let average = Double(recentIntervals.reduce(0, +)) / Double(recentIntervals.count)
+            if let predictedStart = calendar.date(
+                byAdding: .day,
+                value: Int(average.rounded()),
+                to: lastStart
+            ) {
+                let duration = durationResult.durations.isEmpty
+                    ? nil
+                    : Int((Double(durationResult.durations.reduce(0, +))
+                        / Double(durationResult.durations.count)).rounded())
+                prediction = CyclePrediction(startDate: predictedStart, length: duration)
             }
         }
-        
-        guard !recentCycleLengths.isEmpty else { return nil }
-        
-        let totalDays = recentCycleLengths.reduce(0, +)
-        let averageLength = Double(totalDays) / Double(recentCycleLengths.count)
-        
-        let predictedCycleDays = Int(round(averageLength))
-        
-        if let start = Calendar.current.date(byAdding: .day, value: predictedCycleDays, to: lastPeriodDate) {
-            return CyclePrediction(startDate: start, length: Int(calculateAveragePeriodDuration(from: entries)))
-        }
-        
-        return nil
+
+        return CyclePredictionAnalysis(
+            prediction: prediction,
+            totalEntries: entries.count,
+            detectedStarts: startDates,
+            acceptedIntervals: acceptedIntervals,
+            excludedIntervals: excludedIntervals,
+            completedPeriodDurations: durationResult.durations,
+            incompletePeriodCount: durationResult.incompleteCount,
+            validCycleRange: minValidCycleLength...maxValidCycleLength
+        )
     }
-    
+
     func calculateAveragePeriodDuration(from entries: [Cycle]) -> Double {
-
-            // 1. Create a quick lookup set for all dates where a log exists.
-            // We normalize to startOfDay to ignore time differences.
-            let loggedDates = Set(entries.map { Calendar.current.startOfDay(for: $0.date) })
-
-            // 2. Find the "Anchor" days (where the user explicitly said "Period Started")
-            let startDates = entries
-                .filter { $0.isStartOfCycle }
-                .map { Calendar.current.startOfDay(for: $0.date) }
-
-            guard !startDates.isEmpty else { return 0.0 }
-
-            var periodDurations: [Int] = []
-
-            // 3. For each start date, count the consecutive streak of logs
-            for startDate in startDates {
-                var duration = 1 // The start day itself counts as Day 1
-                var nextDayToCheck = Calendar.current.date(byAdding: .day, value: 1, to: startDate)!
-
-                // Keep checking the next day as long as it exists in our logs
-                while loggedDates.contains(nextDayToCheck) {
-                    duration += 1
-                    nextDayToCheck = Calendar.current.date(byAdding: .day, value: 1, to: nextDayToCheck)!
-                }
-
-                periodDurations.append(duration)
-            }
-
-            // 5. Calculate Average
-            let totalDays = periodDurations.reduce(0, +)
-            return Double(totalDays) / Double(periodDurations.count)
-        }
+        let starts = uniqueDays(entries.filter(\.isStartOfCycle).map(\.date))
+        let durations = completedPeriodDurations(entries: entries, starts: starts).durations
+        guard !durations.isEmpty else { return 0 }
+        return Double(durations.reduce(0, +)) / Double(durations.count)
+    }
 
     // MARK: - Public Statistics Methods
 
     func getAverageCycleLength() -> Double? {
-        let cycles = CycleRepo.shared.getCycles(for: .year)
-        let startDates = cycles
-            .filter { $0.isStartOfCycle }
-            .map { $0.date }
-            .sorted()
-
-        guard startDates.count >= 2 else { return nil }
-
-        var cycleLengths: [Int] = []
-
-        for i in 1..<startDates.count {
-            let current = startDates[i]
-            let previous = startDates[i - 1]
-
-            if let days = Calendar.current.dateComponents([.day], from: previous, to: current).day {
-                if days >= minValidCycleLength && days <= maxValidCycleLength {
-                    cycleLengths.append(days)
-                }
-            }
-        }
-
-        guard !cycleLengths.isEmpty else { return nil }
-
-        let total = cycleLengths.reduce(0, +)
-        return Double(total) / Double(cycleLengths.count)
+        let intervals = getPredictionAnalysis().acceptedIntervals
+        guard !intervals.isEmpty else { return nil }
+        return Double(intervals.reduce(0, +)) / Double(intervals.count)
     }
 
     func getAveragePeriodDuration() -> Double? {
-        let cycles = CycleRepo.shared.getCycles(for: .year)
-        let avgDuration = calculateAveragePeriodDuration(from: cycles)
-        return avgDuration > 0 ? avgDuration : nil
+        let durations = getPredictionAnalysis().completedPeriodDurations
+        guard !durations.isEmpty else { return nil }
+        return Double(durations.reduce(0, +)) / Double(durations.count)
     }
 
     func getCycleRegularity() -> CycleRegularity? {
-        let cycles = CycleRepo.shared.getCycles(for: .year)
-        let startDates = cycles
-            .filter { $0.isStartOfCycle }
-            .map { $0.date }
-            .sorted()
-
-        // Need at least 3 cycles to determine regularity
-        guard startDates.count >= 3 else { return .insufficientData }
-
-        var cycleLengths: [Int] = []
-
-        for i in 1..<startDates.count {
-            let current = startDates[i]
-            let previous = startDates[i - 1]
-
-            if let days = Calendar.current.dateComponents([.day], from: previous, to: current).day {
-                if days >= minValidCycleLength && days <= maxValidCycleLength {
-                    cycleLengths.append(days)
-                }
-            }
-        }
-
+        let cycleLengths = getPredictionAnalysis().acceptedIntervals
         guard cycleLengths.count >= 2 else { return .insufficientData }
 
         // Calculate standard deviation
@@ -217,11 +177,67 @@ struct CycleManager: CycleManaging {
             return .irregular
         }
     }
+
+    private func completedPeriodDurations(
+        entries: [Cycle],
+        starts: [Date]
+    ) -> (durations: [Int], incompleteCount: Int) {
+        guard !starts.isEmpty else { return ([], 0) }
+        let normalizedEntries = entries.map { entry in
+            (date: calendar.startOfDay(for: entry.date), entry: entry)
+        }
+        var durations: [Int] = []
+        var incompleteCount = 0
+
+        for (index, start) in starts.enumerated() {
+            let nextStart = index + 1 < starts.count ? starts[index + 1] : nil
+            let periodEntries = normalizedEntries
+                .filter { item in
+                    item.date >= start && (nextStart == nil || item.date < nextStart!)
+                }
+                .sorted { $0.date < $1.date }
+
+            if let explicitEnd = periodEntries.first(where: { $0.entry.isEndOfCycle == true })?.date,
+               let daySpan = calendar.dateComponents([.day], from: start, to: explicitEnd).day,
+               (0...13).contains(daySpan) {
+                durations.append(daySpan + 1)
+                continue
+            }
+
+            let days = uniqueDays(periodEntries.map(\.date))
+            let hasGap = zip(days, days.dropFirst()).contains { previous, current in
+                (calendar.dateComponents([.day], from: previous, to: current).day ?? 0) > 1
+            }
+            if nextStart != nil, !days.isEmpty, !hasGap, days.count <= 14 {
+                durations.append(days.count)
+            } else {
+                incompleteCount += 1
+            }
+        }
+        return (durations, incompleteCount)
+    }
+
+    private func uniqueDays(_ dates: [Date]) -> [Date] {
+        Array(Set(dates.map { calendar.startOfDay(for: $0) })).sorted()
+    }
 }
 
 struct MockCycleManager: CycleManaging {
     func getNextCycle() -> CyclePrediction? {
         return CyclePrediction(startDate: Calendar.current.date(byAdding: .day, value: 5, to: Date()) ?? Date(), length: 5)
+    }
+
+    func getPredictionAnalysis() -> CyclePredictionAnalysis {
+        CyclePredictionAnalysis(
+            prediction: getNextCycle(),
+            totalEntries: 10,
+            detectedStarts: [Date(), Date()],
+            acceptedIntervals: [28],
+            excludedIntervals: [],
+            completedPeriodDurations: [5],
+            incompletePeriodCount: 0,
+            validCycleRange: 15...40
+        )
     }
 
     func getAverageCycleLength() -> Double? {
@@ -239,5 +255,45 @@ struct MockCycleManager: CycleManaging {
 
 struct CyclePrediction {
     let startDate: Date
-    let length: Int
+    let length: Int?
+}
+
+struct CycleIntervalExclusion: Identifiable {
+    let id = UUID()
+    let earlierStart: Date
+    let laterStart: Date
+    let days: Int
+    let reason: String
+}
+
+struct CyclePredictionAnalysis {
+    let prediction: CyclePrediction?
+    let totalEntries: Int
+    let detectedStarts: [Date]
+    let acceptedIntervals: [Int]
+    let excludedIntervals: [CycleIntervalExclusion]
+    let completedPeriodDurations: [Int]
+    let incompletePeriodCount: Int
+    let validCycleRange: ClosedRange<Int>
+
+    var requirementText: String {
+        "Prediction needs 2 marked starts that are \(validCycleRange.lowerBound)–\(validCycleRange.upperBound) days apart."
+    }
+
+    var unavailableExplanation: String? {
+        guard prediction == nil else { return nil }
+        if totalEntries == 0 {
+            return "No period days have been logged yet. \(requirementText)"
+        }
+        if detectedStarts.isEmpty {
+            return "Period days exist, but none are marked as a start. Edit the first day of each period and turn on Period Started."
+        }
+        if detectedStarts.count == 1 {
+            return "1 cycle start is marked. Mark the start of one more period to create an interval."
+        }
+        if acceptedIntervals.isEmpty {
+            return "The marked starts are outside the accepted \(validCycleRange.lowerBound)–\(validCycleRange.upperBound) day range. Review the dates below."
+        }
+        return requirementText
+    }
 }
