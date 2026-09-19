@@ -11,7 +11,13 @@ final class InsightEvidenceModelTests: XCTestCase {
 
         XCTAssertEqual(first.id, second.id)
         XCTAssertEqual(first.confidence, 0.7, accuracy: 1e-9)
-        XCTAssertTrue(try XCTUnwrap(first.evidence).whyText.contains("14 recorded observations"))
+        let evidence = try XCTUnwrap(first.evidence)
+        XCTAssertTrue(evidence.whyText.contains("14 recorded observations"))
+        XCTAssertTrue(evidence.whyText.contains("100% coverage"))
+        XCTAssertTrue(evidence.whyText.contains("0 missing"))
+        XCTAssertTrue(evidence.whyText.contains("Eligibility:"))
+        XCTAssertTrue(evidence.whyText.contains("Method:"))
+        XCTAssertFalse(evidence.dateRangeText.isEmpty)
         XCTAssertEqual(Set(InsightGenerator().generate(dataset: dataset).map(\.id)).count, InsightGenerator().generate(dataset: dataset).count)
     }
 

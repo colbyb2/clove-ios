@@ -47,6 +47,42 @@ final class PairAlignmentEngineTests: XCTestCase {
             .align(factor: MetricCatalog.hydration, outcome: MetricCatalog.painLevel, dataset: dataset, lagDays: 1)
         XCTAssertEqual(result.pairs.count, 3)
     }
+
+    func testSparseRelationshipEvidenceExplainsCoverageAndMinimum() {
+        let interval = DateInterval(
+            start: AnalyticsTestDates.date(2026, 7, 1),
+            end: AnalyticsTestDates.date(2026, 7, 11)
+        )
+        let dataset = relationshipDataset(
+            definitions: [MetricCatalog.hydration, MetricCatalog.painLevel],
+            interval: interval,
+            values: [
+                MetricCatalog.hydration.id: [(1, .number(20)), (2, .number(30)), (3, .number(40))],
+                MetricCatalog.painLevel.id: [(2, .number(4)), (3, .number(5)), (8, .number(6))]
+            ]
+        )
+        let alignment = PairAlignmentEngine(calendar: AnalyticsTestDates.calendar, timeZone: AnalyticsTestDates.utc)
+            .align(factor: MetricCatalog.hydration, outcome: MetricCatalog.painLevel, dataset: dataset)
+        let estimate = RelationshipStatisticsEngine().estimate(
+            alignment: alignment,
+            factor: MetricCatalog.hydration,
+            outcome: MetricCatalog.painLevel
+        )
+        let evidence = RelationshipEvidenceSummary(
+            alignment: alignment,
+            estimate: estimate,
+            eventOutcomes: [],
+            interval: interval
+        )
+
+        XCTAssertEqual(evidence.matchedDayCount, 2)
+        XCTAssertEqual(evidence.missingDayCount, 8)
+        XCTAssertEqual(evidence.minimumSampleCount, 14)
+        XCTAssertFalse(evidence.isSufficient)
+        XCTAssertTrue(evidence.eligibilityRule.contains("14"))
+        XCTAssertTrue(evidence.guidance.contains("Keep recording"))
+        XCTAssertFalse(evidence.dateRangeText.isEmpty)
+    }
 }
 
 final class RelationshipStatisticsEngineTests: XCTestCase {

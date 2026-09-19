@@ -14,7 +14,17 @@ struct RelationshipResultsView: View {
     }
 
     let analysis: CorrelationAnalysis
+    let isSaved: Bool
     let onSave: () -> Void
+
+    private var evidence: RelationshipEvidenceSummary {
+        RelationshipEvidenceSummary(
+            alignment: analysis.alignment,
+            estimate: analysis.estimate,
+            eventOutcomes: analysis.eventOutcomes,
+            interval: analysis.timeRange
+        )
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: CloveSpacing.large) {
@@ -24,24 +34,77 @@ struct RelationshipResultsView: View {
             coverage
             technicalDetails
             dailyDrillDown
-            Button(action: onSave) { Label("Save Analysis", systemImage: "bookmark") }
-                .buttonStyle(.borderedProminent).tint(Theme.shared.accent)
+            saveControl
         }
+    }
+
+    private var saveControl: some View {
+        Button(action: onSave) {
+            HStack(spacing: CloveSpacing.medium) {
+                Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(isSaved ? CloveColors.success : Theme.shared.accent)
+                    .frame(width: 42, height: 42)
+                    .background(
+                        (isSaved ? CloveColors.success : Theme.shared.accent).opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 12)
+                    )
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(isSaved ? "Analysis saved" : "Save this analysis")
+                        .font(.headline)
+                        .foregroundStyle(CloveColors.primaryText)
+                    Text(isSaved ? "You can reopen it from Saved Analyses below." : "Keep this comparison, range, and timing for later.")
+                        .font(.caption)
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: CloveSpacing.small)
+
+                Image(systemName: isSaved ? "checkmark.circle.fill" : "plus.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(isSaved ? CloveColors.success : Theme.shared.accent)
+            }
+            .padding(CloveSpacing.medium)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                    .fill(CloveColors.card)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: CloveCorners.medium)
+                            .stroke(
+                                (isSaved ? CloveColors.success : Theme.shared.accent).opacity(0.22),
+                                lineWidth: 1
+                            )
+                    }
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isSaved)
+        .accessibilityLabel(isSaved ? "Analysis saved" : "Save this analysis")
+        .accessibilityHint(isSaved ? "This comparison is already saved" : "Adds this comparison to Saved Analyses")
     }
 
     private var summary: some View {
         card {
-            Text("What the data suggests").font(.title3.bold()).foregroundStyle(CloveColors.primaryText)
+            Text(evidence.isSufficient ? "What the data suggests" : "Keep tracking")
+                .font(.title3.bold()).foregroundStyle(CloveColors.primaryText)
             ForEach(analysis.insights, id: \.self) { insight in
-                Label(insight, systemImage: "sparkles")
+                Label(insight, systemImage: evidence.isSufficient ? "sparkles" : "calendar.badge.plus")
                     .font(CloveFonts.body()).foregroundStyle(CloveColors.secondaryText)
             }
             if let estimate = analysis.estimate {
                 HStack(spacing: 8) {
-                    resultBadge("\(estimate.strength) pattern", icon: "waveform.path")
-                    resultBadge("\(estimate.sampleCount) matching days", icon: "calendar")
+                    if estimate.isSufficient {
+                        resultBadge("\(estimate.strength) pattern", icon: "waveform.path")
+                    }
+                    resultBadge("\(estimate.sampleCount) of \(estimate.minimumSampleCount) required", icon: "calendar")
                 }
             }
+            Label(evidence.guidance, systemImage: "info.circle")
+                .font(.caption)
+                .foregroundStyle(evidence.isSufficient ? CloveColors.secondaryText : .orange)
         }
     }
 
@@ -214,6 +277,8 @@ struct RelationshipResultsView: View {
         card {
             let coverage = analysis.alignment.coverage
             Text("How much data was compared?").font(.headline).foregroundStyle(CloveColors.primaryText)
+            Text(evidence.dateRangeText)
+                .font(.caption).foregroundStyle(CloveColors.secondaryText)
             HStack(alignment: .firstTextBaseline) {
                 Text("\(coverage.matchedDayCount) days")
                     .font(.title2.bold()).foregroundStyle(CloveColors.primaryText)
@@ -231,6 +296,12 @@ struct RelationshipResultsView: View {
                     detailRow("Days with \(analysis.factorDefinition.displayName)", value: coverage.factorObservedDayCount)
                     detailRow("Days with \(analysis.outcomeDefinition.displayName)", value: coverage.outcomeObservedDayCount)
                     detailRow("Days with both", value: coverage.matchedDayCount)
+                    detailRow("Missing one or both", value: coverage.excludedDayCount)
+                    if let estimate = analysis.estimate {
+                        detailRow("Minimum matching days", value: estimate.minimumSampleCount)
+                    }
+                    Text(evidence.eligibilityRule)
+                        .font(.caption).foregroundStyle(CloveColors.secondaryText)
                     Text("Missing days were left out of the comparison. They were not changed to zero.")
                         .font(.caption).foregroundStyle(CloveColors.secondaryText)
                 }

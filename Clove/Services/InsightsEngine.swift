@@ -32,9 +32,23 @@ struct InsightEvidence: Hashable, Sendable {
     let quality: InsightEvidenceQuality
     let provenance: InsightProvenance
     let limitations: [String]
+    let eligibilityRule: String
+
+    var missingDayCount: Int {
+        max(0, provenance.possibleDayCount - provenance.observedDayCount)
+    }
+
+    var compactSummary: String {
+        "\(sampleCount) observations • \(coverage.formatted(.percent.precision(.fractionLength(0)))) coverage"
+    }
+
+    var dateRangeText: String {
+        let inclusiveEnd = provenance.interval.end.addingTimeInterval(-1)
+        return "\(provenance.interval.start.formatted(date: .abbreviated, time: .omitted))–\(inclusiveEnd.formatted(date: .abbreviated, time: .omitted))"
+    }
 
     var whyText: String {
-        "Based on \(sampleCount) recorded observations across \(provenance.observedDayCount) of \(provenance.possibleDayCount) eligible days using \(provenance.calculation)."
+        "Based on \(sampleCount) recorded observations across \(provenance.observedDayCount) of \(provenance.possibleDayCount) eligible days (\(coverage.formatted(.percent.precision(.fractionLength(0)))) coverage; \(missingDayCount) missing) from \(dateRangeText). Eligibility: \(eligibilityRule) Method: \(provenance.calculation)."
     }
 }
 
@@ -131,6 +145,7 @@ struct InsightGenerator {
                 let evidence = makeEvidence(generator: "period-change", definition: definition, dataset: dataset, coverage: coverage,
                                             count: observations.count, effect: change, quality: quality,
                                             calculation: "equal-length period summaries",
+                                            eligibilityRule: "At least 4 recorded days are required in both periods.",
                                             limitations: commonLimitations(coverage: coverage))
                 result.append(HealthInsight(type: type, priority: quality == .strong ? .high : .medium,
                     title: "\(definition.displayName) was \(direction)",
@@ -146,6 +161,7 @@ struct InsightGenerator {
             let quality = evidenceQuality(count: observations.count, coverage: coverage.observedDayFraction)
             let evidence = makeEvidence(generator: "robust-trend", definition: definition, dataset: dataset, coverage: coverage,
                 count: observations.count, effect: trend.totalChange, quality: quality, calculation: "median pairwise daily slope",
+                eligibilityRule: "At least \(max(7, definition.minimumSamples.pattern)) recorded observations are required.",
                 limitations: commonLimitations(coverage: coverage))
             result.append(HealthInsight(type: favorability == .unfavorable ? .warning : .trend,
                 priority: favorability == .unfavorable ? .high : .medium,
@@ -160,6 +176,7 @@ struct InsightGenerator {
             let evidence = makeEvidence(generator: "weekday-pattern", definition: definition, dataset: dataset, coverage: coverage,
                 count: observations.count, effect: weekday.difference, quality: quality,
                 calculation: "weekday averages with at least three observations per compared group",
+                eligibilityRule: "At least 3 observations are required in each of at least 2 weekday groups.",
                 limitations: commonLimitations(coverage: coverage))
             result.append(HealthInsight(type: .pattern, priority: .medium, title: "A recurring \(weekday.name) pattern",
                 description: "Recorded \(definition.displayName.lowercased()) was about \(format(abs(weekday.difference), definition: definition)) \(weekday.difference > 0 ? "higher" : "lower") on \(weekday.name)s than on other recorded days.",
@@ -172,6 +189,7 @@ struct InsightGenerator {
             let evidence = makeEvidence(generator: "volatility-change", definition: definition, dataset: dataset, coverage: coverage,
                 count: observations.count, effect: volatility.ratio, quality: quality,
                 calculation: "median absolute deviation in the first and second halves of the period",
+                eligibilityRule: "At least 14 observations are required, with 7 in each half of the period.",
                 limitations: commonLimitations(coverage: coverage))
             result.append(HealthInsight(type: .pattern, priority: .medium,
                 title: "\(definition.displayName) became more variable",
@@ -184,6 +202,7 @@ struct InsightGenerator {
             let quality = evidenceQuality(count: observations.count, coverage: coverage.observedDayFraction)
             let evidence = makeEvidence(generator: "recording-streak", definition: definition, dataset: dataset, coverage: coverage,
                 count: observations.count, effect: Double(streak), quality: quality, calculation: "consecutive calendar days with observed values",
+                eligibilityRule: "At least 3 consecutive recorded days are required.",
                 limitations: ["Missing days end a streak; they are not treated as negative observations."])
             result.append(HealthInsight(type: .achievement, priority: .low, title: "\(streak)-day \(definition.displayName) tracking streak",
                 description: "You recorded this metric on \(streak) consecutive calendar days.", actionableText: nil,
@@ -284,12 +303,13 @@ struct InsightGenerator {
 
     private func makeEvidence(generator: String, definition: MetricDefinition, dataset: AnalyticsDataset, coverage: MetricCoverage,
                               count: Int, effect: Double?, quality: InsightEvidenceQuality, calculation: String,
+                              eligibilityRule: String,
                               limitations: [String]) -> InsightEvidence {
         InsightEvidence(effect: effect, unitLabel: unit(definition.unit), sampleCount: count,
             coverage: coverage.observedDayFraction, quality: quality,
             provenance: InsightProvenance(generator: generator, metricIDs: [definition.id], interval: dataset.interval,
                 observedDayCount: coverage.sourceDayCount, possibleDayCount: coverage.possibleDayCount, calculation: calculation),
-            limitations: limitations)
+            limitations: limitations, eligibilityRule: eligibilityRule)
     }
 
     private func commonLimitations(coverage: MetricCoverage) -> [String] {

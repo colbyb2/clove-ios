@@ -632,6 +632,13 @@ struct InsightPreviewRow: View {
                     .font(.system(.caption2))
                     .foregroundStyle(CloveColors.secondaryText)
                     .lineLimit(2)
+
+                if let evidence = insight.evidence {
+                    Text(evidence.compactSummary)
+                        .font(.caption2)
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .lineLimit(1)
+                }
             }
             
             Spacer()

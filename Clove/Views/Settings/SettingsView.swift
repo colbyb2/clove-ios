@@ -267,6 +267,10 @@ private struct AppearanceAndAlertsSettingsView: View {
 
 private struct DataSettingsView: View {
     @State private var showExportSheet = false
+#if DEBUG
+    @State private var showMockDataConfirmation = false
+    @State private var mockDataStatus: String?
+#endif
 
     var body: some View {
         Form {
@@ -283,10 +287,42 @@ private struct DataSettingsView: View {
                                      detail: "Restore a backup or import CSV records")
                 }
             }
+
+#if DEBUG
+            Section {
+                Button {
+                    showMockDataConfirmation = true
+                } label: {
+                    SettingsButtonRow(icon: "wand.and.stars", color: .purple, title: "Load 120 Days of Test Data")
+                }
+                .accessibilityHint("Generate sample health records for testing insights")
+
+                if let mockDataStatus {
+                    Label(mockDataStatus, systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(CloveColors.success)
+                }
+            } header: {
+                Text("Developer Testing")
+            } footer: {
+                Text("Available only in debug builds. Test data replaces daily logs on overlapping dates.")
+            }
+#endif
         }
         .navigationTitle("Data")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showExportSheet) { DataExportSheet() }
+#if DEBUG
+        .alert("Load Test Data?", isPresented: $showMockDataConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Load 120 Days", role: .destructive) {
+                let savedCount = MockDataGenerator.generateAndSaveMockLogs(numberOfDays: 120)
+                mockDataStatus = "Loaded \(savedCount) days. Reopen Insights to refresh."
+            }
+        } message: {
+            Text("This adds realistic sample history and replaces daily logs on overlapping dates.")
+        }
+#endif
     }
 }
 

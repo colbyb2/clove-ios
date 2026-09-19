@@ -52,6 +52,66 @@ struct PairAlignmentResult: Equatable, Sendable {
     let qualityFlags: Set<MetricQualityFlag>
 }
 
+struct RelationshipEvidenceSummary: Equatable, Sendable {
+    let matchedDayCount: Int
+    let eligibleDayCount: Int
+    let missingDayCount: Int
+    let coverage: Double
+    let sampleCount: Int
+    let minimumSampleCount: Int
+    let eligibilityRule: String
+    let isSufficient: Bool
+    let interval: DateInterval
+    let guidance: String
+
+    init(
+        alignment: PairAlignmentResult,
+        estimate: RelationshipEstimate?,
+        eventOutcomes: [EventOutcomeResult],
+        interval: DateInterval
+    ) {
+        matchedDayCount = alignment.coverage.matchedDayCount
+        eligibleDayCount = alignment.coverage.eligibleDayCount
+        missingDayCount = alignment.coverage.excludedDayCount
+        coverage = alignment.coverage.matchedFraction
+        self.interval = interval
+
+        if let estimate {
+            sampleCount = estimate.sampleCount
+            minimumSampleCount = estimate.minimumSampleCount
+            eligibilityRule = "At least \(estimate.minimumSampleCount) days with both metrics recorded are required."
+            isSufficient = estimate.isSufficient
+            if estimate.isSufficient {
+                guidance = "This is an association in the recorded data, not evidence that one metric caused the other."
+            } else if estimate.sampleCount < estimate.minimumSampleCount {
+                guidance = "Not enough matching data yet. Keep recording both items on the same days before interpreting this as a relationship."
+            } else {
+                guidance = estimate.limitations.first
+                    ?? "There is not enough variation in the recorded values to estimate a relationship."
+            }
+        } else {
+            let strongest = eventOutcomes.max {
+                min($0.exposedCount, $0.controlCount) < min($1.exposedCount, $1.controlCount)
+            }
+            let exposed = strongest?.exposedCount ?? 0
+            let controls = strongest?.controlCount ?? 0
+            sampleCount = exposed + controls
+            minimumSampleCount = 6
+            eligibilityRule = "At least 3 event days and 3 comparison days are required."
+            isSufficient = exposed >= 3 && controls >= 3
+            guidance = isSufficient
+                ? "This is an association in the recorded data, not evidence that the event caused the outcome."
+                : "Not enough comparison data yet. Keep recording the event and outcome before interpreting this pattern."
+        }
+    }
+
+    var dateRangeText: String {
+        let inclusiveEnd = interval.end.addingTimeInterval(-1)
+        return "\(interval.start.formatted(date: .abbreviated, time: .omitted))–\(inclusiveEnd.formatted(date: .abbreviated, time: .omitted))"
+    }
+
+}
+
 struct PairAlignmentEngine: Sendable {
     let normalizer: MetricDayNormalizer
 

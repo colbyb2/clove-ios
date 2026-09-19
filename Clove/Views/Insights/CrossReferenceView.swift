@@ -154,7 +154,7 @@ struct CrossReferenceView: View {
          if let errorMessage = viewModel.errorMessage {
             errorMessageSection(errorMessage)
          } else if let analysis = viewModel.currentAnalysis {
-            RelationshipResultsView(analysis: analysis) {
+            RelationshipResultsView(analysis: analysis, isSaved: viewModel.isSaved(analysis)) {
                viewModel.saveCorrelation(analysis)
             }
          } else if viewModel.isCalculating {
@@ -170,9 +170,14 @@ struct CrossReferenceView: View {
    private var savedCorrelationsSection: some View {
       VStack(alignment: .leading, spacing: CloveSpacing.medium) {
          HStack {
-            Text("Saved Analyses")
-               .font(.system(.title3, design: .rounded).weight(.bold))
-               .foregroundStyle(CloveColors.primaryText)
+            VStack(alignment: .leading, spacing: 2) {
+               Text("Saved Analyses")
+                  .font(.system(.title3, design: .rounded).weight(.bold))
+                  .foregroundStyle(CloveColors.primaryText)
+               Text("Tap a comparison to run it again")
+                  .font(.caption)
+                  .foregroundStyle(CloveColors.secondaryText)
+            }
 
             Spacer()
 
@@ -194,10 +199,28 @@ struct CrossReferenceView: View {
                   Button {
                      viewModel.loadSavedAnalysis(saved)
                   } label: {
-                     VStack(alignment: .leading, spacing: 3) {
-                        Text(saved.title).font(.headline).foregroundStyle(CloveColors.primaryText)
-                        Text("\(saved.rangePolicy) • \(saved.lagDays == 0 ? "same day" : "lag \(saved.lagDays)d")")
-                           .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                     HStack(spacing: CloveSpacing.small) {
+                        Image(systemName: "bookmark.fill")
+                           .font(.system(size: 14, weight: .semibold))
+                           .foregroundStyle(Theme.shared.accent)
+                           .frame(width: 34, height: 34)
+                           .background(Theme.shared.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+
+                        VStack(alignment: .leading, spacing: 3) {
+                           Text(saved.title)
+                              .font(.subheadline.weight(.semibold))
+                              .foregroundStyle(CloveColors.primaryText)
+                              .lineLimit(2)
+                           Text("\(rangeLabel(saved.rangePolicy)) • \(saved.lagDays == 0 ? "Same day" : timingLabel(saved.lagDays))")
+                              .font(.caption)
+                              .foregroundStyle(CloveColors.secondaryText)
+                        }
+
+                        Spacer(minLength: CloveSpacing.small)
+
+                        Image(systemName: "chevron.right")
+                           .font(.caption.bold())
+                           .foregroundStyle(CloveColors.secondaryText.opacity(0.65))
                      }
                      .frame(maxWidth: .infinity, alignment: .leading)
                   }
@@ -210,11 +233,23 @@ struct CrossReferenceView: View {
                      }
                      Button("Delete", systemImage: "trash", role: .destructive) { viewModel.removeSavedAnalysis(saved) }
                   } label: {
-                     Image(systemName: "ellipsis.circle").foregroundStyle(Theme.shared.accent)
+                     Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
                   }
                }
-               .padding(CloveSpacing.small)
-               .background(RoundedRectangle(cornerRadius: CloveCorners.small).fill(CloveColors.background))
+               .padding(.horizontal, CloveSpacing.small)
+               .padding(.vertical, 10)
+               .background(
+                  RoundedRectangle(cornerRadius: CloveCorners.small)
+                     .fill(CloveColors.background)
+                     .overlay {
+                        RoundedRectangle(cornerRadius: CloveCorners.small)
+                           .stroke(Theme.shared.accent.opacity(0.08), lineWidth: 1)
+                     }
+               )
             }
          }
       }
@@ -224,6 +259,15 @@ struct CrossReferenceView: View {
             .fill(CloveColors.card)
             .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
       )
+   }
+
+   private func rangeLabel(_ policy: String) -> String {
+      if let period = TimePeriod(rawValue: policy) { return period.displayName }
+      return policy.hasPrefix("custom|") ? "Custom range" : policy
+   }
+
+   private func timingLabel(_ lagDays: Int) -> String {
+      lagDays > 0 ? "Factor \(lagDays)d before" : "Outcome \(-lagDays)d before"
    }
 
    private var lagControl: some View {

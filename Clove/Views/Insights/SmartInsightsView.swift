@@ -334,6 +334,12 @@ struct InsightCardView: View {
                         .font(CloveFonts.body())
                         .foregroundStyle(CloveColors.secondaryText)
                         .lineLimit(isExpanded ? nil : 3)
+
+                    if let evidence = insight.evidence {
+                        Label(evidence.compactSummary, systemImage: "checklist")
+                            .font(CloveFonts.small())
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
                     
                     if isExpanded {
                         expandedContent
@@ -382,17 +388,10 @@ struct InsightCardView: View {
     
     private var expandedContent: some View {
         VStack(alignment: .leading, spacing: CloveSpacing.small) {
-            // Confidence indicator
-            HStack(spacing: CloveSpacing.small) {
-                Text("Confidence:")
-                    .font(CloveFonts.small())
-                    .foregroundStyle(CloveColors.secondaryText)
-                
-                ProgressView(value: insight.confidence, total: 1.0)
-                    .progressViewStyle(LinearProgressViewStyle(tint: Theme.shared.accent))
-                    .frame(width: 60)
-                
-                Text("\(Int(insight.confidence * 100))%")
+            if let evidence = insight.evidence {
+                evidenceDetails(evidence)
+            } else {
+                Text("Evidence details are unavailable for this legacy insight.")
                     .font(CloveFonts.small())
                     .foregroundStyle(CloveColors.secondaryText)
             }
@@ -416,6 +415,38 @@ struct InsightCardView: View {
                 .font(CloveFonts.small())
                 .foregroundStyle(CloveColors.secondaryText.opacity(0.7))
         }
+    }
+
+    private func evidenceDetails(_ evidence: InsightEvidence) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label("\(evidence.quality.rawValue) evidence", systemImage: "chart.bar.doc.horizontal")
+                .font(CloveFonts.small()).fontWeight(.semibold)
+                .foregroundStyle(Theme.shared.accent)
+            evidenceRow("Date range", evidence.dateRangeText)
+            evidenceRow("Recorded days", "\(evidence.provenance.observedDayCount) of \(evidence.provenance.possibleDayCount)")
+            evidenceRow("Missing days", "\(evidence.missingDayCount)")
+            Text(evidence.eligibilityRule)
+                .font(CloveFonts.small())
+                .foregroundStyle(CloveColors.secondaryText)
+            Text("Method: \(evidence.provenance.calculation)")
+                .font(CloveFonts.small())
+                .foregroundStyle(CloveColors.secondaryText)
+            ForEach(evidence.limitations, id: \.self) { limitation in
+                Label(limitation, systemImage: "info.circle")
+                    .font(CloveFonts.small())
+                    .foregroundStyle(CloveColors.secondaryText)
+            }
+        }
+        .padding(.top, 2)
+    }
+
+    private func evidenceRow(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label).foregroundStyle(CloveColors.secondaryText)
+            Spacer()
+            Text(value).fontWeight(.semibold).foregroundStyle(CloveColors.primaryText)
+        }
+        .font(CloveFonts.small())
     }
     
     private func actionableSection(_ actionableText: String) -> some View {

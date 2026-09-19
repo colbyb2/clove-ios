@@ -156,8 +156,18 @@ struct AdvancedDiscoveryView: View {
                 Spacer(minLength: 0)
             }
             if let evidence = insight.evidence {
-                Text("Seen across \(evidence.sampleCount) recorded observations")
+                Text(evidence.compactSummary)
                     .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                DisclosureGroup("Evidence details") {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(evidence.whyText)
+                        ForEach(evidence.limitations, id: \.self) { Text("• \($0)") }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .padding(.top, 5)
+                }
+                .font(.caption.bold())
             }
             feedbackControls(id: feedbackID, allowsDismissal: false)
         }

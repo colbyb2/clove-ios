@@ -71,6 +71,7 @@ final class CrossReferenceViewModel {
     }
 
     func saveCorrelation(_ analysis: CorrelationAnalysis) {
+        guard !isSaved(analysis) else { return }
         do {
             let title = "\(analysis.primaryMetric.displayName) → \(analysis.secondaryMetric.displayName)"
             let saved = SavedAnalysis(
@@ -84,7 +85,21 @@ final class CrossReferenceViewModel {
             )
             _ = try savedRepo.save(saved)
             loadSavedAnalyses()
+            ToastManager.shared.showToast(
+                message: "Analysis saved",
+                color: CloveColors.success,
+                icon: Image(systemName: "bookmark.fill")
+            )
         } catch { errorMessage = "Could not save this analysis: \(error.localizedDescription)" }
+    }
+
+    func isSaved(_ analysis: CorrelationAnalysis) -> Bool {
+        savedAnalyses.contains {
+            $0.factorMetricID == analysis.factorDefinition.id.rawValue
+                && $0.outcomeMetricID == analysis.outcomeDefinition.id.rawValue
+                && $0.rangePolicy == savedRangePolicy
+                && $0.lagDays == selectedLagDays
+        }
     }
 
     func removeSavedAnalysis(_ saved: SavedAnalysis) {
@@ -157,14 +172,13 @@ final class CrossReferenceViewModel {
             return (pair.factorDay, lhs, rhs)
         }
         let pValue = estimate?.pValue ?? 1
-        let intervalDates = alignment.pairs.map(\.factorDay)
         let insights = explanation(factor: factor, outcome: outcome, estimate: estimate, eventOutcomes: eventOutcomes)
         return CorrelationAnalysis(
             primaryMetric: primary, secondaryMetric: secondary,
             factorDefinition: factor, outcomeDefinition: outcome,
             alignment: alignment, estimate: estimate, lagProfile: lagProfile, eventOutcomes: eventOutcomes,
             coefficient: effect, significance: 1 - pValue, pValue: pValue, dataPoints: numericPoints,
-            timeRange: DateInterval(start: intervalDates.min() ?? interval.start, end: intervalDates.max() ?? interval.end),
+            timeRange: interval,
             strengthDescription: estimate?.strength ?? "Event comparison", insights: insights
         )
     }
