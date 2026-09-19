@@ -14,6 +14,9 @@ enum Constants {
 
    // Hydration
    static let HYDRATION_GOAL_OUNCES = "hydrationGoalOunces"
+
+   // Cycle
+   static let SHOW_CYCLE_ON_TODAY = "showCycleOnToday"
    
    // Input Method Preferences
    static let USE_SLIDER_INPUT = "useSliderInput"

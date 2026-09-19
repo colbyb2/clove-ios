@@ -3,19 +3,15 @@ import SwiftUI
 struct TodayView: View {
     @State var viewModel = TodayViewModel()
     @Environment(NavigationCoordinator.self) private var navigationCoordinator
+    @AppStorage(Constants.SHOW_CYCLE_ON_TODAY) private var showCycleOnToday = true
 
     @State private var showEditSymptoms: Bool = false
     @State private var showQuickAddSymptomSheet: Bool = false
     @State private var showWeatherSelection: Bool = false
     @State private var showMedicationSelection: Bool = false
     @State private var showNotesEntry: Bool = false
-    @State private var showOccasionalFeaturesMenu: Bool = false
     @State private var showCycleEntry: Bool = false
-
-    private var shouldShowQuickAdd: Bool {
-        viewModel.settings.trackCycle
-        // Future: || viewModel.settings.trackOtherFeature
-    }
+    @State private var cycleEntryPreset: CycleEntryPreset?
 
     var body: some View {
         ZStack {
@@ -195,32 +191,21 @@ struct TodayView: View {
                         BowelMovementTracker(date: viewModel.selectedDate)
                     }
 
-                    // MARK: Cycle Indicator
-                    if let cycle = viewModel.cycleEntry {
-                        VStack(spacing: CloveSpacing.small) {
-                            HStack(spacing: CloveSpacing.small) {
-                                Image(systemName: CloveSymbols.cycle)
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(Theme.shared.accent)
-                                Text("Cycle")
-                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-
-                                Spacer()
-                            }
-
-                            CycleIndicator(
-                                cycle: cycle,
-                                onTap: {
-                                    showCycleEntry = true
-                                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                    impactFeedback.impactOccurred()
-                                },
-                                onDelete: {
-                                    viewModel.deleteCycleEntry()
-                                }
-                            )
-                        }
-                        .padding(.vertical, CloveSpacing.small)
+                    // MARK: Cycle
+                    if viewModel.settings.trackCycle && showCycleOnToday {
+                        TodayCycleCard(
+                            date: viewModel.selectedDate,
+                            entry: viewModel.cycleEntry,
+                            cycleDay: viewModel.currentCycleDay,
+                            isPeriodActive: viewModel.isPeriodActive,
+                            onLog: { preset in
+                                cycleEntryPreset = preset
+                                showCycleEntry = true
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            },
+                            onDelete: viewModel.deleteCycleEntry,
+                            onHide: { showCycleOnToday = false }
+                        )
                         .transition(.move(edge: .top).combined(with: .opacity))
                     }
 
@@ -316,28 +301,6 @@ struct TodayView: View {
                         .padding(.vertical, CloveSpacing.small)
                     }
 
-                    // MARK: Quick Add
-                    if shouldShowQuickAdd {
-                        Button {
-                            self.showOccasionalFeaturesMenu = true
-                        } label: {
-                            HStack(spacing: CloveSpacing.small) {
-                                Image(systemName: "ellipsis.circle")
-                                    .font(.system(size: 16, weight: .semibold))
-                                Text("Track Other")
-                                    .font(.system(size: 16, weight: .semibold))
-                            }
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 46)  // Large touch target
-                        .background(
-                            RoundedRectangle(cornerRadius: CloveCorners.medium)
-                                .fill(CloveColors.card)
-                                .shadow(
-                                    color: Theme.shared.accent.opacity(0.3), radius: 4, x: 0, y: 2)
-                        )
-                    }
                     } else if viewModel.loadError == nil {
                         ProgressView("Loading your health data...")
                             .frame(maxWidth: .infinity)
@@ -394,27 +357,16 @@ struct TodayView: View {
                 date: viewModel.selectedDate
             )
         }
-        .sheet(isPresented: $showOccasionalFeaturesMenu) {
-            OccasionalFeaturesMenu(settings: viewModel.settings) { feature in
-                switch feature {
-                case .cycle:
-                    showOccasionalFeaturesMenu = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        showCycleEntry = true
-                    }
-                }
-            }
-            .presentationDetents([.height(300)])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(CloveColors.card)
-        }
         .sheet(isPresented: $showCycleEntry) {
             CycleEntrySheet(
                 date: viewModel.selectedDate,
-                existingEntry: viewModel.cycleEntry
+                existingEntry: viewModel.cycleEntry,
+                preset: cycleEntryPreset
             ) {
                 viewModel.loadCycleEntry(for: viewModel.selectedDate)
+                cycleEntryPreset = nil
             }
+            .onDisappear { cycleEntryPreset = nil }
         }
     }
 

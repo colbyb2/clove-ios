@@ -40,6 +40,8 @@ class TodayViewModel {
 
    var yesterdayLog: DailyLog? = nil
    var cycleEntry: Cycle? = nil
+   var currentCycleDay: Int? = nil
+   var isPeriodActive = false
    private(set) var trackedSymptoms: [TrackedSymptom] = []
    private(set) var loadError: RepositoryError?
    private(set) var saveError: RepositoryError?
@@ -537,13 +539,46 @@ class TodayViewModel {
 
    func loadCycleEntry(for date: Date) {
       let entries = cycleRepository.getCyclesForDate(date)
+      let allEntries = cycleRepository.getAllCycles()
       self.cycleEntry = entries.first
+      self.currentCycleDay = cycleDay(on: date, from: allEntries)
+      self.isPeriodActive = periodIsActive(on: date, from: allEntries)
+   }
+
+   private func cycleDay(on date: Date, from entries: [Cycle]) -> Int? {
+      let calendar = Calendar.current
+      let selectedDay = calendar.startOfDay(for: date)
+      let eligibleStarts = entries.filter {
+         $0.isStartOfCycle && calendar.startOfDay(for: $0.date) <= selectedDay
+      }
+      guard let latestStart = eligibleStarts.max(by: { $0.date < $1.date }) else { return nil }
+
+      let startDay = calendar.startOfDay(for: latestStart.date)
+      let elapsedDays = calendar.dateComponents([.day], from: startDay, to: selectedDay).day ?? -1
+      let day = elapsedDays + 1
+      return (1...90).contains(day) ? day : nil
+   }
+
+   private func periodIsActive(on date: Date, from entries: [Cycle]) -> Bool {
+      let calendar = Calendar.current
+      let selectedDay = calendar.startOfDay(for: date)
+      let relevantEntries = entries.filter { calendar.startOfDay(for: $0.date) <= selectedDay }
+      let startEntries = relevantEntries.filter { $0.isStartOfCycle }
+      guard let latestStart = startEntries.max(by: { $0.date < $1.date }) else { return false }
+
+      let startDay = calendar.startOfDay(for: latestStart.date)
+      let elapsedDays = calendar.dateComponents([.day], from: startDay, to: selectedDay).day ?? -1
+      guard (0...14).contains(elapsedDays) else { return false }
+
+      return !relevantEntries.contains {
+         $0.isEndOfCycle == true && calendar.startOfDay(for: $0.date) >= startDay
+      }
    }
 
    func deleteCycleEntry() {
       guard let id = cycleEntry?.id else { return }
       if cycleRepository.delete(id: id) {
-         cycleEntry = nil
+         loadCycleEntry(for: selectedDate)
          toastManager.showToast(
             message: "Cycle entry deleted",
             color: CloveColors.success,

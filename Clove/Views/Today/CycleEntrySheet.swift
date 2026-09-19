@@ -1,9 +1,15 @@
 import SwiftUI
 
+enum CycleEntryPreset {
+    case start
+    case end
+}
+
 struct CycleEntrySheet: View {
     @Environment(\.dismiss) private var dismiss
     let date: Date
     let existingEntry: Cycle?
+    var preset: CycleEntryPreset? = nil
     let onSave: () -> Void
 
     @State private var selectedFlow: FlowLevel?
@@ -156,6 +162,13 @@ struct CycleEntrySheet: View {
                 isStartOfCycle = entry.isStartOfCycle
                 isEndOfCycle = entry.isEndOfCycle == true
                 hasCramps = entry.hasCramps
+            }
+            if preset == .start {
+                isStartOfCycle = true
+                isEndOfCycle = false
+            } else if preset == .end {
+                isStartOfCycle = false
+                isEndOfCycle = true
             }
             withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                 animateIn = true

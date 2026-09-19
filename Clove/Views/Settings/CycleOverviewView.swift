@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CycleOverviewView: View {
     @State private var settingsViewModel = UserSettingsViewModel()
+    @AppStorage(Constants.SHOW_CYCLE_ON_TODAY) private var showCycleOnToday = true
     @State private var periods: [Period] = []
     @State private var cyclePrediction: CyclePrediction? = nil
     @State private var predictionAnalysis: CyclePredictionAnalysis? = nil
@@ -26,6 +27,9 @@ struct CycleOverviewView: View {
                         predictionCard
                             .padding(.horizontal)
                             .padding(.top, 10)
+
+                        todayShortcutPreference
+                            .padding(.horizontal)
 
                         if let predictionAnalysis {
                             dataQualityCard(predictionAnalysis)
@@ -108,6 +112,22 @@ struct CycleOverviewView: View {
                 "Predictions are estimates based on your past cycle patterns. This is not medical advice."
             )
         }
+    }
+
+    private var todayShortcutPreference: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle("Show cycle shortcut on Today", isOn: $showCycleOnToday)
+                .font(.subheadline.weight(.semibold))
+                .tint(Theme.shared.accent)
+            Text("When no period is active, the shortcut stays compact. Hide it here whenever you prefer a quieter Today screen.")
+                .font(.caption)
+                .foregroundStyle(CloveColors.secondaryText)
+        }
+        .padding(CloveSpacing.medium)
+        .background(
+            RoundedRectangle(cornerRadius: CloveCorners.medium)
+                .fill(CloveColors.card)
+        )
     }
 
     private var cycleDisabledView: some View {
