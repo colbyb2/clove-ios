@@ -183,10 +183,15 @@ struct ManageFoodsView: View {
         guard let id = entry.id else { return }
         if repo.delete(id: id) {
             loadEntries()
-
-            // Haptic feedback
-            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-            impactFeedback.impactOccurred()
+            ToastManager.shared.showToast(
+                message: "Food deleted",
+                color: CloveColors.secondaryText,
+                icon: Image(systemName: "trash"),
+                duration: 8,
+                actionTitle: "Undo"
+            ) {
+                if repo.save(entry) != nil { loadEntries() }
+            }
         }
     }
 }

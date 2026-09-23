@@ -96,6 +96,9 @@ final class CloveArchiveTests: XCTestCase {
         XCTAssertFalse(defaults.bool(forKey: Constants.HYDRATION_GOAL_ENABLED))
         XCTAssertEqual(defaults.string(forKey: Constants.HYDRATION_UNIT), HydrationUnit.milliliters.rawValue)
         XCTAssertEqual(defaults.array(forKey: Constants.HYDRATION_QUICK_AMOUNTS_MILLILITERS) as? [Int], [200, 400, 600])
+        let recoveryURL = try XCTUnwrap(manager.latestRecoveryCheckpointURL)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: recoveryURL.path))
+        XCTAssertNoThrow(try CloveArchiveManager.validateArchiveFile(at: recoveryURL))
         XCTAssertEqual(restoredNotifications.map(\.id), ["morning-check-in"])
         XCTAssertEqual(revision.reasons.map(\.rawValue), [AnalyticsRevisionReason.dataImport.rawValue])
     }

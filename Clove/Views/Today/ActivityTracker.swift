@@ -148,10 +148,15 @@ struct ActivityTracker: View {
 
         if repo.delete(id: id) {
             loadActivityEntries()
-
-            // Haptic feedback
-            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-            impactFeedback.impactOccurred()
+            ToastManager.shared.showToast(
+                message: "Activity deleted",
+                color: CloveColors.secondaryText,
+                icon: Image(systemName: "trash"),
+                duration: 8,
+                actionTitle: "Undo"
+            ) {
+                if repo.save(entry) != nil { loadActivityEntries() }
+            }
         } else {
             ToastManager.shared.showToast(
                 message: "Activity couldn't be deleted. Please try again.",

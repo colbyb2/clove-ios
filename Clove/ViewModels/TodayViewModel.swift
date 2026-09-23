@@ -576,14 +576,19 @@ class TodayViewModel {
    }
 
    func deleteCycleEntry() {
-      guard let id = cycleEntry?.id else { return }
+      guard let deletedEntry = cycleEntry, let id = deletedEntry.id else { return }
       if cycleRepository.delete(id: id) {
          loadCycleEntry(for: selectedDate)
          toastManager.showToast(
             message: "Cycle entry deleted",
-            color: CloveColors.success,
-            icon: Image(systemName: "checkmark.circle")
-         )
+            color: CloveColors.secondaryText,
+            icon: Image(systemName: "trash"),
+            duration: 8,
+            actionTitle: "Undo"
+         ) { [weak self] in
+            guard self?.cycleRepository.save([deletedEntry]) == true else { return }
+            self?.loadCycleEntry(for: deletedEntry.date)
+         }
       } else {
          toastManager.showToast(
             message: "Failed to delete cycle entry",

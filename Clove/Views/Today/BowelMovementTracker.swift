@@ -162,10 +162,15 @@ struct BowelMovementTracker: View {
         
         if repo.delete(id: id) {
             loadBowelMovements()
-            
-            // Haptic feedback
-            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-            impactFeedback.impactOccurred()
+            ToastManager.shared.showToast(
+                message: "Bowel movement deleted",
+                color: CloveColors.secondaryText,
+                icon: Image(systemName: "trash"),
+                duration: 8,
+                actionTitle: "Undo"
+            ) {
+                if repo.save([movement]) { loadBowelMovements() }
+            }
         } else {
             ToastManager.shared.showToast(
                 message: "Bowel movement couldn't be deleted. Please try again.",

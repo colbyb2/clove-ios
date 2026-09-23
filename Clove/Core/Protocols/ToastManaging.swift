@@ -30,6 +30,14 @@ protocol ToastManaging: AnyObject {
     ///   - icon: Optional icon to display
     ///   - duration: How long to display the toast (default: 3.0 seconds)
     func showToast(message: String, color: Color, icon: Image?, duration: Double)
+    func showToast(
+        message: String,
+        color: Color,
+        icon: Image?,
+        duration: Double,
+        actionTitle: String?,
+        action: (() -> Void)?
+    )
 
     /// Hides the currently visible toast
     func hide()
@@ -44,6 +52,24 @@ extension ToastManaging {
         duration: Double = 3.0
     ) {
         showToast(message: message, color: color, icon: icon, duration: duration)
+    }
+
+    func showToast(
+        message: String,
+        color: Color = .black,
+        icon: Image? = nil,
+        duration: Double = 3.0,
+        actionTitle: String?,
+        action: (() -> Void)?
+    ) {
+        showToast(
+            message: message,
+            color: color,
+            icon: icon,
+            duration: duration,
+            actionTitle: actionTitle,
+            action: action
+        )
     }
 }
 

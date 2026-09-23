@@ -119,10 +119,15 @@ struct FoodTracker: View {
 
         if repo.delete(id: id) {
             loadFoodEntries()
-
-            // Haptic feedback
-            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-            impactFeedback.impactOccurred()
+            ToastManager.shared.showToast(
+                message: "Food deleted",
+                color: CloveColors.secondaryText,
+                icon: Image(systemName: "trash"),
+                duration: 8,
+                actionTitle: "Undo"
+            ) {
+                if repo.save(entry) != nil { loadFoodEntries() }
+            }
         } else {
             ToastManager.shared.showToast(
                 message: "Food couldn't be deleted. Please try again.",

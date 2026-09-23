@@ -11,18 +11,27 @@ class DataImportManager {
 
     private let databaseManager: DatabaseManaging
     private let analyticsRevisionSource: any AnalyticsRevisionProviding
+    private let recoveryCheckpointProvider: () throws -> URL
 
     init(
         databaseManager: DatabaseManaging,
-        analyticsRevisionSource: any AnalyticsRevisionProviding = AnalyticsRevisionSource.shared
+        analyticsRevisionSource: any AnalyticsRevisionProviding = AnalyticsRevisionSource.shared,
+        recoveryCheckpointProvider: (() throws -> URL)? = nil
     ) {
         self.databaseManager = databaseManager
         self.analyticsRevisionSource = analyticsRevisionSource
+        self.recoveryCheckpointProvider = recoveryCheckpointProvider ?? {
+            try CloveArchiveManager(
+                databaseManager: databaseManager,
+                analyticsRevisionSource: analyticsRevisionSource
+            ).createRecoveryCheckpoint()
+        }
     }
     
     var isImporting: Bool = false
     var importProgress: Double = 0.0
     var importError: ImportError?
+    private(set) var recoveryCheckpointURL: URL?
     
     func importFromCSV(
         fileURL: URL,
@@ -78,6 +87,18 @@ class DataImportManager {
         
         // Step 5: Perform atomic import
         await updateProgress(0.4)
+        let checkpointURL = try recoveryCheckpointProvider()
+        let checkpointSize = try checkpointURL.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        guard FileManager.default.fileExists(atPath: checkpointURL.path),
+              checkpointSize > 0 else {
+            throw ImportError.databaseError("A verified recovery checkpoint could not be created. Existing data was not changed.")
+        }
+        do {
+            try CloveArchiveManager.validateArchiveFile(at: checkpointURL)
+        } catch {
+            throw ImportError.databaseError("The recovery checkpoint could not be validated. Existing data was not changed.")
+        }
+        recoveryCheckpointURL = checkpointURL
         return try await performAtomicImport(parsedData: parsedData, symptomColumns: symptomColumns)
     }
     

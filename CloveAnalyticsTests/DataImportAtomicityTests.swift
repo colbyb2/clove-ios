@@ -63,6 +63,35 @@ final class DataImportAtomicityTests: XCTestCase {
         XCTAssertEqual(revision.currentRevision, 0)
     }
 
+    func testReplacementDoesNotStartWhenRecoveryCheckpointFails() async throws {
+        struct CheckpointFailure: Error {}
+
+        let database = try TestDatabaseManager()
+        let revision = TestRevisionSource()
+        try seedOriginalLog(in: database)
+        let csvURL = try makeRepresentativeCSV()
+        defer { try? FileManager.default.removeItem(at: csvURL) }
+
+        let manager = DataImportManager(
+            databaseManager: database,
+            analyticsRevisionSource: revision,
+            recoveryCheckpointProvider: { throw CheckpointFailure() }
+        )
+
+        do {
+            _ = try await manager.performImport(from: csvURL)
+            XCTFail("Expected checkpoint creation to stop replacement")
+        } catch is CheckpointFailure {
+            // Expected.
+        }
+
+        let snapshot = try snapshot(in: database)
+        XCTAssertEqual(snapshot.logs.count, 1)
+        XCTAssertEqual(snapshot.logs.first?.mood, 9)
+        XCTAssertEqual(snapshot.logs.first?.waterIntake, 12)
+        XCTAssertEqual(revision.currentRevision, 0)
+    }
+
     private func seedOriginalLog(in database: DatabaseManaging) throws {
         try database.write { db in
             try DailyLog(

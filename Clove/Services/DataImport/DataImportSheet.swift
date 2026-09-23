@@ -15,6 +15,7 @@ struct DataImportView: View {
     @State private var archiveErrorMessage: String?
     @State private var importCompleted = false
     @State private var showExportSheet = false
+    @State private var recoveryCheckpointURL: URL?
     
     private let importManager = DataImportManager.shared
     
@@ -142,7 +143,7 @@ struct DataImportView: View {
                     .foregroundStyle(CloveColors.primaryText)
             }
             
-            Text("Restoring or importing replaces the existing Clove data covered by the selected file. Create a full backup first if you may need to undo it.")
+            Text("Restoring or importing replaces the existing Clove data covered by the selected file. Clove creates and verifies a recovery backup before replacement begins.")
                 .font(.system(size: 14))
                 .foregroundStyle(CloveColors.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -348,6 +349,16 @@ struct DataImportView: View {
                 .font(.system(size: 14))
                 .foregroundStyle(CloveColors.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if importSucceeded, let recoveryCheckpointURL {
+                ShareLink(item: recoveryCheckpointURL) {
+                    Label("Save Recovery Backup", systemImage: "lifepreserver")
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                }
+                .buttonStyle(.bordered)
+                .tint(Theme.shared.accent)
+            }
             
             Button("Done") {
                 dismiss()
@@ -432,6 +443,7 @@ struct DataImportView: View {
                         importProgress = 1
                         importCompleted = true
                         archiveResult = result
+                        recoveryCheckpointURL = CloveArchiveManager.shared.latestRecoveryCheckpointURL
                         ToastManager.shared.showToast(
                             message: "Full backup restored successfully",
                             color: CloveColors.success,
@@ -457,6 +469,7 @@ struct DataImportView: View {
                 switch result {
                 case .success(let result):
                     self.importResult = result
+                    self.recoveryCheckpointURL = importManager.recoveryCheckpointURL
                     
                     ToastManager.shared.showToast(
                         message: "Data imported successfully",
@@ -509,9 +522,9 @@ struct DataImportView: View {
 
     private var replacementWarning: String {
         if isFullBackupSelected {
-            return "Restoring this full backup will completely replace all existing Clove data and settings. This cannot be undone."
+            return "Restoring this full backup will replace all existing Clove data and settings. Clove will first create and verify a recovery backup."
         }
-        return "Importing this CSV will replace existing daily logs, meals, activities, and bowel movements. App settings and medication definitions are preserved."
+        return "Importing this CSV will replace existing daily logs, meals, activities, and bowel movements. Clove will first create and verify a recovery backup."
     }
 }
 

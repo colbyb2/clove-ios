@@ -15,6 +15,8 @@ final class MockToastManager: ToastManaging {
 
     /// Tracks how many times showToast was called
     var showCallCount: Int = 0
+    var actionTitle: String?
+    var action: (() -> Void)?
 
     func showToast(message: String, color: Color, icon: Image?, duration: Double) {
         self.message = message
@@ -25,6 +27,19 @@ final class MockToastManager: ToastManaging {
         self.lastShownMessage = message
         self.showCallCount += 1
         self.isVisible = true
+    }
+
+    func showToast(
+        message: String,
+        color: Color,
+        icon: Image?,
+        duration: Double,
+        actionTitle: String?,
+        action: (() -> Void)?
+    ) {
+        showToast(message: message, color: color, icon: icon, duration: duration)
+        self.actionTitle = actionTitle
+        self.action = action
     }
 
     func hide() {

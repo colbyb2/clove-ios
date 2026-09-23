@@ -23,6 +23,18 @@ struct Toast: View {
                             .lineLimit(3)
 
                         Spacer(minLength: 0)
+
+                        if let actionTitle = ToastManager.shared.actionTitle {
+                            Button(actionTitle) {
+                                ToastManager.shared.performAction()
+                            }
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(.white.opacity(0.18), in: Capsule())
+                            .accessibilityHint("Restores the deleted item")
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
@@ -105,10 +117,19 @@ class ToastManager {
     var duration: Double = 3.0
     var isVisible: Bool = false
     var showProgress: Bool = false
+    var actionTitle: String?
 
     private var hideTask: Task<Void, Never>?
+    @ObservationIgnored private var action: (() -> Void)?
 
-    func showToast(message: String, color: Color = .black, icon: Image? = nil, duration: Double = 3.0) {
+    func showToast(
+        message: String,
+        color: Color = .black,
+        icon: Image? = nil,
+        duration: Double = 3.0,
+        actionTitle: String? = nil,
+        action: (() -> Void)? = nil
+    ) {
         // Cancel any existing task
         hideTask?.cancel()
 
@@ -119,6 +140,8 @@ class ToastManager {
         self.duration = duration
         self.offset = 0
         self.showProgress = duration > 2.0
+        self.actionTitle = actionTitle
+        self.action = action
 
         // Haptic feedback
         if color == CloveColors.success {
@@ -146,6 +169,8 @@ class ToastManager {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 self.isVisible = false
             }
+            self.action = nil
+            self.actionTitle = nil
         }
     }
 
@@ -155,6 +180,17 @@ class ToastManager {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             self.isVisible = false
         }
+    }
+
+    func performAction() {
+        let pendingAction = action
+        hideTask?.cancel()
+        action = nil
+        actionTitle = nil
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            isVisible = false
+        }
+        pendingAction?()
     }
 }
 

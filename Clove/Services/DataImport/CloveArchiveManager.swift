@@ -159,6 +159,7 @@ final class CloveArchiveManager {
     private let userDefaults: UserDefaults
     private let notificationProvider: () -> [ScheduledNotification]
     private let notificationRestorer: ([ScheduledNotification]) -> Void
+    private(set) var latestRecoveryCheckpointURL: URL?
 
     init(
         databaseManager: DatabaseManaging,
@@ -183,6 +184,33 @@ final class CloveArchiveManager {
             .appendingPathComponent("clove-backup-\(formatter.string(from: archive.manifest.createdAt)).json")
         try data.write(to: url, options: .atomic)
         return url
+    }
+
+    /// Creates and validates a durable snapshot before any replacement operation.
+    /// If this fails, callers must not modify existing data.
+    func createRecoveryCheckpoint() throws -> URL {
+        let archive = try makeArchive()
+        let data = try Self.encoder(prettyPrinted: true).encode(archive)
+        _ = try Self.decodeAndValidate(data)
+
+        let directory = try FileManager.default.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        ).appendingPathComponent("Clove/Recovery", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("clove-recovery-checkpoint.json")
+        try data.write(to: url, options: .atomic)
+
+        let writtenData = try Data(contentsOf: url)
+        _ = try Self.decodeAndValidate(writtenData)
+        latestRecoveryCheckpointURL = url
+        return url
+    }
+
+    static func validateArchiveFile(at url: URL) throws {
+        _ = try decodeAndValidate(Data(contentsOf: url))
     }
 
     func makeArchive() throws -> CloveArchive {
@@ -229,21 +257,8 @@ final class CloveArchiveManager {
     }
 
     func restoreArchive(data: Data) throws -> CloveArchiveRestoreResult {
-        let archive: CloveArchive
-        do {
-            archive = try Self.decoder().decode(CloveArchive.self, from: data)
-        } catch {
-            throw CloveArchiveError.invalidFormat
-        }
-
-        guard archive.manifest.format == Self.formatIdentifier else { throw CloveArchiveError.invalidFormat }
-        guard archive.manifest.schemaVersion == Self.currentSchemaVersion else {
-            throw CloveArchiveError.unsupportedVersion(archive.manifest.schemaVersion)
-        }
-        let unsigned = UnsignedArchive(manifest: archive.manifest, payload: archive.payload)
-        guard try Self.checksum(for: unsigned) == archive.checksum else {
-            throw CloveArchiveError.checksumMismatch
-        }
+        let archive = try Self.decodeAndValidate(data)
+        _ = try createRecoveryCheckpoint()
 
         try databaseManager.writeReturning { db in
             try Self.clearRestorableTables(in: db)
@@ -318,6 +333,24 @@ final class CloveArchiveManager {
     private static func checksum(for archive: UnsignedArchive) throws -> String {
         let data = try encoder().encode(archive)
         return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func decodeAndValidate(_ data: Data) throws -> CloveArchive {
+        let archive: CloveArchive
+        do {
+            archive = try decoder().decode(CloveArchive.self, from: data)
+        } catch {
+            throw CloveArchiveError.invalidFormat
+        }
+        guard archive.manifest.format == formatIdentifier else { throw CloveArchiveError.invalidFormat }
+        guard archive.manifest.schemaVersion == currentSchemaVersion else {
+            throw CloveArchiveError.unsupportedVersion(archive.manifest.schemaVersion)
+        }
+        let unsigned = UnsignedArchive(manifest: archive.manifest, payload: archive.payload)
+        guard try checksum(for: unsigned) == archive.checksum else {
+            throw CloveArchiveError.checksumMismatch
+        }
+        return archive
     }
 
     private static func encoder(prettyPrinted: Bool = false) -> JSONEncoder {
