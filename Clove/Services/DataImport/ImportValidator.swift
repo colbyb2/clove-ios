@@ -48,8 +48,8 @@ class ImportValidator {
                 throw ImportError.invalidDataValue(column: column, value: value, row: row)
             }
 
-        case "Hydration (oz)":
-            if let ounces = Int(value), ounces >= 0 {
+        case "Hydration (oz)", "Hydration (fl oz)", "Hydration (mL)":
+            if let amount = Int(value), amount >= 0 {
                 // Valid hydration amount
             } else {
                 throw ImportError.invalidDataValue(column: column, value: value, row: row)
@@ -112,8 +112,9 @@ class ImportValidator {
     }
     
     static func extractSymptomColumns(from headers: [String]) -> [String] {
+        let hydrationAliases = ["Hydration (fl oz)", "Hydration (mL)"]
         return headers.filter { header in
-            !expectedColumns.contains(header)
+            !expectedColumns.contains(header) && !hydrationAliases.contains(header)
         }
     }
 }

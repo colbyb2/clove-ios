@@ -83,6 +83,12 @@ struct AnalyticsMetricDetailView: View {
     @State private var selectedDate: Date?
     @State private var selectedLog: DailyLog?
     @AppStorage(Constants.HYDRATION_GOAL_OUNCES) private var hydrationGoalOunces = 64
+    @AppStorage(Constants.HYDRATION_GOAL_ENABLED) private var hydrationGoalEnabled = true
+    @AppStorage(Constants.HYDRATION_UNIT) private var hydrationUnitRawValue = HydrationUnit.fluidOunces.rawValue
+
+    private var hydrationUnit: HydrationUnit {
+        HydrationUnit(rawValue: hydrationUnitRawValue) ?? .fluidOunces
+    }
 
     init(metric: any MetricProvider) {
         metricID = metric.id
@@ -105,7 +111,7 @@ struct AnalyticsMetricDetailView: View {
     }
 
     private var loadKey: String {
-        [metricID, String(interval.start.timeIntervalSinceReferenceDate), String(interval.end.timeIntervalSinceReferenceDate), String(timeManager.isComparisonModeEnabled), String(hydrationGoalOunces)].joined(separator: "|")
+        [metricID, String(interval.start.timeIntervalSinceReferenceDate), String(interval.end.timeIntervalSinceReferenceDate), String(timeManager.isComparisonModeEnabled), String(hydrationGoalOunces), String(hydrationGoalEnabled), hydrationUnitRawValue].joined(separator: "|")
     }
 
     var body: some View {
@@ -249,9 +255,9 @@ struct AnalyticsMetricDetailView: View {
                 .accessibilityLabel("\(result.definition.displayName) chart")
                 .accessibilityValue(accessibleSummary(result))
 
-            if case .hydrationProgress(let goal) = result.family {
+            if case .hydrationProgress(let goal) = result.family, hydrationGoalEnabled {
                 HStack(spacing: 14) {
-                    chartKey(color: CloveColors.success, text: "Met \(Int(goal)) oz goal")
+                    chartKey(color: CloveColors.success, text: "Met \(formatHydration(goal)) goal")
                     chartKey(color: Theme.shared.accent, text: "Below goal")
                 }
                 .accessibilityElement(children: .combine)
@@ -290,19 +296,22 @@ struct AnalyticsMetricDetailView: View {
             .chartXSelection(value: $selectedDate)
 
         case .hydrationProgress(let goal):
+            let displayGoal = displayHydration(goal)
             Chart {
                 ForEach(activePoints(result)) { point in
-                    BarMark(x: .value("Date", point.date), y: .value("Fluid ounces", point.value))
-                        .foregroundStyle(point.value >= goal ? CloveColors.success : Theme.shared.accent)
+                    BarMark(x: .value("Date", point.date), y: .value(hydrationUnit.title, displayHydration(point.value)))
+                        .foregroundStyle(hydrationGoalEnabled && point.value >= goal ? CloveColors.success : Theme.shared.accent)
                 }
-                RuleMark(y: .value("Daily goal", goal))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [5]))
-                    .foregroundStyle(CloveColors.secondaryText)
-                    .annotation(position: .top, alignment: .trailing) {
-                        Text("\(Int(goal)) oz goal")
-                            .font(.caption2.bold())
-                            .foregroundStyle(CloveColors.secondaryText)
-                    }
+                if hydrationGoalEnabled {
+                    RuleMark(y: .value("Daily goal", displayGoal))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5]))
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .annotation(position: .top, alignment: .trailing) {
+                            Text("\(formatHydration(goal)) goal")
+                                .font(.caption2.bold())
+                                .foregroundStyle(CloveColors.secondaryText)
+                        }
+                }
             }
             .chartXSelection(value: $selectedDate)
 
@@ -465,6 +474,9 @@ struct AnalyticsMetricDetailView: View {
     }
 
     private func format(_ value: Double, definition: MetricDefinition) -> String {
+        if definition.unit == .fluidOunces {
+            return formatHydration(value)
+        }
         let digits = definition.displayFormat.maximumFractionDigits
         return value.formatted(.number.precision(.fractionLength(0...digits))) + (definition.displayFormat.suffix ?? unitSuffix(definition.unit))
     }
@@ -477,6 +489,14 @@ struct AnalyticsMetricDetailView: View {
         case .custom(let symbol): return " \(symbol)"
         default: return ""
         }
+    }
+
+    private func displayHydration(_ ounces: Double) -> Double {
+        hydrationUnit == .fluidOunces ? ounces : ounces * 29.5735
+    }
+
+    private func formatHydration(_ ounces: Double) -> String {
+        "\(Int(displayHydration(ounces).rounded())) \(hydrationUnit.symbol)"
     }
 
     private func accessibleSummary(_ result: AnalyticsChartResult) -> String {

@@ -3,8 +3,10 @@ import SwiftUI
 struct HydrationTracker: View {
     @Binding var ounces: Int
     var onAmountChanged: (Int) -> Void = { _ in }
+    @AppStorage(Constants.HYDRATION_UNIT) private var unitRawValue = HydrationUnit.fluidOunces.rawValue
 
-    private let quickAmounts = [8, 12, 16]
+    private var unit: HydrationUnit { HydrationUnit(rawValue: unitRawValue) ?? .fluidOunces }
+    private var quickAmounts: [Int] { HydrationPreferences.quickAmounts(for: unit) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: CloveSpacing.medium) {
@@ -15,29 +17,29 @@ struct HydrationTracker: View {
 
                 Spacer()
 
-                Text("\(ounces) oz")
+                Text(unit.formatted(canonicalOunces: ounces))
                     .font(.system(.title3, design: .rounded, weight: .bold))
                     .foregroundStyle(CloveColors.blue)
                     .contentTransition(.numericText())
-                    .accessibilityLabel("\(ounces) fluid ounces logged")
+                    .accessibilityLabel("\(unit.formatted(canonicalOunces: ounces)) logged")
             }
 
             HStack(spacing: CloveSpacing.small) {
                 ForEach(quickAmounts, id: \.self) { amount in
-                    Button("+\(amount) oz") {
+                    Button("+\(amount) \(unit.symbol)") {
                         add(amount)
                     }
                     .buttonStyle(HydrationQuickAddButtonStyle())
-                    .accessibilityHint("Adds \(amount) fluid ounces")
+                    .accessibilityHint("Adds \(amount) \(unit.title.lowercased())")
                 }
             }
 
-            Stepper(value: persistedOunces, in: 0...512, step: 1) {
-                Text("Adjust by 1 oz")
+            Stepper(value: persistedDisplayAmount, in: 0...unit.displayValue(fromCanonicalOunces: 512), step: unit.adjustmentStep) {
+                Text("Adjust by \(unit.adjustmentStep) \(unit.symbol)")
                     .font(CloveFonts.small())
                     .foregroundStyle(CloveColors.secondaryText)
             }
-            .accessibilityValue("\(ounces) fluid ounces")
+            .accessibilityValue(unit.formatted(canonicalOunces: ounces))
         }
         .padding(CloveSpacing.medium)
         .background(
@@ -50,18 +52,20 @@ struct HydrationTracker: View {
         )
     }
 
-    private func add(_ amount: Int) {
-        ounces = min(ounces + amount, 512)
+    private func add(_ displayAmount: Int) {
+        let canonicalAmount = unit.canonicalOunces(fromDisplayValue: displayAmount)
+        ounces = min(ounces + canonicalAmount, 512)
         onAmountChanged(ounces)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
-    private var persistedOunces: Binding<Int> {
+    private var persistedDisplayAmount: Binding<Int> {
         Binding(
-            get: { ounces },
+            get: { unit.displayValue(fromCanonicalOunces: ounces) },
             set: { newValue in
-                ounces = newValue
-                onAmountChanged(newValue)
+                let canonicalValue = unit.canonicalOunces(fromDisplayValue: newValue)
+                ounces = canonicalValue
+                onAmountChanged(canonicalValue)
             }
         )
     }

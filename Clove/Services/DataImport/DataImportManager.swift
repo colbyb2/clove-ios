@@ -211,7 +211,11 @@ class DataImportManager {
         let mood = parseOptionalInt(getValue("Mood", row: row, columnMap: columnMap))
         let painLevel = parseOptionalInt(getValue("Pain Level", row: row, columnMap: columnMap))
         let energyLevel = parseOptionalInt(getValue("Energy Level", row: row, columnMap: columnMap))
-        let waterIntake = parseOptionalInt(getValue("Hydration (oz)", row: row, columnMap: columnMap))
+        let hydrationOunces = parseOptionalInt(getValue("Hydration (oz)", row: row, columnMap: columnMap))
+            ?? parseOptionalInt(getValue("Hydration (fl oz)", row: row, columnMap: columnMap))
+        let hydrationMilliliters = parseOptionalInt(getValue("Hydration (mL)", row: row, columnMap: columnMap))
+        let waterIntake = hydrationOunces
+            ?? hydrationMilliliters.map { HydrationUnit.milliliters.canonicalOunces(fromDisplayValue: $0) }
         let isFlareDay = parseFlareDay(getValue("Flare Day", row: row, columnMap: columnMap))
         let weather = getValue("Weather", row: row, columnMap: columnMap)
         

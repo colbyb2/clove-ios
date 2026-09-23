@@ -319,12 +319,17 @@ struct InsightGenerator {
     }
 
     private func format(_ value: Double, definition: MetricDefinition) -> String {
+        if definition.unit == .fluidOunces {
+            let hydrationUnit = HydrationPreferences.unit()
+            let displayed = hydrationUnit == .fluidOunces ? value : value * 29.5735
+            return "\(Int(displayed.rounded())) \(hydrationUnit.symbol)"
+        }
         let number = value.formatted(.number.precision(.fractionLength(0...max(1, definition.displayFormat.maximumFractionDigits))))
         return number + (definition.displayFormat.suffix.map { " \($0)" } ?? unit(definition.unit).map { " \($0)" } ?? "")
     }
 
     private func unit(_ unit: MetricUnit) -> String? {
-        switch unit { case .score: return "points"; case .count: return "events"; case .percentage: return "%"; case .fluidOunces: return "fl oz"; case .minutes: return "minutes"; case .category, .occurrence: return nil; case .custom(let symbol): return symbol }
+        switch unit { case .score: return "points"; case .count: return "events"; case .percentage: return "%"; case .fluidOunces: return HydrationPreferences.unit().symbol; case .minutes: return "minutes"; case .category, .occurrence: return nil; case .custom(let symbol): return symbol }
     }
 }
 

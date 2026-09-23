@@ -34,7 +34,7 @@ enum MetricCatalog {
     static let hydration = MetricDefinition(
         id: "hydration",
         displayName: "Hydration",
-        description: "Daily water intake in fluid ounces",
+        description: "Daily water intake",
         category: .coreHealth,
         source: .dailyLog(field: "waterIntake"),
         measurementLevel: .continuous,
@@ -46,7 +46,7 @@ enum MetricCatalog {
         supportedAnalyses: [.descriptive, .trend, .distribution, .periodComparison, .relationship, .laggedRelationship],
         minimumSamples: standardSamples,
         recommendedVisualizations: [.bar, .line, .calendarHeatmap],
-        displayFormat: MetricDisplayFormat(maximumFractionDigits: 0, suffix: " oz")
+        displayFormat: MetricDisplayFormat(maximumFractionDigits: 0)
     )
 
     static let flareDay = MetricDefinition(

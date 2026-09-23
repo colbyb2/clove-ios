@@ -41,6 +41,10 @@ struct CloveArchivePreferences: Codable {
     let selectedColor: String?
     let selectedTimePeriod: String?
     let hydrationGoalOunces: Int?
+    let hydrationGoalEnabled: Bool?
+    let hydrationUnit: String?
+    let hydrationQuickAmountsOunces: [Int]?
+    let hydrationQuickAmountsMilliliters: [Int]?
     let useSliderInput: Bool?
     let overviewDashboard: Bool?
     let smartInsights: Bool?
@@ -60,6 +64,10 @@ struct CloveArchivePreferences: Codable {
             selectedColor: defaults.string(forKey: Constants.SELECTED_COLOR),
             selectedTimePeriod: defaults.string(forKey: Constants.TIMEPERIOD),
             hydrationGoalOunces: defaults.object(forKey: Constants.HYDRATION_GOAL_OUNCES) as? Int,
+            hydrationGoalEnabled: defaults.object(forKey: Constants.HYDRATION_GOAL_ENABLED) as? Bool,
+            hydrationUnit: defaults.string(forKey: Constants.HYDRATION_UNIT),
+            hydrationQuickAmountsOunces: defaults.array(forKey: Constants.HYDRATION_QUICK_AMOUNTS_OUNCES) as? [Int],
+            hydrationQuickAmountsMilliliters: defaults.array(forKey: Constants.HYDRATION_QUICK_AMOUNTS_MILLILITERS) as? [Int],
             useSliderInput: defaults.object(forKey: Constants.USE_SLIDER_INPUT) as? Bool,
             overviewDashboard: defaults.object(forKey: Constants.INSIGHTS_OVERVIEW_DASHBOARD) as? Bool,
             smartInsights: defaults.object(forKey: Constants.INSIGHTS_SMART_INSIGHTS) as? Bool,
@@ -80,6 +88,10 @@ struct CloveArchivePreferences: Codable {
         set(selectedColor, forKey: Constants.SELECTED_COLOR, in: defaults)
         set(selectedTimePeriod, forKey: Constants.TIMEPERIOD, in: defaults)
         set(hydrationGoalOunces, forKey: Constants.HYDRATION_GOAL_OUNCES, in: defaults)
+        set(hydrationGoalEnabled, forKey: Constants.HYDRATION_GOAL_ENABLED, in: defaults)
+        set(hydrationUnit, forKey: Constants.HYDRATION_UNIT, in: defaults)
+        set(hydrationQuickAmountsOunces, forKey: Constants.HYDRATION_QUICK_AMOUNTS_OUNCES, in: defaults)
+        set(hydrationQuickAmountsMilliliters, forKey: Constants.HYDRATION_QUICK_AMOUNTS_MILLILITERS, in: defaults)
         set(useSliderInput, forKey: Constants.USE_SLIDER_INPUT, in: defaults)
         set(overviewDashboard, forKey: Constants.INSIGHTS_OVERVIEW_DASHBOARD, in: defaults)
         set(smartInsights, forKey: Constants.INSIGHTS_SMART_INSIGHTS, in: defaults)

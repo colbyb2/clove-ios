@@ -184,7 +184,8 @@ struct DailyLogDetailView: View {
     }
 
     private func hydrationSection(ounces: Int) -> some View {
-        VStack(spacing: CloveSpacing.medium) {
+        let unit = HydrationPreferences.unit()
+        return VStack(spacing: CloveSpacing.medium) {
             SectionHeaderView(title: "Hydration", icon: CloveSymbols.hydration)
 
             HStack {
@@ -195,7 +196,7 @@ struct DailyLogDetailView: View {
                     .font(CloveFonts.body())
                     .foregroundStyle(CloveColors.primaryText)
                 Spacer()
-                Text("\(ounces) oz")
+                Text(unit.formatted(canonicalOunces: ounces))
                     .font(.system(.title3, design: .rounded, weight: .bold))
                     .foregroundStyle(CloveColors.blue)
             }

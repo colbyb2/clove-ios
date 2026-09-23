@@ -14,6 +14,10 @@ enum Constants {
 
    // Hydration
    static let HYDRATION_GOAL_OUNCES = "hydrationGoalOunces"
+   static let HYDRATION_GOAL_ENABLED = "hydrationGoalEnabled"
+   static let HYDRATION_UNIT = "hydrationDisplayUnit"
+   static let HYDRATION_QUICK_AMOUNTS_OUNCES = "hydrationQuickAmountsOunces"
+   static let HYDRATION_QUICK_AMOUNTS_MILLILITERS = "hydrationQuickAmountsMilliliters"
 
    // Cycle
    static let SHOW_CYCLE_ON_TODAY = "showCycleOnToday"

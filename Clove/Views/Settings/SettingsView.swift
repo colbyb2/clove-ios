@@ -79,6 +79,12 @@ private struct TrackingAndLoggingSettingsView: View {
     @State private var showSymptomsSheet = false
     @State private var trackedSymptoms: [TrackedSymptom] = []
     @AppStorage(Constants.HYDRATION_GOAL_OUNCES) private var hydrationGoalOunces = 64
+    @AppStorage(Constants.HYDRATION_GOAL_ENABLED) private var hydrationGoalEnabled = true
+    @AppStorage(Constants.HYDRATION_UNIT) private var hydrationUnitRawValue = HydrationUnit.fluidOunces.rawValue
+
+    private var hydrationUnit: HydrationUnit {
+        HydrationUnit(rawValue: hydrationUnitRawValue) ?? .fluidOunces
+    }
 
     var body: some View {
         @Bindable var bindableViewModel = viewModel
@@ -106,8 +112,14 @@ private struct TrackingAndLoggingSettingsView: View {
                 NavigationLink {
                     HydrationSettingsView()
                 } label: {
-                    SettingsRowLabel(icon: "drop.fill", color: .blue, title: "Hydration Goal",
-                                     detail: "\(hydrationGoalOunces) oz per day")
+                    SettingsRowLabel(
+                        icon: "drop.fill",
+                        color: .blue,
+                        title: "Hydration",
+                        detail: hydrationGoalEnabled
+                            ? "Goal: \(hydrationUnit.formatted(canonicalOunces: hydrationGoalOunces)) per day"
+                            : "\(hydrationUnit.title), no daily goal"
+                    )
                 }
             }
 
@@ -410,61 +422,105 @@ private struct SettingsButtonRow: View {
 
 private struct HydrationSettingsView: View {
     @AppStorage(Constants.HYDRATION_GOAL_OUNCES) private var hydrationGoalOunces = 64
-    private let suggestedGoals = [48, 64, 80, 96]
+    @AppStorage(Constants.HYDRATION_GOAL_ENABLED) private var goalEnabled = true
+    @AppStorage(Constants.HYDRATION_UNIT) private var unitRawValue = HydrationUnit.fluidOunces.rawValue
+    @State private var quickAmounts: [Int] = [8, 12, 16]
+
+    private var unit: HydrationUnit { HydrationUnit(rawValue: unitRawValue) ?? .fluidOunces }
+    private var goalRange: ClosedRange<Int> {
+        unit == .fluidOunces ? 8...256 : 250...7500
+    }
+    private var goalStep: Int { unit == .fluidOunces ? 8 : 250 }
 
     var body: some View {
         Form {
             Section {
-                VStack(spacing: 8) {
-                    Image(systemName: "drop.fill")
-                        .font(.system(size: 34))
-                        .foregroundStyle(.blue)
-                    Text("\(hydrationGoalOunces) oz")
-                        .font(.system(.largeTitle, design: .rounded).bold())
-                    Text("per day")
-                        .font(.subheadline)
-                        .foregroundStyle(CloveColors.secondaryText)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-
-                Stepper(
-                    "Daily goal",
-                    value: $hydrationGoalOunces,
-                    in: 8...256,
-                    step: 8
-                )
-                .accessibilityValue("\(hydrationGoalOunces) fluid ounces per day")
-            } header: {
-                Text("Your Goal")
-            } footer: {
-                Text("Adjusts in eight-ounce increments. Changes are saved automatically.")
-            }
-
-            Section("Quick Choices") {
-                HStack(spacing: 8) {
-                    ForEach(suggestedGoals, id: \.self) { goal in
-                        Button("\(goal) oz") {
-                            hydrationGoalOunces = goal
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .buttonBorderShape(.capsule)
-                        .tint(hydrationGoalOunces == goal ? Theme.shared.accent : CloveColors.card)
-                        .foregroundStyle(hydrationGoalOunces == goal ? Color.white : CloveColors.primaryText)
+                Picker("Unit", selection: $unitRawValue) {
+                    ForEach(HydrationUnit.allCases) { option in
+                        Text(option.title).tag(option.rawValue)
                     }
                 }
+                .pickerStyle(.segmented)
+            } header: {
+                Text("Display Unit")
+            } footer: {
+                Text("Changing units only changes how hydration is displayed. Existing entries keep the same underlying quantity.")
             }
 
-            Section("How It Is Used") {
-                Label("The dashed chart line shows this daily goal.", systemImage: "line.diagonal")
-                Label("Green bars meet or exceed it; purple bars are below it.", systemImage: "chart.bar.fill")
+            Section {
+                Toggle("Use a daily goal", isOn: $goalEnabled)
+
+                if goalEnabled {
+                    VStack(spacing: 8) {
+                        Image(systemName: "drop.fill")
+                            .font(.system(size: 30))
+                            .foregroundStyle(.blue)
+                        Text(unit.formatted(canonicalOunces: hydrationGoalOunces))
+                            .font(.system(.title, design: .rounded).bold())
+                        Text("per day")
+                            .font(.subheadline)
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+
+                    Stepper("Daily goal", value: displayGoal, in: goalRange, step: goalStep)
+                        .accessibilityValue("\(unit.formatted(canonicalOunces: hydrationGoalOunces)) per day")
+                }
+            } header: {
+                Text("Optional Goal")
+            } footer: {
                 Text("This is a personal tracking target, not medical advice. Hydration needs vary by person and circumstance.")
-                    .font(.caption)
-                    .foregroundStyle(CloveColors.secondaryText)
+            }
+
+            Section {
+                ForEach(quickAmounts.indices, id: \.self) { index in
+                    Stepper(value: quickAmountBinding(at: index), in: quickRange, step: quickStep) {
+                        HStack {
+                            Text("Button \(index + 1)")
+                            Spacer()
+                            Text("+\(quickAmounts[index]) \(unit.symbol)")
+                                .foregroundStyle(CloveColors.secondaryText)
+                        }
+                    }
+                }
+            } header: {
+                Text("Quick Add Amounts")
+            } footer: {
+                Text("These three amounts appear as shortcuts on Today.")
             }
         }
         .navigationTitle("Hydration")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear(perform: loadQuickAmounts)
+        .onChange(of: unitRawValue) { _, _ in loadQuickAmounts() }
+    }
+
+    private var displayGoal: Binding<Int> {
+        Binding(
+            get: { unit.displayValue(fromCanonicalOunces: hydrationGoalOunces) },
+            set: { hydrationGoalOunces = unit.canonicalOunces(fromDisplayValue: $0) }
+        )
+    }
+
+    private var quickRange: ClosedRange<Int> {
+        unit == .fluidOunces ? 1...64 : 50...2000
+    }
+
+    private var quickStep: Int { unit == .fluidOunces ? 1 : 50 }
+
+    private func loadQuickAmounts() {
+        quickAmounts = HydrationPreferences.quickAmounts(for: unit)
+    }
+
+    private func quickAmountBinding(at index: Int) -> Binding<Int> {
+        Binding(
+            get: { quickAmounts[index] },
+            set: { newValue in
+                quickAmounts[index] = newValue
+                HydrationPreferences.saveQuickAmounts(quickAmounts, for: unit)
+            }
+        )
     }
 }
 

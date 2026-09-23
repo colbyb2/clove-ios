@@ -117,7 +117,10 @@ class DataManager {
         
         for category in orderedCategories {
             if categories.contains(category) {
-                headers.append(escapeCSVField(category.rawValue))
+                let header = category == .hydration
+                    ? "Hydration (\(HydrationPreferences.unit().symbol))"
+                    : category.rawValue
+                headers.append(escapeCSVField(header))
             }
         }
         
@@ -166,7 +169,9 @@ class DataManager {
         case .energy:
             return log.energyLevel.map { String($0) } ?? ""
         case .hydration:
-            return log.waterIntake.map { String($0) } ?? ""
+            return log.waterIntake.map {
+                String(HydrationPreferences.unit().displayValue(fromCanonicalOunces: $0))
+            } ?? ""
         case .flareDay:
             return log.isFlareDay ? "Yes" : "No"
         case .weather:

@@ -359,6 +359,10 @@ enum ExportCategory: String, CaseIterable {
     case meals = "Meals"
     case activities = "Activities"
     case notes = "Notes"
+
+    var displayName: String {
+        self == .hydration ? "Hydration (\(HydrationPreferences.unit().symbol))" : rawValue
+    }
     
     var icon: String {
         switch self {
@@ -383,7 +387,7 @@ enum ExportCategory: String, CaseIterable {
         case .mood: return "Daily mood ratings"
         case .pain: return "Pain level scores"
         case .energy: return "Energy level scores"
-        case .hydration: return "Daily water intake in ounces"
+        case .hydration: return "Daily water intake in \(HydrationPreferences.unit().title.lowercased())"
         case .flareDay: return "Flare day indicators"
         case .weather: return "Weather conditions"
         case .bowelMovements: return "Bristol stool chart data"
@@ -408,7 +412,7 @@ struct CategoryToggleCard: View {
                     .font(.system(size: 24, weight: .medium))
                     .foregroundStyle(isSelected ? Theme.shared.accent : CloveColors.secondaryText)
                 
-                Text(category.rawValue)
+                Text(category.displayName)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(CloveColors.primaryText)
                     .lineLimit(1)
@@ -427,7 +431,7 @@ struct CategoryToggleCard: View {
                     .stroke(isSelected ? Theme.shared.accent : CloveColors.background, lineWidth: 2)
             )
         }
-        .accessibilityLabel("\(category.rawValue) export option")
+        .accessibilityLabel("\(category.displayName) export option")
         .accessibilityHint(isSelected ? "Currently selected, tap to deselect" : "Currently not selected, tap to select")
     }
 }

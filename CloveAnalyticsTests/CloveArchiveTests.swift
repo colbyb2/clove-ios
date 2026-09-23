@@ -15,6 +15,9 @@ final class CloveArchiveTests: XCTestCase {
         let backedUpColor = "0.1,0.2,0.3,1.0"
         defaults.set(backedUpColor, forKey: Constants.SELECTED_COLOR)
         defaults.set(80, forKey: Constants.HYDRATION_GOAL_OUNCES)
+        defaults.set(false, forKey: Constants.HYDRATION_GOAL_ENABLED)
+        defaults.set(HydrationUnit.milliliters.rawValue, forKey: Constants.HYDRATION_UNIT)
+        defaults.set([200, 400, 600], forKey: Constants.HYDRATION_QUICK_AMOUNTS_MILLILITERS)
 
         let reminder = ScheduledNotification(
             id: "morning-check-in",
@@ -51,6 +54,8 @@ final class CloveArchiveTests: XCTestCase {
         defaults.set("0.8,0.2,0.4,1.0", forKey: Constants.SELECTED_COLOR)
         Theme.shared.accent = .pink
         defaults.set(12, forKey: Constants.HYDRATION_GOAL_OUNCES)
+        defaults.set(true, forKey: Constants.HYDRATION_GOAL_ENABLED)
+        defaults.set(HydrationUnit.fluidOunces.rawValue, forKey: Constants.HYDRATION_UNIT)
 
         let result = try manager.restoreArchive(from: archiveURL)
 
@@ -88,6 +93,9 @@ final class CloveArchiveTests: XCTestCase {
         XCTAssertEqual(restoredColorComponents[2], 0.3, accuracy: 0.0001)
         XCTAssertEqual(restoredColorComponents[3], 1.0, accuracy: 0.0001)
         XCTAssertEqual(defaults.integer(forKey: Constants.HYDRATION_GOAL_OUNCES), 80)
+        XCTAssertFalse(defaults.bool(forKey: Constants.HYDRATION_GOAL_ENABLED))
+        XCTAssertEqual(defaults.string(forKey: Constants.HYDRATION_UNIT), HydrationUnit.milliliters.rawValue)
+        XCTAssertEqual(defaults.array(forKey: Constants.HYDRATION_QUICK_AMOUNTS_MILLILITERS) as? [Int], [200, 400, 600])
         XCTAssertEqual(restoredNotifications.map(\.id), ["morning-check-in"])
         XCTAssertEqual(revision.reasons.map(\.rawValue), [AnalyticsRevisionReason.dataImport.rawValue])
     }

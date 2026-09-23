@@ -123,7 +123,7 @@ struct EnergyLevelMetricProvider: MetricProvider {
 struct HydrationMetricProvider: MetricProvider {
     let id = "hydration"
     let displayName = "Hydration"
-    let description = "Daily water intake in fluid ounces"
+    let description = "Daily water intake"
     let icon = CloveSymbols.hydration
     let category: MetricCategory = .coreHealth
     let dataType: MetricDataType = .count
@@ -150,7 +150,9 @@ struct HydrationMetricProvider: MetricProvider {
     }
 
     func formatValue(_ value: Double) -> String {
-        "\(Int(value.rounded())) oz"
+        let unit = HydrationPreferences.unit()
+        let displayed = unit == .fluidOunces ? value : value * 29.5735
+        return "\(Int(displayed.rounded())) \(unit.symbol)"
     }
 
     var chartConfiguration: MetricChartConfiguration {

@@ -3,6 +3,8 @@ import SwiftUI
 struct HistoryCalendarView: View {
     @Environment(\.dependencies) private var dependencies
     @AppStorage(Constants.HYDRATION_GOAL_OUNCES) private var hydrationGoalOunces = 64
+    @AppStorage(Constants.HYDRATION_GOAL_ENABLED) private var hydrationGoalEnabled = true
+    @AppStorage(Constants.HYDRATION_UNIT) private var hydrationUnitRawValue = HydrationUnit.fluidOunces.rawValue
     @State private var viewModel: HistoryCalendarViewModel
     @State private var currentMonth = Date()
 
@@ -57,7 +59,9 @@ struct HistoryCalendarView: View {
                 ColorLegendView(
                     category: viewModel.selectedCategory,
                     trackedSymptoms: viewModel.trackedSymptoms,
-                    hydrationGoalOunces: hydrationGoalOunces
+                    hydrationGoalOunces: hydrationGoalOunces,
+                    hydrationGoalEnabled: hydrationGoalEnabled,
+                    hydrationUnit: HydrationUnit(rawValue: hydrationUnitRawValue) ?? .fluidOunces
                 )
                     .padding(.horizontal)
                     .padding(.bottom)
@@ -281,6 +285,7 @@ struct HistoryCalendarView: View {
     }
 
     private func hydrationColor(ounces: Int) -> Color {
+        guard hydrationGoalEnabled else { return CloveColors.blue.opacity(0.85) }
         let progress = Double(ounces) / Double(max(1, hydrationGoalOunces))
         switch progress {
         case ..<0.25: return CloveColors.red.opacity(0.85)
@@ -317,6 +322,8 @@ struct ColorLegendView: View {
     let category: TrackingCategory
     let trackedSymptoms: [TrackedSymptom]
     let hydrationGoalOunces: Int
+    let hydrationGoalEnabled: Bool
+    let hydrationUnit: HydrationUnit
     
     var body: some View {
         VStack(spacing: 8) {
@@ -362,16 +369,25 @@ struct ColorLegendView: View {
                 )
 
             case .hydration:
-                GradientLegendView(
-                    colors: [
-                        CloveColors.red.opacity(0.85),
-                        CloveColors.orange.opacity(0.85),
-                        CloveColors.yellow.opacity(0.85),
-                        CloveColors.blue.opacity(0.8),
-                        CloveColors.green.opacity(0.9)
-                    ],
-                    labels: ["Low", "Goal met (\(hydrationGoalOunces) oz)"]
-                )
+                if hydrationGoalEnabled {
+                    GradientLegendView(
+                        colors: [
+                            CloveColors.red.opacity(0.85),
+                            CloveColors.orange.opacity(0.85),
+                            CloveColors.yellow.opacity(0.85),
+                            CloveColors.blue.opacity(0.8),
+                            CloveColors.green.opacity(0.9)
+                        ],
+                        labels: ["Low", "Goal met (\(hydrationUnit.formatted(canonicalOunces: hydrationGoalOunces)))"]
+                    )
+                } else {
+                    BinaryLegendView(
+                        noColor: .clear,
+                        yesColor: CloveColors.blue.opacity(0.85),
+                        noLabel: "None",
+                        yesLabel: "Logged"
+                    )
+                }
                 
             case .meals:
                 BinaryLegendView(
