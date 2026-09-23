@@ -13,6 +13,8 @@ struct TodayView: View {
     @State private var layoutPreferences = TodayLayoutPreferences.load()
     @State private var selectedSurface: TodaySurface = .checkIn
     @State private var unfinishedPlanCount = 0
+    @State private var expandedRatingModule: TodayModule?
+    @State private var expandedSymptomID: Int64?
 
     @State private var showEditSymptoms: Bool = false
     @State private var showQuickAddSymptomSheet: Bool = false
@@ -28,7 +30,7 @@ struct TodayView: View {
                 .edgesIgnoringSafeArea(.all)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 16) {
                     VStack(spacing: 8) {
                         DateNavigationHeader(
                             selectedDate: $viewModel.selectedDate,
@@ -309,11 +311,27 @@ struct TodayView: View {
     private func moduleContent(_ module: TodayModule) -> some View {
         switch module {
         case .mood:
-            AccessibleRatingInput(value: $viewModel.logData.mood, label: "Mood", icon: viewModel.currentMoodSymbol, maxValue: 10)
+            TodayRatingInput(
+                value: $viewModel.logData.mood,
+                label: "Mood",
+                icon: viewModel.currentMoodSymbol,
+                isExpanded: .constant(true),
+                isProminent: true
+            )
         case .pain:
-            AccessibleRatingInput(value: $viewModel.logData.painLevel, label: "Pain Level", icon: CloveSymbols.pain, maxValue: 10)
+            TodayRatingInput(
+                value: $viewModel.logData.painLevel,
+                label: "Pain",
+                icon: CloveSymbols.pain,
+                isExpanded: ratingModuleExpansion(for: .pain)
+            )
         case .energy:
-            AccessibleRatingInput(value: $viewModel.logData.energyLevel, label: "Energy Level", icon: CloveSymbols.energy, maxValue: 10)
+            TodayRatingInput(
+                value: $viewModel.logData.energyLevel,
+                label: "Energy",
+                icon: CloveSymbols.energy,
+                isExpanded: ratingModuleExpansion(for: .energy)
+            )
         case .hydration:
             HydrationTracker(ounces: $viewModel.logData.waterIntake) { _ in viewModel.saveHydration() }
         case .symptoms:
@@ -352,88 +370,43 @@ struct TodayView: View {
     }
 
     private var medicationsModule: some View {
-        HStack {
-            Label("Medications", systemImage: CloveSymbols.medication)
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(CloveColors.primaryText)
-            Spacer()
-            Button {
-                showMedicationSelection = true
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            } label: {
-                HStack {
-                    Text(medicationSummaryText())
-                    if viewModel.logData.medicationAdherence.isEmpty { Image(systemName: "plus.circle.fill") }
-                }
-                .font(.system(.body, design: .rounded).weight(.medium))
-                .foregroundStyle(viewModel.logData.medicationAdherence.isEmpty ? CloveColors.secondaryText : CloveColors.primary)
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.small))
-                .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
-            }
-            .accessibilityLabel("Medication tracking")
-            .accessibilityHint("Opens medication checklist")
+        TodayActionRow(
+            title: "Medications",
+            icon: CloveSymbols.medication,
+            summary: medicationSummaryText(),
+            hasValue: !viewModel.logData.medicationAdherence.isEmpty
+        ) {
+            showMedicationSelection = true
         }
-        .padding(.vertical, CloveSpacing.small)
     }
 
     private var weatherModule: some View {
-        HStack {
-            Label("Weather", systemImage: CloveSymbols.weather(for: viewModel.logData.weather))
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(CloveColors.primaryText)
-            Spacer()
-            Button {
-                showWeatherSelection = true
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            } label: {
-                HStack {
-                    Text(viewModel.logData.weather ?? "Tap to select")
-                    if viewModel.logData.weather == nil { Image(systemName: "plus.circle.fill") }
-                }
-                .font(.system(.body, design: .rounded).weight(.medium))
-                .foregroundStyle(viewModel.logData.weather == nil ? CloveColors.secondaryText : CloveColors.primary)
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.small))
-                .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
-            }
-            .accessibilityLabel("Weather selection")
-            .accessibilityHint("Opens weather selection dialog")
+        TodayActionRow(
+            title: "Weather",
+            icon: CloveSymbols.weather(for: viewModel.logData.weather),
+            summary: viewModel.logData.weather ?? "Not logged",
+            hasValue: viewModel.logData.weather != nil
+        ) {
+            showWeatherSelection = true
         }
-        .padding(.vertical, CloveSpacing.small)
     }
 
     private var notesModule: some View {
-        HStack {
-            Label("Notes", systemImage: CloveSymbols.notes)
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(CloveColors.primaryText)
-            Spacer()
-            Button {
-                showNotesEntry = true
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            } label: {
-                HStack {
-                    Text(notesSummaryText()).lineLimit(1)
-                    if viewModel.logData.notes == nil { Image(systemName: "plus.circle.fill") }
-                }
-                .font(.system(.body, design: .rounded).weight(.medium))
-                .foregroundStyle(viewModel.logData.notes == nil ? CloveColors.secondaryText : CloveColors.primary)
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.small))
-                .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
-            }
-            .accessibilityLabel("Notes entry")
-            .accessibilityHint("Opens notes editor for this day")
+        TodayActionRow(
+            title: "Notes",
+            icon: CloveSymbols.notes,
+            summary: notesSummaryText(),
+            hasValue: viewModel.logData.notes?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        ) {
+            showNotesEntry = true
         }
-        .padding(.vertical, CloveSpacing.small)
     }
 
     private var flareModule: some View {
-        VStack(spacing: CloveSpacing.small) {
-            HStack {
+        VStack(spacing: 6) {
+            HStack(spacing: 10) {
                 Label("Flare Day", systemImage: CloveSymbols.flare)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundStyle(CloveColors.primaryText)
                 Spacer()
                 CloveToggle(toggled: $viewModel.logData.isFlareDay, onColor: .error, handleColor: .card.opacity(0.6))
@@ -447,7 +420,8 @@ struct TodayView: View {
                     .font(CloveFonts.small()).foregroundStyle(CloveColors.secondaryText).italic()
             }
         }
-        .padding(.vertical, CloveSpacing.small)
+        .padding(CloveSpacing.medium)
+        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
     }
 
     private func moduleIsEnabled(_ module: TodayModule) -> Bool {
@@ -492,123 +466,143 @@ struct TodayView: View {
         }
     }
 
+    private func ratingModuleExpansion(for module: TodayModule) -> Binding<Bool> {
+        Binding(
+            get: { expandedRatingModule == module },
+            set: { isExpanded in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    expandedRatingModule = isExpanded ? module : nil
+                }
+            }
+        )
+    }
+
+    private func symptomExpansion(for id: Int64) -> Binding<Bool> {
+        Binding(
+            get: { expandedSymptomID == id },
+            set: { isExpanded in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    expandedSymptomID = isExpanded ? id : nil
+                }
+            }
+        )
+    }
+
     @ViewBuilder
     private var symptomsSection: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Symptoms").font(.system(size: 22, weight: .semibold, design: .rounded))
-                Text("Unanswered symptoms are not included in your data")
-                    .font(.caption)
-                    .foregroundStyle(CloveColors.secondaryText)
-            }
-            Spacer()
-            Button("Manage") {
-                showEditSymptoms = true
-                // Haptic feedback
-                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                impactFeedback.impactOccurred()
-            }
-            .foregroundStyle(Theme.shared.accent)
-            .fontWeight(.semibold)
-            .frame(minWidth: 44, minHeight: 44)  // Minimum touch target
-            .accessibilityLabel("Manage tracked symptoms")
-            .accessibilityHint("Choose which symptoms appear in the daily tracker")
-        }
-        ForEach(viewModel.logData.symptomRatings, id: \.symptomId) { symptomRating in
-            if let index = viewModel.logData.symptomRatings.firstIndex(where: {
-                $0.symptomId == symptomRating.symptomId
-            }) {
-                let isOneTimeSymptom = SymptomManager.shared.isOneTimeSymptom(
-                    id: symptomRating.symptomId, name: symptomRating.symptomName)
-
-                if isOneTimeSymptom {
-                    HStack(spacing: 8) {
-                        Text("Today only")
-                            .font(.caption2.bold())
-                            .foregroundStyle(Theme.shared.accent)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Theme.shared.accent.opacity(0.12), in: Capsule())
-                        Text(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted))
-                            .font(.caption)
-                            .foregroundStyle(CloveColors.secondaryText)
-                        Spacer()
-                        Button("Track every day") { promoteOneTimeSymptom(at: index) }
-                            .font(.caption.bold())
-                            .foregroundStyle(Theme.shared.accent)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: CloveSpacing.small) {
+                Image(systemName: CloveSymbols.symptom)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Theme.shared.accent)
+                Text("Symptoms")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                Spacer()
+                Menu {
+                    Button("Choose tracked symptoms", systemImage: "checklist") {
+                        showEditSymptoms = true
                     }
-                }
-
-                if symptomRating.isBinary {
-                    BinarySymptomInput(
-                        value: $viewModel.logData.symptomRatings[index].ratingDouble,
-                        label: symptomRating.symptomName,
-                        icon: CloveSymbols.symptom,
-                        onDelete: isOneTimeSymptom
-                            ? { viewModel.logData.symptomRatings.remove(at: index) } : nil
-                    )
-                } else {
-                    AccessibleRatingInput(
-                        value: $viewModel.logData.symptomRatings[index].ratingDouble,
-                        label: symptomRating.symptomName,
-                        icon: CloveSymbols.symptom,
-                        maxValue: 10,
-                        onDelete: isOneTimeSymptom
-                            ? { viewModel.logData.symptomRatings.remove(at: index) } : nil
-                    )
-                }
-            }
-        }
-        if viewModel.logData.symptomRatings.isEmpty {
-            VStack(spacing: 10) {
-                Image(systemName: "stethoscope")
-                    .font(.title2)
-                    .foregroundStyle(Theme.shared.accent)
-                Text("No symptoms tracked daily")
-                    .font(.headline)
-                Text("Choose symptoms you regularly monitor, or log something just for this day.")
-                    .font(.caption)
-                    .foregroundStyle(CloveColors.secondaryText)
-                    .multilineTextAlignment(.center)
-                Button("Choose tracked symptoms") { showEditSymptoms = true }
-                    .buttonStyle(.bordered)
-                    .tint(Theme.shared.accent)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-        }
-
-        // Quick add button for occasional symptoms
-        Button(action: {
-            showQuickAddSymptomSheet = true
-            // Haptic feedback
-            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-            impactFeedback.impactOccurred()
-        }) {
-            HStack {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Log another symptom today")
-                        .foregroundStyle(CloveColors.primaryText)
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    Text("Only appears on \(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted))")
+                    Button("Log another symptom", systemImage: "plus") {
+                        showQuickAddSymptomSheet = true
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(CloveColors.secondaryText)
-                        .font(.caption2)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
-
-                Image(systemName: "plus.circle.fill")
-                    .foregroundStyle(Theme.shared.accent)
-                    .font(.system(size: 14))
+                .accessibilityLabel("Symptom options")
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 9)
-            .background(CloveColors.card)
-            .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
-            .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+
+            ForEach(viewModel.logData.symptomRatings, id: \.symptomId) { symptomRating in
+                if let index = viewModel.logData.symptomRatings.firstIndex(where: {
+                    $0.symptomId == symptomRating.symptomId
+                }) {
+                    symptomRow(for: symptomRating, at: index)
+                }
+            }
+
+            if viewModel.logData.symptomRatings.isEmpty {
+                Button {
+                    showEditSymptoms = true
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "plus.circle")
+                        Text("Choose symptoms to track")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.bold())
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.shared.accent)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Button {
+                showQuickAddSymptomSheet = true
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                Label("Log another symptom", systemImage: "plus")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.shared.accent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 4)
+            }
+            .buttonStyle(.plain)
         }
-        .padding(.top, CloveSpacing.small)
+        .padding(CloveSpacing.medium)
+        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
         .sheet(isPresented: $showQuickAddSymptomSheet) {
             QuickAddSymptomSheet()
                 .environment(viewModel)
+        }
+    }
+
+    @ViewBuilder
+    private func symptomRow(for symptomRating: SymptomRatingVM, at index: Int) -> some View {
+        let isOneTimeSymptom = SymptomManager.shared.isOneTimeSymptom(
+            id: symptomRating.symptomId,
+            name: symptomRating.symptomName
+        )
+        let deleteAction: (() -> Void)? = isOneTimeSymptom
+            ? { viewModel.logData.symptomRatings.remove(at: index) }
+            : nil
+
+        VStack(alignment: .leading, spacing: 6) {
+            if isOneTimeSymptom {
+                HStack(spacing: 8) {
+                    Text("Today only")
+                        .font(.caption2.bold())
+                        .foregroundStyle(Theme.shared.accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Theme.shared.accent.opacity(0.1), in: Capsule())
+                    Spacer()
+                    Button("Track every day") { promoteOneTimeSymptom(at: index) }
+                        .font(.caption.bold())
+                        .foregroundStyle(Theme.shared.accent)
+                }
+            }
+
+            if symptomRating.isBinary {
+                TodayBinarySymptomInput(
+                    value: $viewModel.logData.symptomRatings[index].ratingDouble,
+                    label: symptomRating.symptomName,
+                    onDelete: deleteAction
+                )
+            } else {
+                TodayRatingInput(
+                    value: $viewModel.logData.symptomRatings[index].ratingDouble,
+                    label: symptomRating.symptomName,
+                    icon: nil,
+                    isExpanded: symptomExpansion(for: symptomRating.symptomId),
+                    isNested: true,
+                    onDelete: deleteAction
+                )
+            }
         }
     }
 
@@ -662,6 +656,342 @@ struct TodayView: View {
         } else {
             return String(trimmedNotes.prefix(40)) + "..."
         }
+    }
+}
+
+private struct TodayActionRow: View {
+    let title: String
+    let icon: String
+    let summary: String
+    let hasValue: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            action()
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Theme.shared.accent)
+                    .frame(width: 24)
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(CloveColors.primaryText)
+                Spacer(minLength: 10)
+                Text(summary)
+                    .font(.subheadline.weight(hasValue ? .semibold : .regular))
+                    .foregroundStyle(hasValue ? CloveColors.primaryText : CloveColors.secondaryText)
+                    .lineLimit(1)
+                Image(systemName: "chevron.right")
+                    .font(.caption.bold())
+                    .foregroundStyle(CloveColors.secondaryText)
+            }
+            .padding(CloveSpacing.medium)
+            .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title), \(summary)")
+        .accessibilityHint("Double tap to edit")
+    }
+}
+
+private struct TodayRatingInput: View {
+    @Binding var value: Double?
+    let label: String
+    let icon: String?
+    @Binding var isExpanded: Bool
+    var isProminent = false
+    var isNested = false
+    var onDelete: (() -> Void)?
+
+    @AppStorage(Constants.USE_SLIDER_INPUT) private var useSliderInput = true
+
+    init(
+        value: Binding<Double?>,
+        label: String,
+        icon: String?,
+        isExpanded: Binding<Bool>,
+        isProminent: Bool = false,
+        isNested: Bool = false,
+        onDelete: (() -> Void)? = nil
+    ) {
+        self._value = value
+        self.label = label
+        self.icon = icon
+        self._isExpanded = isExpanded
+        self.isProminent = isProminent
+        self.isNested = isNested
+        self.onDelete = onDelete
+    }
+
+    private var showsEditor: Bool { isProminent || isExpanded }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Button {
+                guard !isProminent else { return }
+                isExpanded.toggle()
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                HStack(spacing: 10) {
+                    if let icon {
+                        Image(systemName: icon)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(Theme.shared.accent)
+                            .frame(width: 24)
+                    }
+
+                    Text(label)
+                        .font(.system(size: isProminent ? 20 : 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(CloveColors.primaryText)
+
+                    Spacer()
+
+                    if let value {
+                        Text("\(Int(value))")
+                            .font(.system(size: isProminent ? 24 : 17, weight: .bold, design: .rounded))
+                            .foregroundStyle(Theme.shared.accent)
+                            .contentTransition(.numericText())
+                    } else {
+                        Text("Not logged")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
+
+                    if !isProminent {
+                        Image(systemName: "chevron.down")
+                            .font(.caption.bold())
+                            .foregroundStyle(CloveColors.secondaryText)
+                            .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(label), \(value.map { String(Int($0)) } ?? "not logged")")
+            .accessibilityHint(isProminent ? "Rating control" : "Double tap to edit")
+
+            if showsEditor {
+                if value != nil {
+                    HStack {
+                        Button("Clear") { value = nil }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(CloveColors.secondaryText)
+                        Spacer()
+                        Button {
+                            useSliderInput.toggle()
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        } label: {
+                            Label(
+                                useSliderInput ? "Use buttons" : "Use slider",
+                                systemImage: useSliderInput ? "plusminus" : "slider.horizontal.3"
+                            )
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(CloveColors.secondaryText)
+                        }
+                    }
+                }
+
+                if value == nil || useSliderInput {
+                    OptionalRatingSlider(value: $value, minValue: 0, maxValue: 10, step: 1)
+                } else {
+                    PlusMinusControls(value: answeredValue, minValue: 0, maxValue: 10, step: 1, label: label)
+                }
+            }
+        }
+        .padding(isNested ? 12 : CloveSpacing.medium)
+        .background(
+            isNested ? CloveColors.background.opacity(0.55) : CloveColors.card,
+            in: RoundedRectangle(cornerRadius: isNested ? CloveCorners.small : CloveCorners.medium)
+        )
+        .overlay(alignment: .topTrailing) {
+            if let onDelete {
+                Menu {
+                    Button("Remove", systemImage: "trash", role: .destructive, action: onDelete)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.caption.bold())
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .frame(width: 36, height: 36)
+                }
+                .padding(.trailing, 4)
+                .accessibilityLabel("More options for \(label)")
+            }
+        }
+    }
+
+    private var answeredValue: Binding<Double> {
+        Binding(
+            get: { value ?? 5 },
+            set: { value = $0 }
+        )
+    }
+}
+
+private struct OptionalRatingSlider: View {
+    @Binding var value: Double?
+    let minValue: Int
+    let maxValue: Int
+    let step: Int
+
+    @State private var isDragging = false
+    @State private var lastFeedbackValue: Double?
+
+    var body: some View {
+        VStack(spacing: 4) {
+            if value == nil {
+                Text("Tap or drag to log")
+                    .font(.caption)
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(CloveColors.secondaryText.opacity(0.16))
+                        .frame(height: 8)
+
+                    if let value {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Theme.shared.accent)
+                            .frame(width: progressWidth(for: value, totalWidth: geometry.size.width), height: 8)
+
+                        Circle()
+                            .fill(Theme.shared.accent)
+                            .frame(width: isDragging ? 28 : 24, height: isDragging ? 28 : 24)
+                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                            .shadow(color: .black.opacity(0.14), radius: 3, y: 1)
+                            .position(
+                                x: thumbPosition(for: value, totalWidth: geometry.size.width),
+                                y: geometry.size.height / 2
+                            )
+                    }
+                }
+                .frame(height: 44)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { gesture in
+                            isDragging = true
+                            let updated = rating(at: gesture.location.x, totalWidth: geometry.size.width)
+                            if lastFeedbackValue != updated {
+                                UISelectionFeedbackGenerator().selectionChanged()
+                                lastFeedbackValue = updated
+                            }
+                            value = updated
+                        }
+                        .onEnded { _ in
+                            isDragging = false
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        }
+                )
+            }
+            .frame(height: 44)
+
+            HStack {
+                Text("\(minValue)")
+                Spacer()
+                Text("\(maxValue)")
+            }
+            .font(CloveFonts.small())
+            .foregroundStyle(CloveColors.secondaryText)
+        }
+        .accessibilityElement()
+        .accessibilityLabel("Rating slider")
+        .accessibilityValue(value.map { "\(Int($0)) out of \(maxValue)" } ?? "Not logged")
+        .accessibilityAdjustableAction { direction in
+            let current = value ?? Double((minValue + maxValue) / 2)
+            let change = direction == .increment ? step : -step
+            value = max(Double(minValue), min(Double(maxValue), current + Double(change)))
+        }
+    }
+
+    private func rating(at xPosition: CGFloat, totalWidth: CGFloat) -> Double {
+        guard totalWidth > 0 else { return Double(minValue) }
+        let fraction = max(0, min(1, xPosition / totalWidth))
+        let rawValue = Double(minValue) + Double(fraction) * Double(maxValue - minValue)
+        return (rawValue / Double(step)).rounded() * Double(step)
+    }
+
+    private func progressWidth(for value: Double, totalWidth: CGFloat) -> CGFloat {
+        totalWidth * CGFloat((value - Double(minValue)) / Double(maxValue - minValue))
+    }
+
+    private func thumbPosition(for value: Double, totalWidth: CGFloat) -> CGFloat {
+        max(12, min(totalWidth - 12, progressWidth(for: value, totalWidth: totalWidth)))
+    }
+}
+
+private struct TodayBinarySymptomInput: View {
+    @Binding var value: Double?
+    let label: String
+    var onDelete: (() -> Void)?
+
+    private var isNo: Bool { value == 0 }
+    private var isYes: Bool { value.map { $0 > 0 } ?? false }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(label)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundStyle(CloveColors.primaryText)
+                .lineLimit(1)
+
+            Spacer(minLength: 8)
+
+            binaryButton(title: "No", icon: "xmark", isSelected: isNo, value: 0)
+            binaryButton(title: "Yes", icon: "checkmark", isSelected: isYes, value: 10)
+
+            if let onDelete {
+                Menu {
+                    Button("Remove", systemImage: "trash", role: .destructive, action: onDelete)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.caption.bold())
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .frame(width: 34, height: 36)
+                }
+                .accessibilityLabel("More options for \(label)")
+            }
+        }
+        .padding(10)
+        .background(CloveColors.background.opacity(0.55), in: RoundedRectangle(cornerRadius: CloveCorners.small))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(label), \(value == nil ? "not logged" : (isYes ? "yes" : "no"))")
+    }
+
+    private func binaryButton(
+        title: String,
+        icon: String,
+        isSelected: Bool,
+        value newValue: Double
+    ) -> some View {
+        Button {
+            value = isSelected ? nil : newValue
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: isSelected ? "\(icon).circle.fill" : "\(icon).circle")
+                Text(title)
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(isSelected ? Theme.shared.accent : CloveColors.secondaryText)
+            .frame(minWidth: 54, minHeight: 36)
+            .background(
+                isSelected ? Theme.shared.accent.opacity(0.12) : Color.clear,
+                in: Capsule()
+            )
+            .overlay {
+                Capsule().stroke(CloveColors.secondaryText.opacity(isSelected ? 0 : 0.15), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title) for \(label)")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

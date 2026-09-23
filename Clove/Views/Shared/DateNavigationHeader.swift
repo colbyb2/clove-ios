@@ -21,7 +21,7 @@ struct DateNavigationHeader: View {
    
    
    var body: some View {
-      VStack(spacing: CloveSpacing.medium) {
+      VStack(spacing: CloveSpacing.small) {
          // Main navigation row
          HStack {
             // Previous day button
@@ -37,8 +37,7 @@ struct DateNavigationHeader: View {
                   .frame(width: 44, height: 44)
                   .background(
                      Circle()
-                        .fill(CloveColors.card)
-                        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        .fill(CloveColors.background.opacity(0.65))
                   )
             }
             .accessibilityLabel("Previous day")
@@ -49,7 +48,7 @@ struct DateNavigationHeader: View {
             // Current date display
             VStack(spacing: 4) {
                Text(formattedDateTitle)
-                  .font(.system(size: 24, weight: .bold, design: .rounded))
+                  .font(.system(size: 22, weight: .bold, design: .rounded))
                   .foregroundStyle(CloveColors.primaryText)
                   .accessibilityLabel("Current date: \(accessibilityDateString)")
                
@@ -90,8 +89,7 @@ struct DateNavigationHeader: View {
                   .frame(width: 44, height: 44)
                   .background(
                      Circle()
-                        .fill(CloveColors.card)
-                        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        .fill(CloveColors.background.opacity(0.65))
                   )
             }
             .accessibilityLabel("Next day")
@@ -145,7 +143,7 @@ struct DateNavigationHeader: View {
          }
       }
       .padding(.horizontal, CloveSpacing.medium)
-      .padding(.vertical, CloveSpacing.small)
+      .padding(.vertical, 6)
       .background(
          RoundedRectangle(cornerRadius: CloveCorners.medium)
             .fill(CloveColors.card)

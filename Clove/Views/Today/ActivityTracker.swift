@@ -6,7 +6,7 @@ struct ActivityTracker: View {
     @State private var activityEntries: [ActivityEntry] = []
     @State private var showAddActivitySheet: Bool = false
     @State private var editingActivity: ActivityEntry?
-    @State private var isExpanded: Bool = true
+    @State private var isExpanded: Bool = false
 
     private let repo = ActivityEntryRepo.shared
 
@@ -30,6 +30,10 @@ struct ActivityTracker: View {
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
                             .foregroundStyle(CloveColors.primaryText)
 
+                        Text(activityEntries.isEmpty ? "Not logged" : "\(activityEntries.count)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(CloveColors.secondaryText)
+
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(CloveColors.secondaryText)
@@ -46,20 +50,10 @@ struct ActivityTracker: View {
                     let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                     impactFeedback.impactOccurred()
                 }) {
-                    HStack {
-                        Text(activityButtonText())
-                            .foregroundStyle(activityEntries.isEmpty ? CloveColors.secondaryText : CloveColors.primaryText)
-                            .font(.system(.body, design: .rounded).weight(.medium))
-
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundStyle(Theme.shared.accent)
-                            .font(.system(size: 16))
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(CloveColors.card)
-                    .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
-                    .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundStyle(Theme.shared.accent)
+                        .font(.system(size: 20))
+                        .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel("Add activity entry")
                 .accessibilityHint("Opens activity selection sheet")
@@ -90,7 +84,8 @@ struct ActivityTracker: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
             }
         }
-        .padding(.vertical, CloveSpacing.small)
+        .padding(CloveSpacing.medium)
+        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
         .onAppear {
             loadActivityEntries()
         }
@@ -130,13 +125,6 @@ struct ActivityTracker: View {
                 return "\(hours)h \(minutes)m"
             }
         }
-    }
-
-    private func activityButtonText() -> String {
-        if activityEntries.isEmpty {
-            return "Tap to track"
-        }
-        return "\(activityEntries.count)"
     }
 
     private func loadActivityEntries() {

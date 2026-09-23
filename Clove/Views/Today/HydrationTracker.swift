@@ -4,12 +4,13 @@ struct HydrationTracker: View {
     @Binding var ounces: Int
     var onAmountChanged: (Int) -> Void = { _ in }
     @AppStorage(Constants.HYDRATION_UNIT) private var unitRawValue = HydrationUnit.fluidOunces.rawValue
+    @State private var showsAdjustment = false
 
     private var unit: HydrationUnit { HydrationUnit(rawValue: unitRawValue) ?? .fluidOunces }
     private var quickAmounts: [Int] { HydrationPreferences.quickAmounts(for: unit) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: CloveSpacing.medium) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Label("Hydration", systemImage: "drop.fill")
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
@@ -18,10 +19,20 @@ struct HydrationTracker: View {
                 Spacer()
 
                 Text(unit.formatted(canonicalOunces: ounces))
-                    .font(.system(.title3, design: .rounded, weight: .bold))
-                    .foregroundStyle(CloveColors.blue)
+                    .font(.system(.body, design: .rounded, weight: .bold))
+                    .foregroundStyle(Theme.shared.accent)
                     .contentTransition(.numericText())
                     .accessibilityLabel("\(unit.formatted(canonicalOunces: ounces)) logged")
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { showsAdjustment.toggle() }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.caption.bold())
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .frame(width: 36, height: 36)
+                }
+                .accessibilityLabel(showsAdjustment ? "Hide hydration adjustment" : "Adjust hydration precisely")
             }
 
             HStack(spacing: CloveSpacing.small) {
@@ -34,21 +45,20 @@ struct HydrationTracker: View {
                 }
             }
 
-            Stepper(value: persistedDisplayAmount, in: 0...unit.displayValue(fromCanonicalOunces: 512), step: unit.adjustmentStep) {
-                Text("Adjust by \(unit.adjustmentStep) \(unit.symbol)")
-                    .font(CloveFonts.small())
-                    .foregroundStyle(CloveColors.secondaryText)
+            if showsAdjustment {
+                Stepper(value: persistedDisplayAmount, in: 0...unit.displayValue(fromCanonicalOunces: 512), step: unit.adjustmentStep) {
+                    Text("Adjust by \(unit.adjustmentStep) \(unit.symbol)")
+                        .font(CloveFonts.small())
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+                .accessibilityValue(unit.formatted(canonicalOunces: ounces))
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
-            .accessibilityValue(unit.formatted(canonicalOunces: ounces))
         }
         .padding(CloveSpacing.medium)
         .background(
             RoundedRectangle(cornerRadius: CloveCorners.medium)
                 .fill(CloveColors.card)
-                .overlay(
-                    RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .stroke(CloveColors.blue.opacity(0.25), lineWidth: 1)
-                )
         )
     }
 
@@ -75,10 +85,10 @@ private struct HydrationQuickAddButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(.subheadline, design: .rounded, weight: .semibold))
-            .foregroundStyle(CloveColors.blue)
+            .foregroundStyle(Theme.shared.accent)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
-            .background(CloveColors.blue.opacity(configuration.isPressed ? 0.2 : 0.1))
+            .background(Theme.shared.accent.opacity(configuration.isPressed ? 0.2 : 0.09))
             .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
     }
 }

@@ -6,7 +6,7 @@ struct FoodTracker: View {
     @State private var foodEntries: [FoodEntry] = []
     @State private var showAddFoodSheet: Bool = false
     @State private var editingFood: FoodEntry?
-    @State private var isExpanded: Bool = true
+    @State private var isExpanded: Bool = false
 
     private let repo = FoodEntryRepo.shared
 
@@ -30,6 +30,10 @@ struct FoodTracker: View {
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
                             .foregroundStyle(CloveColors.primaryText)
 
+                        Text(foodEntries.isEmpty ? "Not logged" : "\(foodEntries.count)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(CloveColors.secondaryText)
+
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(CloveColors.secondaryText)
@@ -46,20 +50,10 @@ struct FoodTracker: View {
                     let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                     impactFeedback.impactOccurred()
                 }) {
-                    HStack {
-                        Text(foodButtonText())
-                            .foregroundStyle(foodEntries.isEmpty ? CloveColors.secondaryText : CloveColors.primaryText)
-                            .font(.system(.body, design: .rounded).weight(.medium))
-
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundStyle(Theme.shared.accent)
-                            .font(.system(size: 16))
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(CloveColors.card)
-                    .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
-                    .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundStyle(Theme.shared.accent)
+                        .font(.system(size: 20))
+                        .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel("Add food entry")
                 .accessibilityHint("Opens food selection sheet")
@@ -79,7 +73,8 @@ struct FoodTracker: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
             }
         }
-        .padding(.vertical, CloveSpacing.small)
+        .padding(CloveSpacing.medium)
+        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
         .onAppear {
             loadFoodEntries()
         }
@@ -101,13 +96,6 @@ struct FoodTracker: View {
                 loadFoodEntries()
             }
         }
-    }
-
-    private func foodButtonText() -> String {
-        if foodEntries.isEmpty {
-            return "Tap to track"
-        }
-        return "\(foodEntries.count)"
     }
 
     private func loadFoodEntries() {
