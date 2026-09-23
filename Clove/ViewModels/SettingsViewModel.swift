@@ -45,12 +45,16 @@ class UserSettingsViewModel {
         self.settings = settingsRepository.getSettings() ?? .default
     }
 
-    func save() {
+    @discardableResult
+    func save(showSuccessFeedback: Bool = true) -> Bool {
         let result = settingsRepository.saveSettings(settings)
         if result {
-            toastManager.showToast(message: "Settings saved successfully", color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
+            if showSuccessFeedback {
+                toastManager.showToast(message: "Settings saved successfully", color: CloveColors.success, icon: Image(systemName: "checkmark.circle"))
+            }
         } else {
             toastManager.showToast(message: "Hmm, something went wrong.", color: CloveColors.error)
         }
+        return result
     }
 }

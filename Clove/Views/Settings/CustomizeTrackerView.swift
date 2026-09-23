@@ -1,22 +1,17 @@
 import SwiftUI
 
 struct CustomizeTrackerView: View {
-    @Environment(UserSettingsViewModel.self) var viewModel
+    @Environment(UserSettingsViewModel.self) private var viewModel
     @AppStorage(Constants.USE_SLIDER_INPUT) private var useSliderInput = true
     @AppStorage(Constants.PACING_PLANS_ENABLED) private var pacingPlansEnabled = false
-    
-    // Animation states
-    @State private var headerOpacity: Double = 0
-    @State private var trackingOpacity: Double = 0
-    @State private var inputOpacity: Double = 0
-    @State private var buttonOpacity: Double = 0
-    @State private var headerOffset: CGFloat = -20
-    @State private var trackingOffset: CGFloat = 30
-    @State private var inputOffset: CGFloat = 30
-    @State private var buttonOffset: CGFloat = 30
-    @State private var trackingAnimations: [Bool] = Array(repeating: false, count: 14)
-    
-    // Tracking options with icons and colors
+
+    @State private var saveStatus: SaveStatus = .saved
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10)
+    ]
+
     private let trackingOptions = [
         TrackingOption(key: "trackMood", title: "Mood", icon: "face.smiling", color: .blue, description: "Track your daily mood levels"),
         TrackingOption(key: "trackPain", title: "Pain", icon: "bandage", color: .red, description: "Monitor pain intensity"),
@@ -31,79 +26,86 @@ struct CustomizeTrackerView: View {
         TrackingOption(key: "trackBowelMovements", title: "Bowel Movements", icon: "toilet", color: Color(hex: "9b6230"), description: "Track Bristol Stool Chart types"),
         TrackingOption(key: "trackCycle", title: "Cycle", icon: "drop.fill", color: Color(hex: "ff6b9d"), description: "Track period and flow levels"),
         TrackingOption(key: "trackNotes", title: "Notes", icon: "note.text", color: .indigo, description: "Add daily notes"),
-        TrackingOption(key: "showFlareToggle", title: "Flare Toggle", icon: "exclamationmark.triangle", color: .pink, description: "Mark flare-up days")
+        TrackingOption(key: "showFlareToggle", title: "Flare Day", icon: "exclamationmark.triangle", color: .pink, description: "Mark flare-up days")
     ]
-    
-    var body: some View {
-        ZStack {
-            // Subtle gradient background
-            LinearGradient(
-                colors: [
-                    Theme.shared.accent.opacity(0.02),
-                    CloveColors.background,
-                    Theme.shared.accent.opacity(0.01)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
-            ScrollView {
-                VStack(spacing: CloveSpacing.xlarge) {
-                    // Enhanced header
-                    headerSection
-                        .opacity(headerOpacity)
-                        .offset(y: headerOffset)
-                    
-                    // Enhanced tracking options
-                    trackingSection
-                        .opacity(trackingOpacity)
-                        .offset(y: trackingOffset)
 
-                    todayLayoutSection
-                        .opacity(trackingOpacity)
-                        .offset(y: trackingOffset)
-                    
-                    // Enhanced input method section
-                    inputMethodSection
-                        .opacity(inputOpacity)
-                        .offset(y: inputOffset)
-                    
-                    // Enhanced save button
-                    saveButtonSection
-                        .opacity(buttonOpacity)
-                        .offset(y: buttonOffset)
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                summaryHeader
+
+                LazyVGrid(columns: columns, spacing: 10) {
+                    ForEach(trackingOptions) { option in
+                        TrackerFeatureTile(
+                            option: option,
+                            isEnabled: trackingValue(for: option.key)
+                        ) {
+                            setTrackingValue(for: option.key, value: !trackingValue(for: option.key))
+                        }
+                    }
                 }
-                .padding(.horizontal, CloveSpacing.large)
-                .padding(.bottom, CloveSpacing.xlarge)
+
+                arrangeTodayLink
+                inputMethodSection
             }
+            .padding(.horizontal, CloveSpacing.medium)
+            .padding(.top, CloveSpacing.small)
+            .padding(.bottom, CloveSpacing.xlarge)
         }
-        .navigationTitle("Customize Tracker")
+        .background(CloveColors.background.ignoresSafeArea())
+        .navigationTitle("Choose What to Track")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            startEntranceAnimations()
-        }
     }
 
-    private var todayLayoutSection: some View {
+    private var summaryHeader: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 7) {
+                    Text("Your daily tracker")
+                        .font(.system(.headline, design: .rounded, weight: .bold))
+                        .foregroundStyle(CloveColors.primaryText)
+                    Text("\(enabledTrackingCount) on")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.shared.accent)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Theme.shared.accent.opacity(0.1), in: Capsule())
+                }
+                Text("Tap a feature to show or hide it. Changes save instantly.")
+                    .font(.caption)
+                    .foregroundStyle(CloveColors.secondaryText)
+            }
+
+            Spacer(minLength: 8)
+
+            Image(systemName: saveStatus.icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(saveStatus.color)
+                .frame(width: 32, height: 32)
+                .background(saveStatus.color.opacity(0.1), in: Circle())
+                .accessibilityLabel(saveStatus.accessibilityLabel)
+        }
+        .padding(.horizontal, 2)
+    }
+
+    private var arrangeTodayLink: some View {
         NavigationLink {
             TodayLayoutSettingsView(settings: viewModel.settings)
         } label: {
-            HStack(spacing: CloveSpacing.medium) {
+            HStack(spacing: 12) {
                 Image(systemName: "rectangle.3.group.fill")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Theme.shared.accent)
-                    .frame(width: 44, height: 44)
-                    .background(Theme.shared.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                    .frame(width: 38, height: 38)
+                    .background(Theme.shared.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("Arrange Today")
-                        .font(.headline)
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(CloveColors.primaryText)
-                    Text("Reorder, collapse, hide, and choose essentials")
+                    Text("Reorder enabled features and choose essentials")
                         .font(.caption)
                         .foregroundStyle(CloveColors.secondaryText)
-                        .multilineTextAlignment(.leading)
                 }
 
                 Spacer()
@@ -111,277 +113,110 @@ struct CustomizeTrackerView: View {
                     .font(.caption.bold())
                     .foregroundStyle(CloveColors.secondaryText)
             }
-            .padding(CloveSpacing.large)
-            .background(
-                RoundedRectangle(cornerRadius: CloveCorners.large)
-                    .fill(CloveColors.card)
-                    .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
-            )
+            .padding(12)
+            .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+            .overlay {
+                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                    .stroke(CloveColors.secondaryText.opacity(0.08), lineWidth: 1)
+            }
         }
         .buttonStyle(.plain)
     }
-    
-    // MARK: - Animation Helpers
-    
-    private func startEntranceAnimations() {
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-            headerOpacity = 1.0
-            headerOffset = 0
-        }
-        
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
-            trackingOpacity = 1.0
-            trackingOffset = 0
-        }
-        
-        // Animate tracking options individually
-        for i in 0..<trackingAnimations.count {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.2 + Double(i) * 0.05)) {
-                trackingAnimations[i] = true
-            }
-        }
-        
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.4)) {
-            inputOpacity = 1.0
-            inputOffset = 0
-        }
-        
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.5)) {
-            buttonOpacity = 1.0
-            buttonOffset = 0
-        }
-    }
-    
-    // MARK: - Enhanced Header Section
-    
-    private var headerSection: some View {
-        VStack(spacing: CloveSpacing.large) {
-            // Icon and title
-            HStack(spacing: CloveSpacing.medium) {
-                ZStack {
-                    Circle()
-                        .fill(Theme.shared.accent.opacity(0.1))
-                        .frame(width: 60, height: 60)
-                    
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundStyle(Theme.shared.accent)
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Tracker Customization")
-                        .font(.system(.title2, design: .rounded, weight: .bold))
-                        .foregroundStyle(CloveColors.primaryText)
-                    
-                    Text("Choose what to track daily")
-                        .font(.system(.subheadline, design: .rounded))
-                        .foregroundStyle(CloveColors.secondaryText)
-                }
-                
-                Spacer()
-            }
-            
-            // Description
-            VStack(alignment: .leading, spacing: CloveSpacing.small) {
-                Text("Choose the metrics that YOU want to track.")
-                    .font(.system(.body, design: .rounded))
-                    .foregroundStyle(CloveColors.secondaryText)
-                    .lineSpacing(2)
-            }
-        }
-        .padding(CloveSpacing.large)
-        .background(
-            RoundedRectangle(cornerRadius: CloveCorners.large)
-                .fill(CloveColors.card)
-                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
-        )
-    }
-    
-    // MARK: - Enhanced Tracking Section
-    
-    private var trackingSection: some View {
-        VStack(spacing: CloveSpacing.large) {
-            // Section header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("What to Track")
-                        .font(.system(.title3, design: .rounded, weight: .semibold))
-                        .foregroundStyle(CloveColors.primaryText)
-                    
-                    Text("Select your health metrics")
-                        .font(.system(.subheadline, design: .rounded))
-                        .foregroundStyle(CloveColors.secondaryText)
-                }
-                
-                Spacer()
-                
-                // Count badge
-                let enabledCount = getEnabledTrackingCount()
-                if enabledCount > 0 {
-                    Text("\(enabledCount)")
-                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(Theme.shared.accent)
-                        )
-                }
-            }
-            
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: CloveSpacing.medium) {
-                ForEach(Array(trackingOptions.enumerated()), id: \.element.key) { index, option in
-                    CompactTrackingToggleCard(
-                        option: option,
-                        isEnabled: getTrackingValue(for: option.key),
-                        onToggle: { value in
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                setTrackingValue(for: option.key, value: value)
-                            }
-                        }
-                    )
-                    .opacity(trackingAnimations.indices.contains(index) ? (trackingAnimations[index] ? 1.0 : 0) : 0)
-                    .scaleEffect(trackingAnimations.indices.contains(index) ? (trackingAnimations[index] ? 1.0 : 0.9) : 0.9)
-                }
-            }
-        }
-        .padding(CloveSpacing.large)
-        .background(
-            RoundedRectangle(cornerRadius: CloveCorners.large)
-                .fill(CloveColors.card)
-                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
-        )
-    }
-    
-    // MARK: - Enhanced Input Method Section
-    
+
     private var inputMethodSection: some View {
-        VStack(spacing: CloveSpacing.large) {
-            // Section header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Input Method")
-                        .font(.system(.title3, design: .rounded, weight: .semibold))
-                        .foregroundStyle(CloveColors.primaryText)
-                    
-                    Text("Choose your preferred input style")
-                        .font(.system(.subheadline, design: .rounded))
-                        .foregroundStyle(CloveColors.secondaryText)
-                }
-                
-                Spacer()
+        VStack(alignment: .leading, spacing: 9) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Rating controls")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(CloveColors.primaryText)
+                Text("Choose how you enter numbered ratings")
+                    .font(.caption)
+                    .foregroundStyle(CloveColors.secondaryText)
             }
-            
-            VStack(spacing: CloveSpacing.medium) {
-                // Slider option
-                EnhancedInputMethodCard(
-                    title: "Slider Input",
-                    description: "Use sliders for quick rating adjustments",
+
+            HStack(spacing: 4) {
+                inputMethodButton(
+                    title: "Sliders",
                     icon: "slider.horizontal.3",
-                    isSelected: useSliderInput,
-                    onTap: {
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                            useSliderInput = true
-                        }
-                        
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                        impactFeedback.impactOccurred()
-                    }
-                )
-                
-                // Button option
-                EnhancedInputMethodCard(
-                    title: "Button Input",
-                    description: "Use plus/minus buttons for precise control",
+                    isSelected: useSliderInput
+                ) { selectInputMethod(usesSliders: true) }
+
+                inputMethodButton(
+                    title: "Buttons",
                     icon: "plus.forwardslash.minus",
-                    isSelected: !useSliderInput,
-                    onTap: {
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                            useSliderInput = false
-                        }
-                        
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                        impactFeedback.impactOccurred()
-                    }
-                )
+                    isSelected: !useSliderInput
+                ) { selectInputMethod(usesSliders: false) }
+            }
+            .padding(3)
+            .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+            .overlay {
+                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                    .stroke(CloveColors.secondaryText.opacity(0.08), lineWidth: 1)
             }
         }
-        .padding(CloveSpacing.large)
-        .background(
-            RoundedRectangle(cornerRadius: CloveCorners.large)
-                .fill(CloveColors.card)
-                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
-        )
     }
-    
-    // MARK: - Enhanced Save Button Section
-    
-    private var saveButtonSection: some View {
-        VStack(spacing: CloveSpacing.small) {
-            Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                    viewModel.save()
-                }
-                
-                let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                impactFeedback.impactOccurred()
-            }) {
-                HStack(spacing: CloveSpacing.small) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                    
-                    Text("Save Changes")
-                        .font(.system(.body, design: .rounded, weight: .semibold))
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
+
+    private func inputMethodButton(
+        title: String,
+        icon: String,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                .foregroundStyle(isSelected ? Theme.shared.accent : CloveColors.secondaryText)
+                .frame(maxWidth: .infinity, minHeight: 38)
                 .background(
-                    RoundedRectangle(cornerRadius: CloveCorners.large)
-                        .fill(
-                            LinearGradient(
-                                colors: [Theme.shared.accent, Theme.shared.accent.opacity(0.8)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .shadow(color: Theme.shared.accent.opacity(0.3), radius: 12, x: 0, y: 6)
+                    isSelected ? Theme.shared.accent.opacity(0.11) : Color.clear,
+                    in: RoundedRectangle(cornerRadius: CloveCorners.small)
                 )
-            }
-            
-            Text("Changes will be applied immediately")
-                .font(.system(.caption, design: .rounded))
-                .foregroundStyle(CloveColors.secondaryText)
         }
+        .buttonStyle(.plain)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
-    
-    // MARK: - Helper Methods
-    
-    private func getTrackingValue(for key: String) -> Bool {
+
+    private func trackingValue(for key: String) -> Bool {
         switch key {
-        case "trackMood": return viewModel.settings.trackMood
-        case "trackPain": return viewModel.settings.trackPain
-        case "trackEnergy": return viewModel.settings.trackEnergy
-        case "trackHydration": return viewModel.settings.trackHydration
-        case "trackSymptoms": return viewModel.settings.trackSymptoms
-        case "trackMeals": return viewModel.settings.trackMeals
-        case "trackPlans": return pacingPlansEnabled
-        case "trackActivities": return viewModel.settings.trackActivities
-        case "trackMeds": return viewModel.settings.trackMeds
-        case "trackWeather": return viewModel.settings.trackWeather
-        case "trackBowelMovements": return viewModel.settings.trackBowelMovements
-        case "trackCycle": return viewModel.settings.trackCycle
-        case "trackNotes": return viewModel.settings.trackNotes
-        case "showFlareToggle": return viewModel.settings.showFlareToggle
-        default: return false
+        case "trackMood": viewModel.settings.trackMood
+        case "trackPain": viewModel.settings.trackPain
+        case "trackEnergy": viewModel.settings.trackEnergy
+        case "trackHydration": viewModel.settings.trackHydration
+        case "trackSymptoms": viewModel.settings.trackSymptoms
+        case "trackMeals": viewModel.settings.trackMeals
+        case "trackPlans": pacingPlansEnabled
+        case "trackActivities": viewModel.settings.trackActivities
+        case "trackMeds": viewModel.settings.trackMeds
+        case "trackWeather": viewModel.settings.trackWeather
+        case "trackBowelMovements": viewModel.settings.trackBowelMovements
+        case "trackCycle": viewModel.settings.trackCycle
+        case "trackNotes": viewModel.settings.trackNotes
+        case "showFlareToggle": viewModel.settings.showFlareToggle
+        default: false
         }
     }
-    
+
     private func setTrackingValue(for key: String, value: Bool) {
+        let previousValue = trackingValue(for: key)
+        applyTrackingValue(for: key, value: value)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+
+        guard key != "trackPlans" else {
+            saveStatus = .saved
+            return
+        }
+
+        saveStatus = .saving
+        if viewModel.save(showSuccessFeedback: false) {
+            saveStatus = .saved
+        } else {
+            applyTrackingValue(for: key, value: previousValue)
+            saveStatus = .failed
+        }
+    }
+
+    private func applyTrackingValue(for key: String, value: Bool) {
         switch key {
         case "trackMood": viewModel.settings.trackMood = value
         case "trackPain": viewModel.settings.trackPain = value
@@ -399,195 +234,117 @@ struct CustomizeTrackerView: View {
         case "showFlareToggle": viewModel.settings.showFlareToggle = value
         default: break
         }
-
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-        impactFeedback.impactOccurred()
     }
-    
-    private func getEnabledTrackingCount() -> Int {
-        return trackingOptions.reduce(0) { count, option in
-            count + (getTrackingValue(for: option.key) ? 1 : 0)
+
+    private func selectInputMethod(usesSliders: Bool) {
+        guard useSliderInput != usesSliders else { return }
+        useSliderInput = usesSliders
+        saveStatus = .saved
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    private var enabledTrackingCount: Int {
+        trackingOptions.reduce(0) { $0 + (trackingValue(for: $1.key) ? 1 : 0) }
+    }
+}
+
+private enum SaveStatus {
+    case saving
+    case saved
+    case failed
+
+    var icon: String {
+        switch self {
+        case .saving: "arrow.triangle.2.circlepath"
+        case .saved: "checkmark"
+        case .failed: "exclamationmark"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .saving: Theme.shared.accent
+        case .saved: CloveColors.success
+        case .failed: CloveColors.error
+        }
+    }
+
+    var accessibilityLabel: String {
+        switch self {
+        case .saving: "Saving changes"
+        case .saved: "Changes saved automatically"
+        case .failed: "Changes could not be saved"
         }
     }
 }
 
-// MARK: - Supporting Models and Views
-
-struct TrackingOption {
+private struct TrackingOption: Identifiable {
     let key: String
     let title: String
     let icon: String
     let color: Color
     let description: String
+
+    var id: String { key }
 }
 
-struct CompactTrackingToggleCard: View {
+private struct TrackerFeatureTile: View {
     let option: TrackingOption
     let isEnabled: Bool
-    let onToggle: (Bool) -> Void
-    
-    var body: some View {
-        Button(action: {
-            onToggle(!isEnabled)
-        }) {
-            VStack(spacing: CloveSpacing.medium) {
-                // Icon
-                ZStack {
-                    Circle()
-                        .fill(isEnabled ? option.color : option.color.opacity(0.1))
-                        .frame(width: 44, height: 44)
-                        .overlay(
-                            Circle()
-                                .stroke(isEnabled ? option.color.opacity(0.3) : option.color.opacity(0.2), lineWidth: 2)
-                        )
-                    
-                    Image(systemName: option.icon)
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(isEnabled ? .white : option.color)
-                }
-                
-                // Title and toggle
-                VStack(spacing: CloveSpacing.small) {
-                    Text(option.title)
-                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                        .foregroundStyle(CloveColors.primaryText)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    
-                    // Compact toggle
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(isEnabled ? Theme.shared.accent : CloveColors.secondaryText.opacity(0.3))
-                            .frame(width: 40, height: 24)
-                        
-                        Circle()
-                            .fill(.white)
-                            .frame(width: 20, height: 20)
-                            .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: 1)
-                            .offset(x: isEnabled ? 8 : -8)
-                    }
-                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isEnabled)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(CloveSpacing.medium)
-            .background(
-                RoundedRectangle(cornerRadius: CloveCorners.large)
-                    .fill(
-                        isEnabled ?
-                        LinearGradient(
-                            colors: [option.color.opacity(0.08), option.color.opacity(0.03)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ) :
-                        LinearGradient(
-                            colors: [CloveColors.background, CloveColors.background],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CloveCorners.large)
-                            .stroke(
-                                isEnabled ? option.color.opacity(0.3) : CloveColors.secondaryText.opacity(0.1),
-                                lineWidth: isEnabled ? 2 : 1
-                            )
-                    )
-            )
-            .scaleEffect(isEnabled ? 1.02 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isEnabled)
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-struct EnhancedInputMethodCard: View {
-    let title: String
-    let description: String
-    let icon: String
-    let isSelected: Bool
     let onTap: () -> Void
-    @State private var isPressed = false
-    
+
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: CloveSpacing.medium) {
-                // Enhanced icon
+            HStack(spacing: 9) {
+                Image(systemName: option.icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(option.color)
+                    .frame(width: 30, height: 30)
+                    .background(option.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+
+                Text(option.title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(CloveColors.primaryText)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+
+                Spacer(minLength: 2)
+
                 ZStack {
+                    Capsule()
+                        .fill(isEnabled ? Theme.shared.accent : CloveColors.secondaryText.opacity(0.22))
+                        .frame(width: 32, height: 19)
                     Circle()
-                        .fill(isSelected ? Theme.shared.accent : Theme.shared.accent.opacity(0.1))
-                        .frame(width: 50, height: 50)
-                        .overlay(
-                            Circle()
-                                .stroke(isSelected ? Theme.shared.accent.opacity(0.3) : Theme.shared.accent.opacity(0.2), lineWidth: 2)
-                        )
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(isSelected ? .white : Theme.shared.accent)
-                }
-                
-                // Content
-                VStack(alignment: .leading, spacing: CloveSpacing.small) {
-                    Text(title)
-                        .font(.system(.body, design: .rounded, weight: .semibold))
-                        .foregroundStyle(CloveColors.primaryText)
-                    
-                    Text(description)
-                        .font(.system(.subheadline, design: .rounded))
-                        .foregroundStyle(CloveColors.secondaryText)
-                        .lineSpacing(1)
-                }
-                
-                Spacer()
-                
-                // Selection indicator
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(Theme.shared.accent)
-                        .scaleEffect(1.0)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
+                        .fill(.white)
+                        .frame(width: 15, height: 15)
+                        .offset(x: isEnabled ? 6.5 : -6.5)
+                        .shadow(color: .black.opacity(0.12), radius: 1, x: 0, y: 1)
                 }
             }
-            .padding(CloveSpacing.large)
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity, minHeight: 58)
             .background(
-                RoundedRectangle(cornerRadius: CloveCorners.large)
-                    .fill(
-                        isSelected ?
-                        LinearGradient(
-                            colors: [Theme.shared.accent.opacity(0.08), Theme.shared.accent.opacity(0.03)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ) :
-                        LinearGradient(
-                            colors: [CloveColors.background, CloveColors.background],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CloveCorners.large)
-                            .stroke(
-                                isSelected ? Theme.shared.accent.opacity(0.3) : Theme.shared.accent.opacity(0.1),
-                                lineWidth: isSelected ? 2 : 1
-                            )
-                    )
+                isEnabled ? option.color.opacity(0.07) : CloveColors.card,
+                in: RoundedRectangle(cornerRadius: CloveCorners.medium)
             )
-            .scaleEffect(isSelected ? 1.02 : (isPressed ? 0.98 : 1.0))
-            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSelected)
-            .animation(.spring(response: 0.2, dampingFraction: 0.8), value: isPressed)
+            .overlay {
+                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                    .stroke(
+                        isEnabled ? option.color.opacity(0.22) : CloveColors.secondaryText.opacity(0.08),
+                        lineWidth: 1
+                    )
+            }
         }
-        .buttonStyle(PlainButtonStyle())
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-            isPressed = pressing
-        }, perform: {})
+        .buttonStyle(.plain)
+        .accessibilityLabel(option.title)
+        .accessibilityValue(isEnabled ? "On" : "Off")
+        .accessibilityHint(option.description)
     }
 }
 
 #Preview {
-    NavigationView {
+    NavigationStack {
         CustomizeTrackerView()
-            .environment(UserSettingsViewModel())
+            .environment(UserSettingsViewModel.preview())
     }
 }
