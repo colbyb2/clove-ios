@@ -2,12 +2,8 @@ import Foundation
 
 /// Protocol defining operations for searching across logs
 protocol SearchRepositoryProtocol {
-    /// Searches logs based on query and category filters
-    /// - Parameters:
-    ///   - query: The search query
-    ///   - filters: The category filters to apply
-    /// - Returns: Array of search results
-    func searchLogs(query: String, filters: SearchCategoryFilters) -> [SearchResult]
+    /// Searches local health records using an explicit, inspectable request.
+    func search(request: SearchRequest) -> [SearchResult]
 
     /// Searches notes for a query
     /// - Parameter query: The search query
@@ -38,4 +34,11 @@ protocol SearchRepositoryProtocol {
     /// - Parameter query: The search query
     /// - Returns: Array of search results
     func searchBowelMovements(query: String) -> [SearchResult]
+}
+
+extension SearchRepositoryProtocol {
+    /// Compatibility entry point for older callers.
+    func searchLogs(query: String, filters: SearchCategoryFilters) -> [SearchResult] {
+        search(request: SearchRequest(query: query, categories: filters.categories))
+    }
 }

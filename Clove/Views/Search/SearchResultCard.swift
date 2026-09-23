@@ -6,26 +6,49 @@ struct SearchResultCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: CloveSpacing.small) {
-                // Header row: date, category badge, indicators
-                HStack {
-                    Text(result.log.date.formatted(.dateTime.month(.abbreviated).day()))
-                        .font(CloveFonts.small())
-                        .foregroundStyle(CloveColors.secondaryText)
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: result.matchedCategory.icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(result.matchedCategory.color)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(result.matchedCategory.color.opacity(0.13))
+                    )
 
-                    Spacer()
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(result.matchedCategory.rawValue)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(result.matchedCategory.color)
 
-                    categoryBadge
+                        Spacer()
 
-                    healthIndicators
+                        Text(result.log.date.formatted(.dateTime.month(.abbreviated).day().year()))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(CloveColors.secondaryText)
+                    }
+
+                    Text(highlightedSnippet)
+                        .font(CloveFonts.body())
+                        .foregroundStyle(CloveColors.primaryText)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+
+                    HStack(spacing: 8) {
+                        Text(result.log.date.formatted(.dateTime.weekday(.wide)))
+                            .font(.system(size: 12))
+                            .foregroundStyle(CloveColors.secondaryText)
+
+                        healthIndicators
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(CloveColors.secondaryText.opacity(0.7))
+                    }
                 }
-
-                // Matched text snippet with highlighting
-                Text(highlightedSnippet)
-                    .font(CloveFonts.body())
-                    .foregroundStyle(CloveColors.primaryText)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
             }
             .padding(CloveSpacing.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -40,36 +63,24 @@ struct SearchResultCard: View {
 
     // MARK: - Subviews
 
-    private var categoryBadge: some View {
-        HStack(spacing: 4) {
-            Image(systemName: result.matchedCategory.icon)
-                .font(.system(size: 10, weight: .medium))
-
-            Text(result.matchedCategory.rawValue)
-                .font(.system(size: 11, weight: .medium))
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(
-            Capsule()
-                .fill(result.matchedCategory.color.opacity(0.15))
-        )
-        .foregroundStyle(result.matchedCategory.color)
-    }
-
     private var healthIndicators: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 7) {
             if let mood = result.log.mood {
-                Circle()
-                    .fill(moodColor(mood))
-                    .frame(width: 8, height: 8)
+                indicator(icon: CloveSymbols.mood(for: Double(mood)), value: mood, color: moodColor(mood))
             }
             if let pain = result.log.painLevel {
-                Circle()
-                    .fill(painColor(pain))
-                    .frame(width: 8, height: 8)
+                indicator(icon: "cross.fill", value: pain, color: painColor(pain))
             }
         }
+    }
+
+    private func indicator(icon: String, value: Int, color: Color) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+            Text("\(value)")
+        }
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundStyle(color)
     }
 
     private var highlightedSnippet: AttributedString {

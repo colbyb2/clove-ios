@@ -8,9 +8,15 @@ final class MockSearchRepository: SearchRepositoryProtocol {
     /// Controls whether operations succeed or fail
     var shouldSucceed: Bool = true
 
-    func searchLogs(query: String, filters: SearchCategoryFilters) -> [SearchResult] {
+    func search(request: SearchRequest) -> [SearchResult] {
         if shouldSucceed {
             return mockResults
+                .filter { request.categories.contains($0.matchedCategory) && request.includes($0.log.date) }
+                .sorted {
+                    request.sortOrder == .newestFirst
+                        ? $0.log.date > $1.log.date
+                        : $0.log.date < $1.log.date
+                }
         }
         return []
     }

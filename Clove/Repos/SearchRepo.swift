@@ -32,33 +32,37 @@ final class SearchRepo {
 
     // MARK: - Main Search Method
 
-    func searchLogs(query: String, filters: SearchCategoryFilters) -> [SearchResult] {
-        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    func search(request: SearchRequest) -> [SearchResult] {
+        let trimmedQuery = request.normalizedQuery
         guard !trimmedQuery.isEmpty else { return [] }
 
         var results: [SearchResult] = []
 
-        if filters.notes {
+        if request.categories.contains(.notes) {
             results.append(contentsOf: searchNotes(query: trimmedQuery))
         }
-        if filters.symptoms {
+        if request.categories.contains(.symptoms) {
             results.append(contentsOf: searchSymptoms(query: trimmedQuery))
         }
-        if filters.meals {
+        if request.categories.contains(.meals) {
             results.append(contentsOf: searchMeals(query: trimmedQuery))
         }
-        if filters.activities {
+        if request.categories.contains(.activities) {
             results.append(contentsOf: searchActivities(query: trimmedQuery))
         }
-        if filters.medications {
+        if request.categories.contains(.medications) {
             results.append(contentsOf: searchMedications(query: trimmedQuery))
         }
-        if filters.bowelMovements {
+        if request.categories.contains(.bowelMovements) {
             results.append(contentsOf: searchBowelMovements(query: trimmedQuery))
         }
 
-        // Sort by date descending (newest first)
-        results.sort { $0.log.date > $1.log.date }
+        results = results.filter { request.includes($0.log.date) }
+        results.sort {
+            request.sortOrder == .newestFirst
+                ? $0.log.date > $1.log.date
+                : $0.log.date < $1.log.date
+        }
 
         return results
     }
