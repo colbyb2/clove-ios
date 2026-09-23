@@ -339,6 +339,8 @@ private struct DataSettingsView: View {
 }
 
 private struct HelpAndAboutSettingsView: View {
+    private let feedbackURL = URL(string: "https://docs.google.com/forms/d/e/1FAIpQLScdrdNb3RD-OcNnVF0l4L3oa91tfumjloCeYM8Fv4xEXwxzgg/viewform?usp=publish-editor")!
+
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
@@ -359,6 +361,10 @@ private struct HelpAndAboutSettingsView: View {
                 } label: {
                     SettingsRowLabel(icon: "clock.arrow.circlepath", color: .blue, title: "What's New",
                                      detail: "Recent changes and improvements")
+                }
+                Link(destination: feedbackURL) {
+                    SettingsRowLabel(icon: "text.bubble.fill", color: Theme.shared.accent,
+                                     title: "Send Feedback", detail: "Tell us what would make Clove better")
                 }
             }
 
