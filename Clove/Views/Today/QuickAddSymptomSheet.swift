@@ -25,192 +25,22 @@ struct QuickAddSymptomSheet: View {
     @FocusState private var isTextFieldFocused: Bool
 
     var body: some View {
-        NavigationView {
-            VStack(spacing: CloveSpacing.xlarge) {
-                // Header with icon
-                VStack(spacing: CloveSpacing.medium) {
-                    ZStack {
-                        Circle()
-                            .fill(Theme.shared.accent.opacity(0.1))
-                            .frame(width: 60, height: 60)
-
-                        Image(systemName: "bandage.fill")
-                            .font(.system(size: 28, weight: .medium))
-                            .foregroundStyle(Theme.shared.accent)
-                    }
-
-                    VStack(spacing: CloveSpacing.small) {
-                        Text("Log a Symptom")
-                            .font(.system(.title2, design: .rounded, weight: .bold))
-                            .foregroundStyle(CloveColors.primaryText)
-
-                        Text("Choose whether this is occasional or something you want to track regularly")
-                            .font(.system(.subheadline, design: .rounded))
-                            .foregroundStyle(CloveColors.secondaryText)
-                    }
-
-                    VStack(alignment: .leading, spacing: CloveSpacing.small) {
-                        Text("How would you like to track this?")
-                            .font(.system(.subheadline, design: .rounded, weight: .medium))
-                            .foregroundStyle(CloveColors.secondaryText)
-                        Picker("Tracking frequency", selection: $trackingScope) {
-                            ForEach(TrackingScope.allCases) { scope in Text(scope.rawValue).tag(scope) }
-                        }
-                        .pickerStyle(.segmented)
-                        Text(trackingScope == .todayOnly
-                             ? "Saved only to \(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted))."
-                             : "Added to your daily tracker and logged for this date.")
-                            .font(.caption)
-                            .foregroundStyle(CloveColors.secondaryText)
-                    }
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    introHeader
+                    trackingScopeSection
+                    symptomDetailsSection
+                    valueSection
                 }
-                .padding(.top, CloveSpacing.large)
-
-                // Input section
-                VStack(alignment: .leading, spacing: CloveSpacing.medium) {
-                    VStack(alignment: .leading, spacing: CloveSpacing.small) {
-                        Text("Symptom Name")
-                            .font(.system(.subheadline, design: .rounded, weight: .medium))
-                            .foregroundStyle(CloveColors.secondaryText)
-
-                        TextField("e.g., Headache, Nausea", text: $symptomName)
-                            .font(.system(.body, design: .rounded))
-                            .padding(CloveSpacing.medium)
-                            .background(
-                                RoundedRectangle(cornerRadius: CloveCorners.medium)
-                                    .fill(CloveColors.background)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: CloveCorners.medium)
-                                            .stroke(
-                                                isTextFieldFocused ? Theme.shared.accent.opacity(0.5) : CloveColors.secondaryText.opacity(0.2),
-                                                lineWidth: 1.5
-                                            )
-                                    )
-                            )
-                            .focused($isTextFieldFocused)
-                            .onSubmit {
-                                if isAddButtonEnabled {
-                                    saveSymptom()
-                                }
-                            }
-                    }
-
-                    // Rating scale toggle
-                    VStack(alignment: .leading, spacing: CloveSpacing.small) {
-                        Text("Rating Scale")
-                            .font(.system(.subheadline, design: .rounded, weight: .medium))
-                            .foregroundStyle(CloveColors.secondaryText)
-
-                        HStack(spacing: CloveSpacing.small) {
-                            Button(action: {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                    isBinary = false
-                                }
-                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                impactFeedback.impactOccurred()
-                            }) {
-                                HStack(spacing: CloveSpacing.small) {
-                                    Text("0-10")
-                                        .font(.system(.subheadline, design: .rounded, weight: .medium))
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                                .foregroundStyle(!isBinary ? .white : CloveColors.primaryText)
-                                .background(
-                                    RoundedRectangle(cornerRadius: CloveCorners.medium)
-                                        .fill(!isBinary ? Theme.shared.accent : CloveColors.background)
-                                )
-                            }
-
-                            Button(action: {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                    isBinary = true
-                                }
-                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                impactFeedback.impactOccurred()
-                            }) {
-                                HStack(spacing: CloveSpacing.small) {
-                                    Text("Yes/No")
-                                        .font(.system(.subheadline, design: .rounded, weight: .medium))
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                                .foregroundStyle(isBinary ? .white : CloveColors.primaryText)
-                                .background(
-                                    RoundedRectangle(cornerRadius: CloveCorners.medium)
-                                        .fill(isBinary ? Theme.shared.accent : CloveColors.background)
-                                )
-                            }
-                        }
-
-                        Text(isBinary ? "Log a 'Yes' or 'No' response for this date" : "Rate the symptom on a 0-10 scale for this date")
-                            .font(.caption)
-                            .foregroundStyle(CloveColors.secondaryText)
-                    }
-                    .onChange(of: isBinary) { _, binary in
-                        rating = binary ? 10 : 5
-                    }
-
-                    VStack(alignment: .leading, spacing: CloveSpacing.small) {
-                        Text("Value for this date")
-                            .font(.system(.subheadline, design: .rounded, weight: .medium))
-                            .foregroundStyle(CloveColors.secondaryText)
-                        if isBinary {
-                            Picker("Symptom status", selection: $rating) {
-                                Text("No").tag(0.0)
-                                Text("Yes").tag(10.0)
-                            }
-                            .pickerStyle(.segmented)
-                        } else {
-                            HStack {
-                                Slider(value: $rating, in: 0...10, step: 1)
-                                    .tint(Theme.shared.accent)
-                                Text("\(Int(rating))")
-                                    .font(.title3.bold())
-                                    .foregroundStyle(Theme.shared.accent)
-                                    .frame(width: 28)
-                            }
-                        }
-                    }
-
-                    // Save button
-                    Button(action: {
-                        saveSymptom()
-                    }) {
-                        HStack(spacing: CloveSpacing.small) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 16, weight: .semibold))
-
-                            Text(trackingScope == .todayOnly ? "Log for This Day" : "Track Daily & Log")
-                                .font(.system(.body, design: .rounded, weight: .semibold))
-                        }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(
-                            RoundedRectangle(cornerRadius: CloveCorners.medium)
-                                .fill(
-                                    isAddButtonEnabled ? Theme.shared.accent : CloveColors.secondaryText.opacity(0.5)
-                                )
-                                .shadow(
-                                    color: isAddButtonEnabled ? Theme.shared.accent.opacity(0.3) : .clear,
-                                    radius: 8,
-                                    x: 0,
-                                    y: 4
-                                )
-                        )
-                        .scaleEffect(isAddButtonEnabled ? 1.0 : 0.95)
-                        .opacity(isAddButtonEnabled ? 1.0 : 0.6)
-                    }
-                    .disabled(!isAddButtonEnabled)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isAddButtonEnabled)
-                }
-                .padding(.horizontal, CloveSpacing.large)
-
-                Spacer()
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 24)
             }
+            .scrollDismissesKeyboard(.interactively)
             .background(CloveColors.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Log a Symptom")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
@@ -219,12 +49,248 @@ struct QuickAddSymptomSheet: View {
                     .foregroundStyle(CloveColors.secondaryText)
                 }
             }
-            .onAppear {
-                isTextFieldFocused = true
+            .safeAreaInset(edge: .bottom) {
+                saveButton
             }
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+    }
+
+    private var introHeader: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "bandage.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(Theme.shared.accent)
+                .frame(width: 44, height: 44)
+                .background(Theme.shared.accent.opacity(0.1), in: Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("What are you noticing?")
+                    .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(CloveColors.primaryText)
+                Text("Add it just for this date, or keep it in your daily check-in.")
+                    .font(.subheadline)
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var trackingScopeSection: some View {
+        sheetSection(title: "Where should it appear?", step: "1") {
+            HStack(spacing: 10) {
+                optionCard(
+                    title: "This day",
+                    detail: viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted),
+                    icon: "calendar",
+                    isSelected: trackingScope == .todayOnly
+                ) {
+                    trackingScope = .todayOnly
+                }
+                optionCard(
+                    title: "Daily tracker",
+                    detail: "From now on",
+                    icon: "calendar.badge.plus",
+                    isSelected: trackingScope == .everyDay
+                ) {
+                    trackingScope = .everyDay
+                }
+            }
+        }
+    }
+
+    private var symptomDetailsSection: some View {
+        sheetSection(title: "Describe the symptom", step: "2") {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("Name")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(CloveColors.secondaryText)
+
+                    TextField("Headache, nausea, dizziness…", text: $symptomName)
+                        .font(.system(.body, design: .rounded))
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: 50)
+                        .background(CloveColors.background, in: RoundedRectangle(cornerRadius: 12))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(
+                                    isTextFieldFocused ? Theme.shared.accent : CloveColors.secondaryText.opacity(0.14),
+                                    lineWidth: isTextFieldFocused ? 1.5 : 1
+                                )
+                        }
+                        .focused($isTextFieldFocused)
+                        .submitLabel(.done)
+                        .onSubmit {
+                            if isAddButtonEnabled { saveSymptom() }
+                        }
+                }
+
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("How should it be measured?")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(CloveColors.secondaryText)
+
+                    HStack(spacing: 10) {
+                        optionCard(
+                            title: "Severity",
+                            detail: "0–10 scale",
+                            icon: "slider.horizontal.3",
+                            isSelected: !isBinary
+                        ) { isBinary = false }
+                        optionCard(
+                            title: "Present",
+                            detail: "Yes or no",
+                            icon: "checkmark.circle",
+                            isSelected: isBinary
+                        ) { isBinary = true }
+                    }
+                }
+            }
+        }
+        .onChange(of: isBinary) { _, binary in
+            rating = binary ? 10 : 5
+        }
+    }
+
+    private var valueSection: some View {
+        sheetSection(title: "Log today’s value", step: "3") {
+            if isBinary {
+                HStack(spacing: 10) {
+                    valueButton(title: "No", icon: "xmark.circle", value: 0)
+                    valueButton(title: "Yes", icon: "checkmark.circle", value: 10)
+                }
+            } else {
+                VStack(spacing: 8) {
+                    HStack {
+                        Text("Severity")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text("\(Int(rating))")
+                            .font(.title3.bold())
+                            .foregroundStyle(Theme.shared.accent)
+                    }
+                    Slider(value: $rating, in: 0...10, step: 1)
+                        .tint(Theme.shared.accent)
+                    HStack {
+                        Text("0 · none")
+                        Spacer()
+                        Text("10 · most severe")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(CloveColors.secondaryText)
+                }
+            }
+        }
+    }
+
+    private var saveButton: some View {
+        Button(action: saveSymptom) {
+            Label(
+                trackingScope == .todayOnly ? "Log for This Day" : "Add to Daily Tracker",
+                systemImage: "checkmark.circle.fill"
+            )
+            .font(.system(.body, design: .rounded, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .background(
+                isAddButtonEnabled ? Theme.shared.accent : CloveColors.secondaryText.opacity(0.35),
+                in: RoundedRectangle(cornerRadius: CloveCorners.medium)
+            )
+        }
+        .disabled(!isAddButtonEnabled)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
+        .animation(.easeInOut(duration: 0.18), value: isAddButtonEnabled)
+    }
+
+    private func sheetSection<Content: View>(
+        title: String,
+        step: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Text(step)
+                    .font(.caption.bold())
+                    .foregroundStyle(Theme.shared.accent)
+                    .frame(width: 24, height: 24)
+                    .background(Theme.shared.accent.opacity(0.12), in: Circle())
+                Text(title)
+                    .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(CloveColors.primaryText)
+            }
+            content()
+        }
+        .padding(16)
+        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+    }
+
+    private func optionCard(
+        title: String,
+        detail: String,
+        icon: String,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.18)) { action() }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } label: {
+            VStack(alignment: .leading, spacing: 7) {
+                HStack {
+                    Image(systemName: icon)
+                        .foregroundStyle(isSelected ? Theme.shared.accent : CloveColors.secondaryText)
+                    Spacer()
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(isSelected ? Theme.shared.accent : CloveColors.secondaryText.opacity(0.5))
+                }
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(CloveColors.primaryText)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(
+                isSelected ? Theme.shared.accent.opacity(0.1) : CloveColors.background,
+                in: RoundedRectangle(cornerRadius: 12)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Theme.shared.accent.opacity(0.5) : Color.clear, lineWidth: 1.5)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func valueButton(title: String, icon: String, value newValue: Double) -> some View {
+        let isSelected = rating == newValue
+        return Button {
+            rating = newValue
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } label: {
+            Label(title, systemImage: isSelected ? "\(icon).fill" : icon)
+                .font(.system(.body, design: .rounded, weight: .semibold))
+                .foregroundStyle(isSelected ? Theme.shared.accent : CloveColors.secondaryText)
+                .frame(maxWidth: .infinity, minHeight: 46)
+                .background(
+                    isSelected ? Theme.shared.accent.opacity(0.12) : CloveColors.background,
+                    in: RoundedRectangle(cornerRadius: 12)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isSelected ? Theme.shared.accent.opacity(0.45) : Color.clear, lineWidth: 1.5)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private var isAddButtonEnabled: Bool {
