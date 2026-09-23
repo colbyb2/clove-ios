@@ -1,5 +1,6 @@
 /.nvim/xcodebuild
 /buildServer.json
 /docs/*
+!/docs/PRODUCT_CLAIMS.md
 !/docs/analytics-overhaul/
 !/docs/analytics-overhaul/**

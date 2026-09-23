@@ -74,7 +74,7 @@ struct InsightsComplexityOnboardingView: View {
             case .balanced:
                 return ["Trend analysis", "Pattern detection", "Weekly insights", "Health scores"]
             case .comprehensive:
-                return ["Correlation analysis", "Advanced metrics", "Predictive insights", "Detailed reports", "Export options"]
+                return ["Correlation analysis", "Advanced metrics", "Saved comparisons", "Detailed reports", "Export options"]
             }
         }
     }

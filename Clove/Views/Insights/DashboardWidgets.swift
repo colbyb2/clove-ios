@@ -313,7 +313,7 @@ struct WidgetCustomizationRow: View {
         switch type {
         case .healthScore: return "Overall health score based on all metrics"
         case .streakCounter: return "Current streaks for good health days"
-        case .recentInsights: return "Latest AI-generated health insights"
+        case .recentInsights: return "Latest statistical health insights"
         case .trendOverview: return "Overview of key health metrics with trends"
         case .weeklyPattern: return "Weekly patterns in your health data"
         case .correlationHighlight: return "Strongest correlation between metrics"

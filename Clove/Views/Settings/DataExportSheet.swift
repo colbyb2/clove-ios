@@ -25,7 +25,7 @@ struct DataExportSheet: View {
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
                                 .foregroundStyle(CloveColors.primaryText)
                             
-                            Text("Create a complete backup for restoring Clove, or export selected data as a CSV for spreadsheets and healthcare providers.")
+                            Text("Create a full Clove backup for app restore, or export selected data as a CSV for spreadsheets and healthcare providers.")
                                 .font(.system(size: 16))
                                 .foregroundStyle(CloveColors.secondaryText)
                                 .fixedSize(horizontal: false, vertical: true)
