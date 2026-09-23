@@ -6,7 +6,8 @@ struct AddActivitySheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
-    @State private var selectedCategory: ActivityCategory = .exercise
+    @State private var selectedCategory = ActivityCategoryDefinition.presets[0]
+    @State private var categories: [ActivityCategoryDefinition] = ActivityCategoryDefinition.presets
     @State private var showingAddCustomActivity = false
     @State private var entryDate: Date
 
@@ -115,7 +116,7 @@ struct AddActivitySheet: View {
     private var categoryTabs: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: CloveSpacing.small) {
-                ForEach(ActivityCategory.allCases) { category in
+                ForEach(categories) { category in
                     ActivityCategoryTab(
                         category: category,
                         isSelected: selectedCategory == category
@@ -160,7 +161,7 @@ struct AddActivitySheet: View {
 
                     Spacer()
 
-                    Text(selectedCategory.displayName)
+                    Text(selectedCategory.name)
                         .font(CloveFonts.small())
                         .foregroundStyle(CloveColors.secondaryText)
                         .padding(.horizontal, 8)
@@ -186,14 +187,13 @@ struct AddActivitySheet: View {
                 ForEach(filteredFavorites) { entry in
                     ActivityChip(
                         name: entry.name,
-                        category: entry.category,
                         duration: entry.duration,
                         intensity: entry.intensity,
                         isFavorite: true
                     ) {
                         addActivity(
                             name: entry.name,
-                            category: entry.category,
+                            category: entry.categoryDefinition,
                             duration: entry.duration,
                             intensity: entry.intensity
                         )
@@ -213,7 +213,6 @@ struct AddActivitySheet: View {
                 ForEach(filteredRecents, id: \.self) { name in
                     ActivityChip(
                         name: name,
-                        category: selectedCategory,
                         duration: nil,
                         intensity: nil,
                         isFavorite: false
@@ -235,7 +234,6 @@ struct AddActivitySheet: View {
                 ForEach(filteredSuggestions, id: \.self) { name in
                     ActivityChip(
                         name: name,
-                        category: selectedCategory,
                         duration: nil,
                         intensity: nil,
                         isFavorite: false
@@ -250,7 +248,7 @@ struct AddActivitySheet: View {
     // MARK: - Computed Properties
 
     private var filteredFavorites: [ActivityEntry] {
-        let categoryFiltered = favorites.filter { $0.category == selectedCategory }
+        let categoryFiltered = favorites.filter { ($0.categoryID ?? $0.category.rawValue) == selectedCategory.id }
         if searchText.isEmpty {
             return categoryFiltered
         }
@@ -275,11 +273,15 @@ struct AddActivitySheet: View {
     // MARK: - Helper Methods
 
     private func loadData() {
+        categories = ActivityCategoryRepo.shared.getAll()
+        if !categories.contains(where: { $0.id == selectedCategory.id }) {
+            selectedCategory = categories.first ?? .fallback
+        }
         favorites = repo.getFavorites()
         recentActivities = repo.getRecentActivityNames(limit: 20)
     }
 
-    private func addActivity(name: String, category: ActivityCategory, duration: Int?, intensity: ActivityIntensity?) {
+    private func addActivity(name: String, category: ActivityCategoryDefinition, duration: Int?, intensity: ActivityIntensity?) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
@@ -289,7 +291,8 @@ struct AddActivitySheet: View {
 
         let entry = ActivityEntry(
             name: trimmed,
-            category: category,
+            category: ActivityCategory(rawValue: category.id) ?? .other,
+            categoryID: category.id,
             date: entryDate,
             duration: duration,
             intensity: intensity
@@ -312,8 +315,8 @@ struct AddActivitySheet: View {
         }
     }
 
-    private func defaultSuggestions(for category: ActivityCategory) -> [String] {
-        switch category {
+    private func defaultSuggestions(for category: ActivityCategoryDefinition) -> [String] {
+        switch ActivityCategory(rawValue: category.id) {
         case .exercise:
             return ["Walking", "Running", "Gym", "Swimming", "Cycling", "Yoga", "Hiking", "Dancing"]
         case .wellness:
@@ -326,6 +329,8 @@ struct AddActivitySheet: View {
             return ["Nap", "Reading", "TV", "Movies", "Gaming", "Relaxing", "Music", "Podcast"]
         case .other:
             return ["Work", "Study", "Hobbies", "Creative", "Travel", "Volunteering", "Self Care", "Planning"]
+        case nil:
+            return []
         }
     }
 }
@@ -333,21 +338,21 @@ struct AddActivitySheet: View {
 // MARK: - Supporting Views
 
 private struct ActivityCategoryTab: View {
-    let category: ActivityCategory
+    let category: ActivityCategoryDefinition
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
-                Image(systemName: category.icon)
+                Image(systemName: category.symbol)
                     .font(.system(size: 14, weight: .semibold))
-                Text(category.displayName)
+                Text(category.name)
                     .font(.system(.subheadline, design: .rounded).weight(.medium))
             }
             .padding(.horizontal, CloveSpacing.medium)
             .padding(.vertical, CloveSpacing.small)
-            .background(isSelected ? Theme.shared.accent : CloveColors.card)
+            .background(isSelected ? category.color : CloveColors.card)
             .foregroundStyle(isSelected ? .white : CloveColors.primaryText)
             .clipShape(Capsule())
         }
@@ -375,7 +380,6 @@ private struct ActivitySectionHeader: View {
 
 private struct ActivityChip: View {
     let name: String
-    let category: ActivityCategory
     let duration: Int?
     let intensity: ActivityIntensity?
     let isFavorite: Bool
@@ -436,14 +440,15 @@ private struct ActivityChip: View {
 
 struct AddCustomActivitySheet: View {
     let initialName: String
-    let initialCategory: ActivityCategory
+    let initialCategory: ActivityCategoryDefinition
     let date: Date
     let onSave: () -> Void
     let existingEntry: ActivityEntry?
 
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = ""
-    @State private var category: ActivityCategory = .exercise
+    @State private var category = ActivityCategoryDefinition.presets[0]
+    @State private var categories: [ActivityCategoryDefinition] = ActivityCategoryDefinition.presets
     @State private var duration: Int?
     @State private var intensity: ActivityIntensity?
     @State private var notes: String = ""
@@ -456,7 +461,7 @@ struct AddCustomActivitySheet: View {
 
     init(
         initialName: String,
-        initialCategory: ActivityCategory,
+        initialCategory: ActivityCategoryDefinition,
         date: Date,
         existingEntry: ActivityEntry? = nil,
         onSave: @escaping () -> Void
@@ -475,8 +480,8 @@ struct AddCustomActivitySheet: View {
                     TextField("Name", text: $name)
 
                     Picker("Category", selection: $category) {
-                        ForEach(ActivityCategory.allCases) { cat in
-                            Label(cat.displayName, systemImage: cat.icon)
+                        ForEach(categories) { cat in
+                            Label(cat.name, systemImage: cat.symbol)
                             .tag(cat)
                         }
                     }
@@ -543,7 +548,8 @@ struct AddCustomActivitySheet: View {
             }
             .onAppear {
                 name = existingEntry?.name ?? initialName
-                category = existingEntry?.category ?? initialCategory
+                categories = ActivityCategoryRepo.shared.getAll()
+                category = existingEntry?.categoryDefinition ?? initialCategory
                 duration = existingEntry?.duration
                 durationText = existingEntry?.duration.map(String.init) ?? ""
                 intensity = existingEntry?.intensity
@@ -562,7 +568,8 @@ struct AddCustomActivitySheet: View {
             id: existingEntry?.id,
             analyticsIdentityID: existingEntry?.analyticsIdentityID,
             name: trimmedName,
-            category: category,
+            category: ActivityCategory(rawValue: category.id) ?? .other,
+            categoryID: category.id,
             date: entryDate,
             duration: duration,
             intensity: intensity,

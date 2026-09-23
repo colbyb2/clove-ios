@@ -76,6 +76,7 @@ struct ActivityEntry: Codable, FetchableRecord, PersistableRecord, Identifiable 
     var analyticsIdentityID: Int64?
     var name: String
     var category: ActivityCategory
+    var categoryID: String?
     var date: Date
     var duration: Int?  // Duration in minutes
     var intensity: ActivityIntensity?
@@ -88,6 +89,7 @@ struct ActivityEntry: Codable, FetchableRecord, PersistableRecord, Identifiable 
         analyticsIdentityID: Int64? = nil,
         name: String,
         category: ActivityCategory,
+        categoryID: String? = nil,
         date: Date = Date(),
         duration: Int? = nil,
         intensity: ActivityIntensity? = nil,
@@ -99,6 +101,7 @@ struct ActivityEntry: Codable, FetchableRecord, PersistableRecord, Identifiable 
         self.analyticsIdentityID = analyticsIdentityID
         self.name = name
         self.category = category
+        self.categoryID = categoryID ?? category.rawValue
         self.date = date
         self.duration = duration
         self.intensity = intensity
@@ -116,6 +119,7 @@ struct ActivityEntry: Codable, FetchableRecord, PersistableRecord, Identifiable 
         static let analyticsIdentityID = Column(CodingKeys.analyticsIdentityID)
         static let name = Column(CodingKeys.name)
         static let category = Column(CodingKeys.category)
+        static let categoryID = Column(CodingKeys.categoryID)
         static let date = Column(CodingKeys.date)
         static let duration = Column(CodingKeys.duration)
         static let intensity = Column(CodingKeys.intensity)
@@ -128,6 +132,10 @@ struct ActivityEntry: Codable, FetchableRecord, PersistableRecord, Identifiable 
 // MARK: - Helper Extensions
 
 extension ActivityEntry {
+    var categoryDefinition: ActivityCategoryDefinition {
+        ActivityCategoryRepo.shared.definition(for: categoryID ?? category.rawValue)
+    }
+
     /// Returns plain display text. Icons are rendered separately with SF Symbols.
     var displayText: String {
         return name

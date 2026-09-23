@@ -105,7 +105,7 @@ struct ActivityTracker: View {
         .sheet(item: $editingActivity) { entry in
             AddCustomActivitySheet(
                 initialName: entry.name,
-                initialCategory: entry.category,
+                initialCategory: entry.categoryDefinition,
                 date: entry.date,
                 existingEntry: entry
             ) {
@@ -170,6 +170,7 @@ private struct ActivityEntryRow: View {
     let onDelete: () -> Void
 
     var body: some View {
+        let category = entry.categoryDefinition
         HStack(spacing: 12) {
             // Category indicator
             ZStack {
@@ -177,7 +178,7 @@ private struct ActivityEntryRow: View {
                     .fill(categoryColor.opacity(0.15))
                     .frame(width: 36, height: 36)
 
-                Image(systemName: entry.category.icon)
+                Image(systemName: category.symbol)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(categoryColor)
             }
@@ -197,7 +198,7 @@ private struct ActivityEntryRow: View {
                 }
 
                 HStack(spacing: 8) {
-                    Text(entry.category.displayName)
+                    Text(category.name)
                         .font(.system(.caption, design: .rounded))
                         .foregroundStyle(categoryColor)
                         .padding(.horizontal, 6)
@@ -256,14 +257,7 @@ private struct ActivityEntryRow: View {
     }
 
     private var categoryColor: Color {
-        switch entry.category {
-        case .exercise: return CloveColors.blue
-        case .wellness: return CloveColors.green
-        case .social: return CloveColors.orange
-        case .chores: return CloveColors.yellow
-        case .rest: return Theme.shared.accent
-        case .other: return CloveColors.secondaryText
-        }
+        entry.categoryDefinition.color
     }
 
     private func intensityColor(_ intensity: ActivityIntensity) -> Color {

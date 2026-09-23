@@ -893,9 +893,10 @@ struct ActivityEntryDetailRow: View {
     let entry: ActivityEntry
 
     var body: some View {
+        let category = entry.categoryDefinition
         HStack(spacing: CloveSpacing.small) {
             // Category icon
-            Image(systemName: entry.category.icon)
+            Image(systemName: category.symbol)
                 .font(.system(size: 12))
                 .foregroundStyle(categoryColor)
                 .frame(width: 24, height: 24)
@@ -917,6 +918,13 @@ struct ActivityEntryDetailRow: View {
                 }
 
                 HStack(spacing: 6) {
+                    Text(category.name)
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(categoryColor)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(categoryColor.opacity(0.1)))
+
                     if let duration = entry.formattedDuration {
                         Text(duration)
                             .font(.system(.caption2, design: .rounded))
@@ -945,14 +953,7 @@ struct ActivityEntryDetailRow: View {
     }
 
     private var categoryColor: Color {
-        switch entry.category {
-        case .exercise: return CloveColors.blue
-        case .wellness: return CloveColors.green
-        case .social: return CloveColors.orange
-        case .chores: return CloveColors.yellow
-        case .rest: return Theme.shared.accent
-        case .other: return CloveColors.secondaryText
-        }
+        entry.categoryDefinition.color
     }
 
     private func intensityColor(_ intensity: ActivityIntensity) -> Color {

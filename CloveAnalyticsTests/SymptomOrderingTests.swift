@@ -4,7 +4,10 @@ import GRDB
 
 final class SymptomOrderingTests: XCTestCase {
     func testMigrationAssignsExistingSymptomsDeterministicallyByID() throws {
-        let database = try TestDatabaseManager(migrations: Array(Migrations.all.dropLast()))
+        let migrationsBeforeDisplayOrder = Migrations.all.prefix {
+            $0.identifier != SymptomDisplayOrderMigration().identifier
+        }
+        let database = try TestDatabaseManager(migrations: Array(migrationsBeforeDisplayOrder))
         try database.write { db in
             try db.execute(sql: "INSERT INTO trackedSymptom (id, name, isBinary) VALUES (9, 'Third', 0)")
             try db.execute(sql: "INSERT INTO trackedSymptom (id, name, isBinary) VALUES (2, 'First', 0)")

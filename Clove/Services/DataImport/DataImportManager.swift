@@ -427,19 +427,15 @@ class DataImportManager {
                 .replacingOccurrences(of: ")", with: "")
                 .trimmingCharacters(in: .whitespaces)
 
-            // Map category display name to enum
-            let category: ActivityCategory
-            switch categoryString {
-            case "Exercise": category = .exercise
-            case "Wellness": category = .wellness
-            case "Social": category = .social
-            case "Chores": category = .chores
-            case "Rest": category = .rest
-            case "Other": category = .other
-            default: category = .other
-            }
-
-            entries.append(ActivityEntry(name: name, category: category, date: date))
+            let definition = ActivityCategoryRepo.shared.getAll().first {
+                $0.name.localizedCaseInsensitiveCompare(categoryString) == .orderedSame
+            } ?? .fallback
+            entries.append(ActivityEntry(
+                name: name,
+                category: ActivityCategory(rawValue: definition.id) ?? .other,
+                categoryID: definition.id,
+                date: date
+            ))
         }
 
         return entries

@@ -139,14 +139,16 @@ final class SearchRepo {
         let allActivityEntries = activityEntryRepository.getAllEntries()
 
         return allActivityEntries.compactMap { activityEntry in
-            guard activityEntry.name.range(of: query, options: .caseInsensitive) != nil else {
+            let category = activityEntry.categoryDefinition
+            guard activityEntry.name.range(of: query, options: .caseInsensitive) != nil
+                    || category.name.range(of: query, options: .caseInsensitive) != nil else {
                 return nil
             }
 
             // Get or create log for this date
             let log = logsRepository.getLogForDate(activityEntry.date) ?? DailyLog(date: activityEntry.date)
 
-            var contextSnippet = "\(activityEntry.name) (\(activityEntry.category.displayName))"
+            var contextSnippet = "\(activityEntry.name) (\(category.name))"
             if let duration = activityEntry.duration {
                 contextSnippet += " - \(duration) min"
             }

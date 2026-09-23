@@ -27,8 +27,35 @@ enum Migrations {
         DailyLogDayKeyMigration(),
         CycleEndMarkerMigration(),
         SymptomActiveStateMigration(),
-        SymptomDisplayOrderMigration()
+        SymptomDisplayOrderMigration(),
+        ActivityCategoryTaxonomyMigration()
     ]
+}
+
+struct ActivityCategoryTaxonomyMigration: Migration {
+    var identifier: String { "activityCategoryTaxonomy_092226" }
+
+    func migrate(_ db: Database) throws {
+        try db.create(table: "activityCategory") { table in
+            table.primaryKey("id", .text)
+            table.column("name", .text).notNull()
+            table.column("symbol", .text).notNull()
+            table.column("colorHex", .text).notNull()
+            table.column("isPreset", .boolean).notNull().defaults(to: false)
+            table.column("sortOrder", .integer).notNull()
+        }
+
+        for preset in ActivityCategoryDefinition.presets {
+            try preset.insert(db)
+        }
+
+        try db.alter(table: "activityEntry") { table in
+            table.add(column: "categoryID", .text)
+                .references("activityCategory", onDelete: .setDefault)
+        }
+        try db.execute(sql: "UPDATE activityEntry SET categoryID = category")
+        try db.create(index: "activityEntry_categoryID", on: "activityEntry", columns: ["categoryID"])
+    }
 }
 
 struct SymptomActiveStateMigration: Migration {

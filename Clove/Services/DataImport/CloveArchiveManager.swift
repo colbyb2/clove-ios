@@ -20,6 +20,7 @@ struct CloveArchive: Codable {
         let medicationHistory: [MedicationHistoryEntry]
         let bowelMovements: [BowelMovement]
         let foodEntries: [FoodEntry]
+        let activityCategories: [ActivityCategoryDefinition]?
         let activityEntries: [ActivityEntry]
         let cycles: [Cycle]
         let dynamicMetricIdentities: [DynamicMetricIdentity]
@@ -184,6 +185,7 @@ final class CloveArchiveManager {
                 medicationHistory: try MedicationHistoryEntry.fetchAll(db),
                 bowelMovements: try BowelMovement.fetchAll(db),
                 foodEntries: try FoodEntry.fetchAll(db),
+                activityCategories: try ActivityCategoryDefinition.fetchAll(db),
                 activityEntries: try ActivityEntry.fetchAll(db),
                 cycles: try Cycle.fetchAll(db),
                 dynamicMetricIdentities: try DynamicMetricIdentity.fetchAll(db),
@@ -243,6 +245,7 @@ final class CloveArchiveManager {
             try Self.insert(archive.payload.medicationHistory, into: db)
             try Self.insert(archive.payload.bowelMovements, into: db)
             try Self.insert(archive.payload.foodEntries, into: db)
+            try Self.insert(archive.payload.activityCategories ?? ActivityCategoryDefinition.presets, into: db)
             try Self.insert(archive.payload.activityEntries, into: db)
             try Self.insert(archive.payload.cycles, into: db)
             try Self.insert(archive.payload.metricIdentityAliases, into: db)
@@ -286,7 +289,7 @@ final class CloveArchiveManager {
     private static func clearRestorableTables(in db: Database) throws {
         // Child/reference-bearing tables are removed before their identities.
         let tables = [
-            "foodEntry", "activityEntry", "metricIdentityAlias", "dynamicMetricIdentity",
+            "foodEntry", "activityEntry", "activityCategory", "metricIdentityAlias", "dynamicMetricIdentity",
             "dailyLog", "medicationHistoryEntry", "trackedMedication", "trackedSymptom",
             "bowelMovement", "cycle", "savedAnalysis", "insightFeedback", "savedHypothesis",
             "userSettings"

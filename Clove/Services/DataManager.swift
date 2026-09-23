@@ -195,7 +195,7 @@ class DataManager {
         case .activities:
             // Get activity entries from the new ActivityEntryRepo
             let activityEntries = ActivityEntryRepo.shared.getEntriesForDate(log.date)
-            let activityNames = activityEntries.map { "\($0.name) (\($0.category.displayName))" }
+            let activityNames = activityEntries.map { "\($0.name) (\($0.categoryDefinition.name))" }
             return activityNames.joined(separator: "; ")
         case .notes:
             return log.notes ?? ""

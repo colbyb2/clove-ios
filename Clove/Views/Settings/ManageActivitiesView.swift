@@ -4,8 +4,9 @@ struct ManageActivitiesView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
     @State private var allEntries: [ActivityEntry] = []
-    @State private var showingAddActivity = false
-    @State private var selectedCategory: ActivityCategory?
+    @State private var showingCategories = false
+    @State private var categories: [ActivityCategoryDefinition] = ActivityCategoryDefinition.presets
+    @State private var selectedCategoryID: String?
 
     private let repo = ActivityEntryRepo.shared
 
@@ -36,18 +37,18 @@ struct ManageActivitiesView: View {
                 HStack(spacing: CloveSpacing.small) {
                     ActivityCategoryFilterChip(
                         title: "All",
-                        isSelected: selectedCategory == nil
+                        isSelected: selectedCategoryID == nil
                     ) {
-                        selectedCategory = nil
+                        selectedCategoryID = nil
                     }
 
-                    ForEach(ActivityCategory.allCases) { category in
+                    ForEach(categories) { category in
                         ActivityCategoryFilterChip(
-                            title: category.displayName,
-                            icon: category.icon,
-                            isSelected: selectedCategory == category
+                            title: category.name,
+                            icon: category.symbol,
+                            isSelected: selectedCategoryID == category.id
                         ) {
-                            selectedCategory = category
+                            selectedCategoryID = category.id
                         }
                     }
                 }
@@ -115,8 +116,23 @@ struct ManageActivitiesView: View {
         .background(CloveColors.background)
         .navigationTitle("Manage Activities")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Categories") { showingCategories = true }
+            }
+        }
         .onAppear {
             loadEntries()
+        }
+        .sheet(isPresented: $showingCategories) {
+            ManageActivityCategoriesSheet {
+                categories = ActivityCategoryRepo.shared.getAll()
+                if let selectedCategoryID,
+                   !categories.contains(where: { $0.id == selectedCategoryID }) {
+                    self.selectedCategoryID = nil
+                }
+                loadEntries()
+            }
         }
     }
 
@@ -142,8 +158,8 @@ struct ManageActivitiesView: View {
         var entries = uniqueEntries
 
         // Filter by category
-        if let category = selectedCategory {
-            entries = entries.filter { $0.category == category }
+        if let selectedCategoryID {
+            entries = entries.filter { ($0.categoryID ?? $0.category.rawValue) == selectedCategoryID }
         }
 
         // Filter by search text
@@ -165,6 +181,7 @@ struct ManageActivitiesView: View {
     // MARK: - Helper Methods
 
     private func loadEntries() {
+        categories = ActivityCategoryRepo.shared.getAll()
         allEntries = repo.getAllEntries()
     }
 
@@ -225,9 +242,10 @@ private struct ActivityManageRow: View {
     let onDelete: () -> Void
 
     var body: some View {
+        let category = entry.categoryDefinition
         HStack(spacing: CloveSpacing.medium) {
             // Category indicator
-            Image(systemName: entry.category.icon)
+            Image(systemName: category.symbol)
                 .font(.system(size: 18))
                 .foregroundStyle(categoryColor)
                 .frame(width: 28, height: 28)
@@ -241,7 +259,7 @@ private struct ActivityManageRow: View {
                     .foregroundStyle(CloveColors.primaryText)
 
                 HStack(spacing: 6) {
-                    Text(entry.category.displayName)
+                    Text(category.name)
                         .font(.system(.caption, design: .rounded))
                         .foregroundStyle(CloveColors.secondaryText)
 
@@ -281,14 +299,7 @@ private struct ActivityManageRow: View {
     }
 
     private var categoryColor: Color {
-        switch entry.category {
-        case .exercise: return CloveColors.blue
-        case .wellness: return CloveColors.green
-        case .social: return CloveColors.orange
-        case .chores: return CloveColors.yellow
-        case .rest: return Theme.shared.accent
-        case .other: return CloveColors.secondaryText
-        }
+        entry.categoryDefinition.color
     }
 
     private func intensityColor(_ intensity: ActivityIntensity) -> Color {
