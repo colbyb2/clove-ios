@@ -73,16 +73,16 @@ enum Tutorials {
                    description: "Welcome to your health calendar! This is where you can explore your past logs, spot patterns, and track your progress over time.",
                    subtitle: "Every day tells part of your health story"),
 
-      TutorialStep(id: 1, icon: "circle.fill", title: "Daily Indicators",
-                   description: "Each day shows a colored dot indicating your overall well-being. Colors help you quickly spot good days, challenging days, and patterns.",
-                   subtitle: "See your health at a glance"),
+      TutorialStep(id: 1, icon: "chart.xyaxis.line", title: "Choose Your View",
+                   description: "Overview quietly marks days with data. Choose a metric such as mood, pain, or a symptom to see its values across the month.",
+                   subtitle: "Start broad, then focus when you want to"),
 
       TutorialStep(id: 2, icon: "hand.tap", title: "Tap to Explore",
-                   description: "Tap any day to see your detailed log from that date. View your mood, energy, symptoms, and notes from any day in your history.",
-                   subtitle: "Dive deep into any day that interests you"),
+                   description: "Tap a day to see a quick summary below the calendar. From there, you can open the full day or edit it.",
+                   subtitle: "Compare nearby days without opening a new screen each time"),
 
       TutorialStep(id: 3, icon: "calendar.badge.clock", title: "Navigate Through Time",
-                   description: "Tape the arrows to move between months. Go back as far as you want to explore your health journey.",
+                   description: "Tap the arrows or swipe the calendar to move between months. Use Today to return to the current month.",
                    subtitle: nil),
 
       TutorialStep(id: 4, icon: "magnifyingglass", title: "Spot the Patterns",

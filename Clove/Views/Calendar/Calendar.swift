@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 struct CalendarView: View {
@@ -6,199 +5,251 @@ struct CalendarView: View {
     var records: [Date: CalendarRecord] = [:]
     var onDaySelected: (Date) -> Void = { _ in }
     @Binding var selectedDate: Date
-    
-    let calendar = Calendar.current
-    @State private var selectedDay: Date? = nil
-    @GestureState private var dragOffset: CGSize = .zero
-    
+    @Binding var selectedDay: Date?
+    var showsCycleOverlay: Bool = true
+
+    private let calendar = Calendar.current
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    init(
+        theme: CalendarTheme = .defaultTheme,
+        records: [Date: CalendarRecord] = [:],
+        onDaySelected: @escaping (Date) -> Void = { _ in },
+        selectedDate: Binding<Date>,
+        selectedDay: Binding<Date?> = .constant(nil),
+        showsCycleOverlay: Bool = true
+    ) {
+        self.theme = theme
+        self.records = records
+        self.onDaySelected = onDaySelected
+        _selectedDate = selectedDate
+        _selectedDay = selectedDay
+        self.showsCycleOverlay = showsCycleOverlay
+    }
+
     var body: some View {
         VStack(spacing: 10) {
-            HStack {
-                Button(action: { changeMonth(by: -1) }) {
-                    Image(systemName: "chevron.left")
-                }
-                .foregroundStyle(theme.primary)
-                
-                Spacer()
-                
-                Text(monthTitle)
-                    .font(.title2)
-                    .bold()
-                
-                Spacer()
-                
-                Button(action: { changeMonth(by: 1) }) {
-                    Image(systemName: "chevron.right")
-                }
-                .foregroundStyle(theme.primary)
-            }
-            .padding(.horizontal)
-            
-            HStack {
-                ForEach(weekdays, id: \.self) { day in
-                    Text(day)
-                        .font(.caption)
-                        .frame(maxWidth: .infinity)
+            monthHeader
+            weekdayHeader
+
+            LazyVGrid(columns: columns, spacing: 5) {
+                ForEach(calendarDays) { day in
+                    dayCell(day)
                 }
             }
-            
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 10) {
-                ForEach(paddedDays.indices, id: \.self) { index in
-                    if let day = paddedDays[index] {
-                        let date = dateForDay(day)
-                        let isToday = calendar.isDate(date, inSameDayAs: Date())
-                        let isSelected = selectedDay != nil && calendar.isDate(date, inSameDayAs: selectedDay!)
-                        let record: CalendarRecord? = records[date]
-                        
-                        ZStack {
-                            Text("\(day)")
-                                .frame(maxWidth: .infinity, minHeight: 40)
-                                .foregroundColor(textColor(for: record, isSelected: isSelected))
-                                .background {
-                                    ZStack {
-                                        // Prediction background (shown behind everything)
-                                        if let record, record.isPredictedCycle {
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(Color.pink.opacity(0.2))
-                                        }
-
-                                        // Heatmap background
-                                        if let record, !record.isPredictedCycle {
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(record.color)
-                                        }
-
-                                        // Today border
-                                        if isToday {
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .stroke(theme.todayBorder, lineWidth: 2)
-                                        }
-
-                                        // Selection indicator
-                                        if isSelected {
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .stroke(theme.primary, lineWidth: 2.5)
-                                        }
-                                    }
-                                }
-
-                            // Cycle indicator emoji
-                            if let record, record.hasCycleEntry {
-                                VStack {
-                                    Spacer()
-                                    HStack {
-                                        Spacer()
-                                        Image(systemName: "drop.fill")
-                                            .font(.system(size: 10))
-                                            .padding([.trailing, .bottom], 2)
-                                            .foregroundStyle(Color.pink)
-                                    }
-                                }
-                            }
-
-                            // Prediction indicator
-                            if let record, record.isPredictedCycle {
-                                VStack {
-                                    HStack {
-                                        Spacer()
-                                        Image(systemName: "drop")
-                                            .font(.system(size: 8, weight: .bold))
-                                            .foregroundStyle(Color.pink.opacity(0.6))
-                                            .padding([.trailing, .top], 3)
-                                    }
-                                    Spacer()
-                                }
-                            }
-                        }
-                        .onTapGesture {
-                            withAnimation {
-                                selectedDay = date
-                            }
-                            onDaySelected(date)
-                        }
-                    } else {
-                        Color.clear.frame(height: 40)
-                    }
-                }
-            }
-            .gesture(
-                DragGesture()
-                    .updating($dragOffset) { value, state, _ in
-                        state = value.translation
-                    }
-                    .onEnded { value in
-                        let threshold: CGFloat = 50
-                        if value.translation.width < -threshold {
-                            changeMonth(by: 1)
-                        } else if value.translation.width > threshold {
-                            changeMonth(by: -1)
-                        }
-                    }
-            )
         }
-        .padding()
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: CloveCorners.large)
+                .fill(CloveColors.card)
+                .overlay {
+                    RoundedRectangle(cornerRadius: CloveCorners.large)
+                        .stroke(CloveColors.secondaryText.opacity(0.12), lineWidth: 1)
+                }
+        )
+        .contentShape(Rectangle())
+        .gesture(monthSwipe)
     }
-    
-    var monthTitle: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "LLLL yyyy"
-        return formatter.string(from: selectedDate)
+
+    private var monthHeader: some View {
+        HStack(spacing: CloveSpacing.small) {
+            monthButton(systemName: "chevron.left", offset: -1, label: "Previous month")
+            Spacer()
+            Text(monthTitle)
+                .font(CloveFonts.title())
+                .foregroundStyle(CloveColors.primaryText)
+                .accessibilityAddTraits(.isHeader)
+            Spacer()
+            monthButton(systemName: "chevron.right", offset: 1, label: "Next month")
+        }
     }
-    
-    var weekdays: [String] {
-        let formatter = DateFormatter()
-        formatter.locale = calendar.locale
-        return formatter.shortWeekdaySymbols
+
+    private func monthButton(systemName: String, offset: Int, label: String) -> some View {
+        Button { changeMonth(by: offset) } label: {
+            Image(systemName: systemName)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Theme.shared.accent)
+                .frame(width: 38, height: 38)
+                .background(Circle().fill(Theme.shared.accent.opacity(0.09)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
-    
-    var paddedDays: [Int?] {
-        let range = calendar.range(of: .day, in: .month, for: selectedDate)!
+
+    private var weekdayHeader: some View {
+        HStack(spacing: 0) {
+            ForEach(orderedWeekdays, id: \.self) { day in
+                Text(day)
+                    .font(.system(.caption2, design: .rounded, weight: .semibold))
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private func dayCell(_ day: CalendarDay) -> some View {
+        let normalizedDate = calendar.startOfDay(for: day.date)
+        let record = records[normalizedDate]
+        let isToday = calendar.isDateInToday(day.date)
+        let isSelected = selectedDay.map { calendar.isDate($0, inSameDayAs: day.date) } ?? false
+        let hasHeatmapColor = record.map { $0.color != .clear } ?? false
+
+        return Button {
+            if !day.isInDisplayedMonth { selectedDate = day.date }
+            selectedDay = normalizedDate
+            onDaySelected(normalizedDate)
+        } label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: CloveCorners.small)
+                    .fill(cellBackground(record: record, hasHeatmapColor: hasHeatmapColor))
+                RoundedRectangle(cornerRadius: CloveCorners.small)
+                    .strokeBorder(
+                        isSelected ? Theme.shared.accent : (isToday ? Theme.shared.accent.opacity(0.55) : Color.clear),
+                        lineWidth: isSelected ? 2.5 : 1.5
+                    )
+
+                VStack(spacing: 2) {
+                    Text(day.date.formatted(.dateTime.day()))
+                        .font(.system(.body, design: .rounded, weight: isSelected || isToday ? .bold : .medium))
+                        .foregroundStyle(dayTextColor(isInDisplayedMonth: day.isInDisplayedMonth, hasHeatmapColor: hasHeatmapColor))
+
+                    if let value = record?.valueLabel, day.isInDisplayedMonth {
+                        Text(value)
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundStyle(hasHeatmapColor ? Color.white.opacity(0.9) : Theme.shared.accent)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    } else if record?.hasData == true, day.isInDisplayedMonth {
+                        Circle().fill(Theme.shared.accent).frame(width: 5, height: 5)
+                    }
+                }
+
+                if day.isInDisplayedMonth { calendarMarkers(record) }
+            }
+            .frame(maxWidth: .infinity, minHeight: 40)
+            .opacity(day.isInDisplayedMonth ? 1 : 0.34)
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel(for: day.date, record: record, isToday: isToday))
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    @ViewBuilder
+    private func calendarMarkers(_ record: CalendarRecord?) -> some View {
+        if let record {
+            VStack {
+                HStack {
+                    if record.isFlareDay {
+                        Circle().fill(CloveColors.orange).frame(width: 7, height: 7).padding(4)
+                    }
+                    Spacer()
+                    if showsCycleOverlay && record.isPredictedCycle {
+                        Image(systemName: "drop")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(Color.pink.opacity(0.8))
+                            .padding(4)
+                    }
+                }
+                Spacer()
+                if showsCycleOverlay && record.hasCycleEntry {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "drop.fill")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(Color.pink)
+                            .padding(4)
+                    }
+                }
+            }
+        }
+    }
+
+    private func cellBackground(record: CalendarRecord?, hasHeatmapColor: Bool) -> Color {
+        if hasHeatmapColor, let record { return record.color }
+        if showsCycleOverlay, record?.isPredictedCycle == true { return Color.pink.opacity(0.08) }
+        return CloveColors.background.opacity(0.42)
+    }
+
+    private func dayTextColor(isInDisplayedMonth: Bool, hasHeatmapColor: Bool) -> Color {
+        if hasHeatmapColor { return .white }
+        return isInDisplayedMonth ? CloveColors.primaryText : CloveColors.secondaryText
+    }
+
+    private func accessibilityLabel(for date: Date, record: CalendarRecord?, isToday: Bool) -> String {
+        var parts = [date.formatted(date: .complete, time: .omitted)]
+        if isToday { parts.append("Today") }
+        if let value = record?.accessibilityValue { parts.append(value) }
+        else if record?.hasData == true { parts.append("Data recorded") }
+        if record?.isFlareDay == true { parts.append("Flare day") }
+        if showsCycleOverlay && record?.hasCycleEntry == true { parts.append("Period recorded") }
+        if showsCycleOverlay && record?.isPredictedCycle == true { parts.append("Predicted period") }
+        return parts.joined(separator: ", ")
+    }
+
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 5), count: 7)
+    }
+
+    private var monthTitle: String { selectedDate.formatted(.dateTime.month(.wide).year()) }
+
+    private var orderedWeekdays: [String] {
+        let symbols = calendar.veryShortStandaloneWeekdaySymbols
+        let start = max(0, min(symbols.count - 1, calendar.firstWeekday - 1))
+        return Array(symbols[start...] + symbols[..<start])
+    }
+
+    private var calendarDays: [CalendarDay] {
         let components = calendar.dateComponents([.year, .month], from: selectedDate)
-        let firstOfMonth = calendar.date(from: components)!
-        let firstWeekday = calendar.component(.weekday, from: firstOfMonth)
-        
-        let padding: [Int?] = Array(repeating: nil, count: firstWeekday - 1)
-        let days = range.map { Optional($0) }
-        
-        return padding + days
-    }
-    
-    func dateForDay(_ day: Int) -> Date {
-        var components = calendar.dateComponents([.year, .month], from: selectedDate)
-        components.day = day
-        return calendar.date(from: components)!
-    }
-    
-    func changeMonth(by value: Int) {
-        if let newDate = calendar.date(byAdding: .month, value: value, to: selectedDate) {
-            selectedDate = newDate
+        guard let firstOfMonth = calendar.date(from: components) else { return [] }
+        let weekday = calendar.component(.weekday, from: firstOfMonth)
+        let leadingDays = (weekday - calendar.firstWeekday + 7) % 7
+        guard let gridStart = calendar.date(byAdding: .day, value: -leadingDays, to: firstOfMonth) else { return [] }
+
+        return (0..<42).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: gridStart) else { return nil }
+            return CalendarDay(date: date, isInDisplayedMonth: calendar.isDate(date, equalTo: selectedDate, toGranularity: .month))
         }
     }
-    
-    func textColor(for record: CalendarRecord?, isSelected: Bool) -> Color {
-        // If there's a colored heatmap background, use white text for better contrast
-        if record != nil {
-            // Check if the color is likely to be dark/saturated
-            return .white
+
+    private var monthSwipe: some Gesture {
+        DragGesture(minimumDistance: 24).onEnded { value in
+            guard abs(value.translation.width) > abs(value.translation.height), abs(value.translation.width) > 50 else { return }
+            changeMonth(by: value.translation.width < 0 ? 1 : -1)
         }
-        // For days without data, use theme colors
-        return isSelected ? theme.selectedTextColor : theme.textColor
+    }
+
+    private func changeMonth(by value: Int) {
+        guard let newDate = calendar.date(byAdding: .month, value: value, to: selectedDate) else { return }
+        if reduceMotion { selectedDate = newDate }
+        else { withAnimation(.easeInOut(duration: 0.2)) { selectedDate = newDate } }
+        selectedDay = nil
     }
 }
 
+private struct CalendarDay: Identifiable {
+    let date: Date
+    let isInDisplayedMonth: Bool
+    var id: Date { date }
+}
+
 struct CalendarTheme {
-    var primary: Color          // Selected day background
-    var todayBorder: Color      // Border around today
-    var textColor: Color        // Day text
-    var selectedTextColor: Color // Selected day text
-    var eventDotColor: Color    // Event marker
+    var primary: Color
+    var todayBorder: Color
+    var textColor: Color
+    var selectedTextColor: Color
+    var eventDotColor: Color
 }
 
 struct CalendarRecord {
     let color: Color
-    var icon: String?
+    var icon: String? = nil
     var hasCycleEntry: Bool = false
     var isPredictedCycle: Bool = false
+    var hasData: Bool = false
+    var isFlareDay: Bool = false
+    var valueLabel: String? = nil
+    var accessibilityValue: String? = nil
 }
 
 extension CalendarTheme {
@@ -211,88 +262,25 @@ extension CalendarTheme {
     )
 }
 
-#Preview("Empty") {
+#Preview("Calendar") {
     struct PreviewWrapper: View {
-        @State private var selectedDate = Date()
-        
-        var body: some View {
-            CalendarView(selectedDate: $selectedDate)
-        }
-    }
-    
-    return PreviewWrapper()
-}
-
-#Preview("Cycle Data") {
-    struct PreviewWrapper: View {
-        @State private var selectedDate = Date()
-
-        var records: [Date: CalendarRecord] {
-            let calendar = Calendar.current
-            var recordsDict: [Date: CalendarRecord] = [:]
-
-            // Add some regular log data (past days)
-            for dayOffset in -15...(-1) {
-                if let date = calendar.date(byAdding: .day, value: dayOffset, to: Date()) {
-                    let normalizedDate = calendar.startOfDay(for: date)
-                    // Every few days has some data
-                    if dayOffset % 3 == 0 {
-                        recordsDict[normalizedDate] = CalendarRecord(
-                            color: CloveColors.blue.opacity(0.6),
-                            icon: nil,
-                            hasCycleEntry: false,
-                            isPredictedCycle: false
-                        )
-                    }
-                }
-            }
-
-            // Add actual cycle entries (3 days, starting 10 days ago)
-            for dayOffset in -10...(-8) {
-                if let date = calendar.date(byAdding: .day, value: dayOffset, to: Date()) {
-                    let normalizedDate = calendar.startOfDay(for: date)
-                    recordsDict[normalizedDate] = CalendarRecord(
-                        color: .clear,
-                        icon: nil,
-                        hasCycleEntry: true,
-                        isPredictedCycle: false
-                    )
-                }
-            }
-
-            // Add predicted cycle entries (5 days, starting 5 days from now)
-            for dayOffset in 5...9 {
-                if let date = calendar.date(byAdding: .day, value: dayOffset, to: Date()) {
-                    let normalizedDate = calendar.startOfDay(for: date)
-                    recordsDict[normalizedDate] = CalendarRecord(
-                        color: .clear,
-                        icon: nil,
-                        hasCycleEntry: false,
-                        isPredictedCycle: true
-                    )
-                }
-            }
-
-            // Today has some data
-            let today = calendar.startOfDay(for: Date())
-            recordsDict[today] = CalendarRecord(
-                color: CloveColors.green.opacity(0.7),
-                icon: nil,
-                hasCycleEntry: false,
-                isPredictedCycle: false
-            )
-
-            return recordsDict
-        }
+        @State private var month = Date()
+        @State private var day: Date? = Date()
 
         var body: some View {
             CalendarView(
-                records: records,
-                selectedDate: $selectedDate
+                records: [Calendar.current.startOfDay(for: Date()): CalendarRecord(
+                    color: Theme.shared.accent.opacity(0.75),
+                    hasData: true,
+                    valueLabel: "7",
+                    accessibilityValue: "Mood 7 out of 10"
+                )],
+                selectedDate: $month,
+                selectedDay: $day
             )
             .padding()
+            .background(CloveColors.background)
         }
     }
-
     return PreviewWrapper()
 }

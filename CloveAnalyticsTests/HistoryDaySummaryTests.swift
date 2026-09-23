@@ -63,8 +63,10 @@ final class HistoryDaySummaryTests: XCTestCase {
         XCTAssertNotEqual(view.getCalendarRecords()[activityDay]?.color, Color.clear)
 
         viewModel.selectedCategory = .allData
-        XCTAssertNotEqual(view.getCalendarRecords()[foodDay]?.color, Color.clear)
-        XCTAssertNotEqual(view.getCalendarRecords()[activityDay]?.color, Color.clear)
+        XCTAssertEqual(view.getCalendarRecords()[foodDay]?.color, Color.clear)
+        XCTAssertEqual(view.getCalendarRecords()[activityDay]?.color, Color.clear)
+        XCTAssertTrue(view.getCalendarRecords()[foodDay]?.hasData == true)
+        XCTAssertTrue(view.getCalendarRecords()[activityDay]?.hasData == true)
     }
 
     func testHistoryReadFailurePreservesLastKnownGoodCalendarUntilRetry() {
