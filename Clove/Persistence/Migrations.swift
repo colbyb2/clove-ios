@@ -28,8 +28,30 @@ enum Migrations {
         CycleEndMarkerMigration(),
         SymptomActiveStateMigration(),
         SymptomDisplayOrderMigration(),
-        ActivityCategoryTaxonomyMigration()
+        ActivityCategoryTaxonomyMigration(),
+        PacingPlanMigration()
     ]
+}
+
+struct PacingPlanMigration: Migration {
+    var identifier: String { "pacingPlans_092226" }
+
+    func migrate(_ db: Database) throws {
+        try db.create(table: "pacingPlanItem") { table in
+            table.autoIncrementedPrimaryKey("id")
+            table.column("title", .text).notNull()
+            table.column("date", .datetime).notNull()
+            table.column("state", .text).notNull().defaults(to: PacingPlanState.planned.rawValue)
+            table.column("sortOrder", .integer).notNull().defaults(to: 0)
+            table.column("createdAt", .datetime).notNull()
+            table.column("updatedAt", .datetime).notNull()
+        }
+        try db.create(
+            index: "pacingPlanItem_date_order",
+            on: "pacingPlanItem",
+            columns: ["date", "sortOrder", "createdAt"]
+        )
+    }
 }
 
 struct ActivityCategoryTaxonomyMigration: Migration {

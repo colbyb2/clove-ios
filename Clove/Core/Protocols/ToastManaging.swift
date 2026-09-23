@@ -29,7 +29,6 @@ protocol ToastManaging: AnyObject {
     ///   - color: The background color (default: .black)
     ///   - icon: Optional icon to display
     ///   - duration: How long to display the toast (default: 3.0 seconds)
-    func showToast(message: String, color: Color, icon: Image?, duration: Double)
     func showToast(
         message: String,
         color: Color,
@@ -43,7 +42,8 @@ protocol ToastManaging: AnyObject {
     func hide()
 }
 
-/// Protocol extension providing default parameters
+/// Convenience for ordinary toasts. This forwards to the action-capable protocol
+/// requirement so existential calls dispatch to the conforming implementation.
 extension ToastManaging {
     func showToast(
         message: String,
@@ -51,24 +51,13 @@ extension ToastManaging {
         icon: Image? = nil,
         duration: Double = 3.0
     ) {
-        showToast(message: message, color: color, icon: icon, duration: duration)
-    }
-
-    func showToast(
-        message: String,
-        color: Color = .black,
-        icon: Image? = nil,
-        duration: Double = 3.0,
-        actionTitle: String?,
-        action: (() -> Void)?
-    ) {
         showToast(
             message: message,
             color: color,
             icon: icon,
             duration: duration,
-            actionTitle: actionTitle,
-            action: action
+            actionTitle: nil,
+            action: nil
         )
     }
 }

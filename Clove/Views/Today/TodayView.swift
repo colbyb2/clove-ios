@@ -1,10 +1,18 @@
 import SwiftUI
 
+private enum TodaySurface: String {
+    case checkIn
+    case plans
+}
+
 struct TodayView: View {
     @State var viewModel = TodayViewModel()
     @Environment(NavigationCoordinator.self) private var navigationCoordinator
     @AppStorage(Constants.FOCUSED_CHECK_IN) private var focusedCheckIn = false
+    @AppStorage(Constants.PACING_PLANS_ENABLED) private var pacingPlansEnabled = false
     @State private var layoutPreferences = TodayLayoutPreferences.load()
+    @State private var selectedSurface: TodaySurface = .checkIn
+    @State private var unfinishedPlanCount = 0
 
     @State private var showEditSymptoms: Bool = false
     @State private var showQuickAddSymptomSheet: Bool = false
@@ -21,72 +29,39 @@ struct TodayView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-
-                    // Date Navigation Header
-                    DateNavigationHeader(
-                        selectedDate: $viewModel.selectedDate,
-                        isFocused: focusedCheckIn,
-                        onToggleFocus: {
-                            withAnimation(.easeInOut(duration: 0.2)) { focusedCheckIn.toggle() }
-                        },
-                        onDateChange: { newDate in self.viewModel.loadLogData(for: newDate) }
-                    )
-
-                    if let error = viewModel.loadError {
-                        RepositoryErrorView(error: error, onRetry: viewModel.retryLoad)
-                    }
-
-                    if viewModel.hasLoadedData {
-                    // Yesterday's Summary stays out of the way during a focused check-in.
-                    if !focusedCheckIn, viewModel.yesterdayLog != nil
-                        && Calendar.current.isDateInToday(viewModel.selectedDate)
-                    {
-                        YesterdaySummary(
-                            yesterdayLog: viewModel.yesterdayLog,
-                            settings: viewModel.settings
+                    VStack(spacing: 8) {
+                        DateNavigationHeader(
+                            selectedDate: $viewModel.selectedDate,
+                            isFocused: selectedSurface == .checkIn ? focusedCheckIn : nil,
+                            onToggleFocus: selectedSurface == .checkIn ? {
+                                withAnimation(.easeInOut(duration: 0.2)) { focusedCheckIn.toggle() }
+                            } : nil,
+                            onDateChange: handleDateChange
                         )
-                    }
 
-                    ForEach(visibleModules) { module in
-                        moduleContainer(module)
-                    }
-
-                    if visibleModules.isEmpty {
-                        VStack(spacing: CloveSpacing.small) {
-                            Image(systemName: focusedCheckIn ? "scope" : "rectangle.3.group")
-                                .font(.title2)
-                                .foregroundStyle(Theme.shared.accent)
-                            Text(focusedCheckIn ? "No essentials are enabled" : "No Today modules are visible")
-                                .font(.headline)
-                            Text(focusedCheckIn
-                                 ? "Mark enabled modules as Essential in Arrange Today, or return to the full check-in."
-                                 : "You can restore modules from Settings → Tracking & Logging → Arrange Today.")
-                                .font(.caption)
-                                .foregroundStyle(CloveColors.secondaryText)
-                                .multilineTextAlignment(.center)
-                            if focusedCheckIn {
-                                Button("Show all modules") { focusedCheckIn = false }
-                                    .buttonStyle(.bordered)
-                                    .tint(Theme.shared.accent)
-                            }
+                        if pacingPlansEnabled {
+                            surfacePicker
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(CloveSpacing.large)
-                        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
                     }
 
-                    } else if viewModel.loadError == nil {
-                        ProgressView("Loading your health data...")
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 48)
+                    if selectedSurface == .plans, pacingPlansEnabled {
+                        PacingPlanTracker(date: viewModel.selectedDate) {
+                            refreshPlanCount()
+                        }
+                        .padding(CloveSpacing.medium)
+                        .background(
+                            CloveColors.card,
+                            in: RoundedRectangle(cornerRadius: CloveCorners.medium)
+                        )
+                    } else {
+                        checkInContent
                     }
-
                 }
                 .padding()
             }
             .padding(.vertical)
             .overlay(alignment: .bottom) {
-                if viewModel.hasLoadedData, viewModel.saveState != .saved {
+                if selectedSurface == .checkIn, viewModel.hasLoadedData, viewModel.saveState != .saved {
                     DailySaveStatusView(
                         state: viewModel.saveState,
                         onRetry: viewModel.retrySave
@@ -103,6 +78,7 @@ struct TodayView: View {
         .onAppear {
             layoutPreferences = .load()
             viewModel.load()
+            refreshPlanCount()
             if TutorialManager.shared.startTutorial(Tutorials.TodayView) == .Failure {
                 print("Tutorial [TodayView] Failed to Start")
             }
@@ -113,8 +89,13 @@ struct TodayView: View {
         .onChange(of: navigationCoordinator.targetDate) { _, newDate in
             if let targetDate = newDate {
                 viewModel.loadLogData(for: targetDate)
+                refreshPlanCount(for: targetDate)
                 navigationCoordinator.clearTargetDate()
             }
+        }
+        .onChange(of: pacingPlansEnabled) { _, isEnabled in
+            if !isEnabled { selectedSurface = .checkIn }
+            refreshPlanCount()
         }
         .onChange(of: viewModel.logData.mood) { _, _ in viewModel.scheduleAutoSave(for: .mood) }
         .onChange(of: viewModel.logData.painLevel) { _, _ in viewModel.scheduleAutoSave(for: .painLevel) }
@@ -157,6 +138,122 @@ struct TodayView: View {
             }
             .onDisappear { cycleEntryPreset = nil }
         }
+    }
+
+    @ViewBuilder
+    private var checkInContent: some View {
+        if let error = viewModel.loadError {
+            RepositoryErrorView(error: error, onRetry: viewModel.retryLoad)
+        }
+
+        if viewModel.hasLoadedData {
+            // Yesterday's Summary stays out of the way during a focused check-in.
+            if !focusedCheckIn, viewModel.yesterdayLog != nil
+                && Calendar.current.isDateInToday(viewModel.selectedDate)
+            {
+                YesterdaySummary(
+                    yesterdayLog: viewModel.yesterdayLog,
+                    settings: viewModel.settings
+                )
+            }
+
+            ForEach(visibleModules) { module in
+                moduleContainer(module)
+            }
+
+            if visibleModules.isEmpty {
+                VStack(spacing: CloveSpacing.small) {
+                    Image(systemName: focusedCheckIn ? "scope" : "rectangle.3.group")
+                        .font(.title2)
+                        .foregroundStyle(Theme.shared.accent)
+                    Text(focusedCheckIn ? "No essentials are enabled" : "No Today modules are visible")
+                        .font(.headline)
+                    Text(focusedCheckIn
+                         ? "Mark enabled modules as Essential in Arrange Today, or return to the full check-in."
+                         : "You can restore modules from Settings → Tracking & Logging → Arrange Today.")
+                        .font(.caption)
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .multilineTextAlignment(.center)
+                    if focusedCheckIn {
+                        Button("Show all modules") { focusedCheckIn = false }
+                            .buttonStyle(.bordered)
+                            .tint(Theme.shared.accent)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(CloveSpacing.large)
+                .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+            }
+        } else if viewModel.loadError == nil {
+            ProgressView("Loading your health data...")
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 48)
+        }
+    }
+
+    private var surfacePicker: some View {
+        HStack(spacing: 2) {
+            surfaceButton(.checkIn, title: "Check-in", icon: "checkmark.circle")
+            surfaceButton(.plans, title: "Plans", icon: "leaf", count: unfinishedPlanCount)
+        }
+        .padding(2)
+        .background(CloveColors.card.opacity(0.7), in: Capsule())
+        .overlay {
+            Capsule().stroke(CloveColors.secondaryText.opacity(0.1), lineWidth: 1)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Today view")
+    }
+
+    private func surfaceButton(
+        _ surface: TodaySurface,
+        title: String,
+        icon: String,
+        count: Int? = nil
+    ) -> some View {
+        let isSelected = selectedSurface == surface
+        return Button {
+            guard selectedSurface != surface else { return }
+            withAnimation(.easeInOut(duration: 0.18)) { selectedSurface = surface }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                if let count, count > 0 {
+                    Text("\(count)")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 5)
+                        .frame(minHeight: 17)
+                        .background(Theme.shared.accent.opacity(isSelected ? 0.16 : 0.09), in: Capsule())
+                }
+            }
+            .foregroundStyle(isSelected ? Theme.shared.accent : CloveColors.secondaryText)
+            .padding(.horizontal, 11)
+            .frame(height: 30)
+            .background(
+                isSelected ? Theme.shared.accent.opacity(0.11) : Color.clear,
+                in: Capsule()
+            )
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func handleDateChange(_ date: Date) {
+        viewModel.loadLogData(for: date)
+        refreshPlanCount(for: date)
+    }
+
+    private func refreshPlanCount(for date: Date? = nil) {
+        unfinishedPlanCount = PacingPlanRepo.shared.unfinishedCount(for: date ?? viewModel.selectedDate)
     }
 
     private var visibleModules: [TodayModule] {
@@ -223,6 +320,8 @@ struct TodayView: View {
             symptomsSection
         case .meals:
             FoodTracker(date: viewModel.selectedDate)
+        case .plans:
+            EmptyView()
         case .activities:
             ActivityTracker(date: viewModel.selectedDate)
         case .medications:
@@ -359,6 +458,7 @@ struct TodayView: View {
         case .hydration: viewModel.settings.trackHydration
         case .symptoms: viewModel.settings.trackSymptoms
         case .meals: viewModel.settings.trackMeals
+        case .plans: false
         case .activities: viewModel.settings.trackActivities
         case .medications: viewModel.settings.trackMeds
         case .weather: viewModel.settings.trackWeather
@@ -381,7 +481,7 @@ struct TodayView: View {
         case .bowelMovements: viewModel.logData.bowelMovements.isEmpty
         case .cycle: viewModel.cycleEntry == nil
         case .notes: viewModel.logData.notes?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false
-        case .meals, .activities, .flare: nil
+        case .meals, .plans, .activities, .flare: nil
         }
     }
 

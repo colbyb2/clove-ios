@@ -3,6 +3,7 @@ import SwiftUI
 struct CustomizeTrackerView: View {
     @Environment(UserSettingsViewModel.self) var viewModel
     @AppStorage(Constants.USE_SLIDER_INPUT) private var useSliderInput = true
+    @AppStorage(Constants.PACING_PLANS_ENABLED) private var pacingPlansEnabled = false
     
     // Animation states
     @State private var headerOpacity: Double = 0
@@ -13,7 +14,7 @@ struct CustomizeTrackerView: View {
     @State private var trackingOffset: CGFloat = 30
     @State private var inputOffset: CGFloat = 30
     @State private var buttonOffset: CGFloat = 30
-    @State private var trackingAnimations: [Bool] = Array(repeating: false, count: 13)
+    @State private var trackingAnimations: [Bool] = Array(repeating: false, count: 14)
     
     // Tracking options with icons and colors
     private let trackingOptions = [
@@ -23,6 +24,7 @@ struct CustomizeTrackerView: View {
         TrackingOption(key: "trackHydration", title: "Hydration", icon: "drop.fill", color: .blue, description: "Track daily water intake"),
         TrackingOption(key: "trackSymptoms", title: "Symptoms", icon: "stethoscope", color: .orange, description: "Track specific symptoms"),
         TrackingOption(key: "trackMeals", title: "Meals", icon: "fork.knife", color: .green, description: "Record your meals"),
+        TrackingOption(key: "trackPlans", title: "Gentle Plans", icon: "leaf.fill", color: .teal, description: "Keep an optional pacing list"),
         TrackingOption(key: "trackActivities", title: "Activities", icon: "figure.run", color: .cyan, description: "Log physical activities"),
         TrackingOption(key: "trackMeds", title: "Medications", icon: "pills.fill", color: .purple, description: "Track medication adherence"),
         TrackingOption(key: "trackWeather", title: "Weather", icon: "cloud.sun", color: .mint, description: "Record weather conditions"),
@@ -367,6 +369,7 @@ struct CustomizeTrackerView: View {
         case "trackHydration": return viewModel.settings.trackHydration
         case "trackSymptoms": return viewModel.settings.trackSymptoms
         case "trackMeals": return viewModel.settings.trackMeals
+        case "trackPlans": return pacingPlansEnabled
         case "trackActivities": return viewModel.settings.trackActivities
         case "trackMeds": return viewModel.settings.trackMeds
         case "trackWeather": return viewModel.settings.trackWeather
@@ -386,6 +389,7 @@ struct CustomizeTrackerView: View {
         case "trackHydration": viewModel.settings.trackHydration = value
         case "trackSymptoms": viewModel.settings.trackSymptoms = value
         case "trackMeals": viewModel.settings.trackMeals = value
+        case "trackPlans": pacingPlansEnabled = value
         case "trackActivities": viewModel.settings.trackActivities = value
         case "trackMeds": viewModel.settings.trackMeds = value
         case "trackWeather": viewModel.settings.trackWeather = value

@@ -7,6 +7,7 @@ enum TodayModule: String, CaseIterable, Codable, Identifiable {
     case hydration
     case symptoms
     case meals
+    case plans
     case activities
     case medications
     case weather
@@ -14,6 +15,13 @@ enum TodayModule: String, CaseIterable, Codable, Identifiable {
     case cycle
     case notes
     case flare
+
+    // `plans` remains decodable so existing saved layouts migrate cleanly, but
+    // Gentle Plans now has its own Today surface instead of being a module.
+    static let allCases: [TodayModule] = [
+        .mood, .pain, .energy, .hydration, .symptoms, .meals, .activities,
+        .medications, .weather, .bowelMovements, .cycle, .notes, .flare
+    ]
 
     var id: String { rawValue }
 
@@ -25,6 +33,7 @@ enum TodayModule: String, CaseIterable, Codable, Identifiable {
         case .hydration: "Hydration"
         case .symptoms: "Symptoms"
         case .meals: "Meals"
+        case .plans: "Gentle Plans"
         case .activities: "Activities"
         case .medications: "Medications"
         case .weather: "Weather"
@@ -43,6 +52,7 @@ enum TodayModule: String, CaseIterable, Codable, Identifiable {
         case .hydration: "drop.fill"
         case .symptoms: "stethoscope"
         case .meals: "fork.knife"
+        case .plans: "leaf.fill"
         case .activities: "figure.run"
         case .medications: "pills.fill"
         case .weather: "cloud.sun.fill"

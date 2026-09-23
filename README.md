@@ -8,6 +8,7 @@ Clove is a free, open-source iOS health tracker for recording symptoms and day-t
 
 - Daily tracking for mood, pain, energy, symptoms, medications, meals, activities, hydration, notes, weather, bowel movements, flare days, and menstrual-cycle entries
 - Configurable tracking modules, symptom ordering, activity categories, hydration units, reminders, themes, and Today layout
+- An optional Gentle Plans list with planned, done, later, and removed states that never counts as logged activity
 - Calendar history, search, metric charts, saved comparisons, and locally calculated statistical insights
 - CSV export for spreadsheet use
 - Versioned JSON backup and restore for Clove data and preferences

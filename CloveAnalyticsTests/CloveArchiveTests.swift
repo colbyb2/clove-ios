@@ -48,6 +48,7 @@ final class CloveArchiveTests: XCTestCase {
             try db.execute(sql: "DELETE FROM medicationHistoryEntry")
             try db.execute(sql: "DELETE FROM foodEntry")
             try db.execute(sql: "DELETE FROM activityEntry")
+            try db.execute(sql: "DELETE FROM pacingPlanItem")
             try db.execute(sql: "DELETE FROM cycle")
             try db.execute(sql: "DELETE FROM savedAnalysis")
         }
@@ -67,6 +68,7 @@ final class CloveArchiveTests: XCTestCase {
                 try MedicationHistoryEntry.fetchOne(db),
                 try FoodEntry.fetchOne(db),
                 try ActivityEntry.fetchOne(db),
+                try PacingPlanItem.fetchOne(db),
                 try Cycle.fetchOne(db),
                 try SavedAnalysis.fetchOne(db)
             )
@@ -81,8 +83,10 @@ final class CloveArchiveTests: XCTestCase {
         XCTAssertEqual(restored.4?.isFavorite, true)
         XCTAssertEqual(restored.5?.duration, 35)
         XCTAssertEqual(restored.5?.intensity, .medium)
-        XCTAssertEqual(restored.6?.flow, .heavy)
-        XCTAssertEqual(restored.7?.title, "Sleep vs pain")
+        XCTAssertEqual(restored.6?.title, "Call a friend")
+        XCTAssertEqual(restored.6?.state, .deferred)
+        XCTAssertEqual(restored.7?.flow, .heavy)
+        XCTAssertEqual(restored.8?.title, "Sleep vs pain")
         XCTAssertEqual(defaults.string(forKey: Constants.SELECTED_COLOR), backedUpColor)
         let restoredColorComponents = Theme.shared.accent.toString()
             .split(separator: ",")
@@ -181,6 +185,15 @@ final class CloveArchiveTests: XCTestCase {
                 date: AnalyticsTestDates.date(2026, 9, 17, hour: 14),
                 duration: 35,
                 intensity: .medium
+            ).insert(db)
+            try PacingPlanItem(
+                id: 65,
+                title: "Call a friend",
+                date: AnalyticsTestDates.date(2026, 9, 17),
+                state: .deferred,
+                sortOrder: 0,
+                createdAt: AnalyticsTestDates.date(2026, 9, 17, hour: 8),
+                updatedAt: AnalyticsTestDates.date(2026, 9, 17, hour: 9)
             ).insert(db)
             try Cycle(
                 id: 71,

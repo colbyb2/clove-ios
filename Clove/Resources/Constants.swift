@@ -24,6 +24,7 @@ enum Constants {
 
    // Today layout
    static let FOCUSED_CHECK_IN = "focusedCheckInEnabled"
+   static let PACING_PLANS_ENABLED = "pacingPlansEnabled"
    
    // Input Method Preferences
    static let USE_SLIDER_INPUT = "useSliderInput"

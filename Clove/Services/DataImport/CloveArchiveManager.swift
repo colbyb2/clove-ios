@@ -22,6 +22,7 @@ struct CloveArchive: Codable {
         let foodEntries: [FoodEntry]
         let activityCategories: [ActivityCategoryDefinition]?
         let activityEntries: [ActivityEntry]
+        let pacingPlans: [PacingPlanItem]?
         let cycles: [Cycle]
         let dynamicMetricIdentities: [DynamicMetricIdentity]
         let metricIdentityAliases: [MetricIdentityAlias]
@@ -58,6 +59,7 @@ struct CloveArchivePreferences: Codable {
     let mealSuggestions: [String]?
     let activitySuggestions: [String]?
     let medicationSuggestions: [String]?
+    let pacingPlansEnabled: Bool?
 
     static func capture(from defaults: UserDefaults) -> Self {
         Self(
@@ -80,7 +82,8 @@ struct CloveArchivePreferences: Codable {
             dashboardWidgets: defaults.data(forKey: "dashboardWidgets"),
             mealSuggestions: defaults.stringArray(forKey: "meals_suggestions"),
             activitySuggestions: defaults.stringArray(forKey: "activities_suggestions"),
-            medicationSuggestions: defaults.stringArray(forKey: "medications_suggestions")
+            medicationSuggestions: defaults.stringArray(forKey: "medications_suggestions"),
+            pacingPlansEnabled: defaults.object(forKey: Constants.PACING_PLANS_ENABLED) as? Bool
         )
     }
 
@@ -105,6 +108,7 @@ struct CloveArchivePreferences: Codable {
         set(mealSuggestions, forKey: "meals_suggestions", in: defaults)
         set(activitySuggestions, forKey: "activities_suggestions", in: defaults)
         set(medicationSuggestions, forKey: "medications_suggestions", in: defaults)
+        set(pacingPlansEnabled, forKey: Constants.PACING_PLANS_ENABLED, in: defaults)
     }
 
     private func set(_ value: Any?, forKey key: String, in defaults: UserDefaults) {
@@ -227,6 +231,7 @@ final class CloveArchiveManager {
                 foodEntries: try FoodEntry.fetchAll(db),
                 activityCategories: try ActivityCategoryDefinition.fetchAll(db),
                 activityEntries: try ActivityEntry.fetchAll(db),
+                pacingPlans: try PacingPlanItem.fetchAll(db),
                 cycles: try Cycle.fetchAll(db),
                 dynamicMetricIdentities: try DynamicMetricIdentity.fetchAll(db),
                 metricIdentityAliases: try MetricIdentityAlias.fetchAll(db),
@@ -274,6 +279,7 @@ final class CloveArchiveManager {
             try Self.insert(archive.payload.foodEntries, into: db)
             try Self.insert(archive.payload.activityCategories ?? ActivityCategoryDefinition.presets, into: db)
             try Self.insert(archive.payload.activityEntries, into: db)
+            try Self.insert(archive.payload.pacingPlans ?? [], into: db)
             try Self.insert(archive.payload.cycles, into: db)
             try Self.insert(archive.payload.metricIdentityAliases, into: db)
             try Self.insert(archive.payload.savedAnalyses, into: db)
@@ -316,7 +322,7 @@ final class CloveArchiveManager {
     private static func clearRestorableTables(in db: Database) throws {
         // Child/reference-bearing tables are removed before their identities.
         let tables = [
-            "foodEntry", "activityEntry", "activityCategory", "metricIdentityAlias", "dynamicMetricIdentity",
+            "foodEntry", "activityEntry", "pacingPlanItem", "activityCategory", "metricIdentityAlias", "dynamicMetricIdentity",
             "dailyLog", "medicationHistoryEntry", "trackedMedication", "trackedSymptom",
             "bowelMovement", "cycle", "savedAnalysis", "insightFeedback", "savedHypothesis",
             "userSettings"

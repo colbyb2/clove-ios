@@ -125,6 +125,7 @@ struct TodayLayoutSettingsView: View {
         case .hydration: settings.trackHydration
         case .symptoms: settings.trackSymptoms
         case .meals: settings.trackMeals
+        case .plans: false
         case .activities: settings.trackActivities
         case .medications: settings.trackMeds
         case .weather: settings.trackWeather
