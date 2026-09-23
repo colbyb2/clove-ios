@@ -3,13 +3,70 @@ import SwiftUI
 struct YesterdaySummary: View {
     let yesterdayLog: DailyLog?
     let settings: UserSettings
+    @State private var isExpanded = false
     
     var body: some View {
         if let log = yesterdayLog {
-            YesterdayDataView(log: log, settings: settings)
+            VStack(alignment: .leading, spacing: CloveSpacing.medium) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
+                } label: {
+                    HStack(spacing: CloveSpacing.small) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(CloveColors.secondaryText)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Yesterday")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(CloveColors.primaryText)
+                            if !summaryText(for: log).isEmpty {
+                                Text(summaryText(for: log))
+                                    .font(.caption)
+                                    .foregroundStyle(CloveColors.secondaryText)
+                                    .lineLimit(1)
+                            }
+                        }
+
+                        Spacer()
+
+                        if log.isFlareDay { FlareDayBadge() }
+
+                        Image(systemName: "chevron.down")
+                            .font(.caption.bold())
+                            .foregroundStyle(CloveColors.secondaryText)
+                            .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Yesterday's summary")
+                .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+
+                if isExpanded {
+                    MetricsGrid(log: log, settings: settings)
+                    SymptomsSection(log: log, settings: settings)
+                }
+            }
+            .padding(CloveSpacing.medium)
+            .background(
+                RoundedRectangle(cornerRadius: CloveCorners.medium)
+                    .fill(CloveColors.card)
+                    .stroke(CloveColors.background, lineWidth: 1)
+            )
         } else {
             NoDataView()
         }
+    }
+
+    private func summaryText(for log: DailyLog) -> String {
+        var parts: [String] = []
+        if settings.trackMood, let mood = log.mood { parts.append("Mood \(mood)") }
+        if settings.trackPain, let pain = log.painLevel { parts.append("Pain \(pain)") }
+        if settings.trackEnergy, let energy = log.energyLevel { parts.append("Energy \(energy)") }
+        let notableCount = log.symptomRatings.filter { $0.rating >= 7 || $0.rating <= 3 }.count
+        if settings.trackSymptoms, notableCount > 0 { parts.append("\(notableCount) notable symptom\(notableCount == 1 ? "" : "s")") }
+        return parts.prefix(2).joined(separator: " • ")
     }
 }
 

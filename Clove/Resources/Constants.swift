@@ -17,6 +17,9 @@ enum Constants {
 
    // Cycle
    static let SHOW_CYCLE_ON_TODAY = "showCycleOnToday"
+
+   // Today layout
+   static let FOCUSED_CHECK_IN = "focusedCheckInEnabled"
    
    // Input Method Preferences
    static let USE_SLIDER_INPUT = "useSliderInput"

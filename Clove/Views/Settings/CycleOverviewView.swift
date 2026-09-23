@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CycleOverviewView: View {
     @State private var settingsViewModel = UserSettingsViewModel()
-    @AppStorage(Constants.SHOW_CYCLE_ON_TODAY) private var showCycleOnToday = true
+    @State private var todayLayout = TodayLayoutPreferences.load()
     @State private var periods: [Period] = []
     @State private var cyclePrediction: CyclePrediction? = nil
     @State private var predictionAnalysis: CyclePredictionAnalysis? = nil
@@ -95,6 +95,7 @@ struct CycleOverviewView: View {
             }
         }
         .onAppear {
+            todayLayout = .load()
             settingsViewModel.load()
             if settingsViewModel.settings.trackCycle {
                 loadData()
@@ -116,7 +117,14 @@ struct CycleOverviewView: View {
 
     private var todayShortcutPreference: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Toggle("Show cycle shortcut on Today", isOn: $showCycleOnToday)
+            Toggle("Show cycle shortcut on Today", isOn: Binding(
+                get: { !todayLayout.hidden.contains(.cycle) },
+                set: { isVisible in
+                    if isVisible { todayLayout.hidden.remove(.cycle) }
+                    else { todayLayout.hidden.insert(.cycle) }
+                    todayLayout.save()
+                }
+            ))
                 .font(.subheadline.weight(.semibold))
                 .tint(Theme.shared.accent)
             Text("When no period is active, the shortcut stays compact. Hide it here whenever you prefer a quieter Today screen.")

@@ -2,11 +2,20 @@ import SwiftUI
 
 struct DateNavigationHeader: View {
    @Binding var selectedDate: Date
+   let isFocused: Bool?
+   let onToggleFocus: (() -> Void)?
    
    var onDateChange: (Date) -> Void = {_ in}
    
-   init(selectedDate: Binding<Date> = .constant(Date()), onDateChange: @escaping (Date) -> Void = {_ in}) {
+   init(
+      selectedDate: Binding<Date> = .constant(Date()),
+      isFocused: Bool? = nil,
+      onToggleFocus: (() -> Void)? = nil,
+      onDateChange: @escaping (Date) -> Void = {_ in}
+   ) {
       self._selectedDate = selectedDate
+      self.isFocused = isFocused
+      self.onToggleFocus = onToggleFocus
       self.onDateChange = onDateChange
    }
    
@@ -42,14 +51,30 @@ struct DateNavigationHeader: View {
                Text(formattedDateTitle)
                   .font(.system(size: 24, weight: .bold, design: .rounded))
                   .foregroundStyle(CloveColors.primaryText)
+                  .accessibilityLabel("Current date: \(accessibilityDateString)")
                
-               Text(formattedDateSubtitle)
-                  .font(.system(size: 14, weight: .medium))
-                  .foregroundStyle(CloveColors.secondaryText)
+               HStack(spacing: 6) {
+                  Text(formattedDateSubtitle)
+                     .font(.system(size: 14, weight: .medium))
+                     .foregroundStyle(CloveColors.secondaryText)
+                     .accessibilityHidden(true)
+
+                  if let isFocused, let onToggleFocus {
+                     Button(action: onToggleFocus) {
+                        Image(systemName: "scope")
+                           .font(.system(size: 12, weight: .semibold))
+                           .foregroundStyle(isFocused ? Color.white : Theme.shared.accent)
+                           .frame(width: 26, height: 26)
+                           .background(
+                              isFocused ? Theme.shared.accent : Theme.shared.accent.opacity(0.1),
+                              in: Circle()
+                           )
+                     }
+                     .accessibilityLabel(isFocused ? "Show all Today modules" : "Start focused check-in")
+                     .accessibilityHint(isFocused ? "Leaves focused check-in mode" : "Shows only essential modules")
+                  }
+               }
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Current date: \(accessibilityDateString)")
-            
             Spacer()
             
             // Next day button

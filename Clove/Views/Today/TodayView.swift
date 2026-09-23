@@ -3,7 +3,8 @@ import SwiftUI
 struct TodayView: View {
     @State var viewModel = TodayViewModel()
     @Environment(NavigationCoordinator.self) private var navigationCoordinator
-    @AppStorage(Constants.SHOW_CYCLE_ON_TODAY) private var showCycleOnToday = true
+    @AppStorage(Constants.FOCUSED_CHECK_IN) private var focusedCheckIn = false
+    @State private var layoutPreferences = TodayLayoutPreferences.load()
 
     @State private var showEditSymptoms: Bool = false
     @State private var showQuickAddSymptomSheet: Bool = false
@@ -22,22 +23,22 @@ struct TodayView: View {
                 VStack(alignment: .leading, spacing: 24) {
 
                     // Date Navigation Header
-                    DateNavigationHeader(selectedDate: $viewModel.selectedDate) { newDate in
-                        self.viewModel.loadLogData(for: newDate)
-                    }
+                    DateNavigationHeader(
+                        selectedDate: $viewModel.selectedDate,
+                        isFocused: focusedCheckIn,
+                        onToggleFocus: {
+                            withAnimation(.easeInOut(duration: 0.2)) { focusedCheckIn.toggle() }
+                        },
+                        onDateChange: { newDate in self.viewModel.loadLogData(for: newDate) }
+                    )
 
                     if let error = viewModel.loadError {
                         RepositoryErrorView(error: error, onRetry: viewModel.retryLoad)
                     }
 
                     if viewModel.hasLoadedData {
-                        DailySaveStatusView(
-                            state: viewModel.saveState,
-                            onRetry: viewModel.retrySave
-                        )
-
-                    // Yesterday's Summary (only show if data exists or it's helpful for context)
-                    if viewModel.yesterdayLog != nil
+                    // Yesterday's Summary stays out of the way during a focused check-in.
+                    if !focusedCheckIn, viewModel.yesterdayLog != nil
                         && Calendar.current.isDateInToday(viewModel.selectedDate)
                     {
                         YesterdaySummary(
@@ -46,259 +47,32 @@ struct TodayView: View {
                         )
                     }
 
-                    if viewModel.settings.trackMood {
-                        AccessibleRatingInput(
-                            value: $viewModel.logData.mood,
-                            label: "Mood",
-                            icon: viewModel.currentMoodSymbol,
-                            maxValue: 10
-                        )
+                    ForEach(visibleModules) { module in
+                        moduleContainer(module)
                     }
 
-                    if viewModel.settings.trackPain {
-                        AccessibleRatingInput(
-                            value: $viewModel.logData.painLevel,
-                            label: "Pain Level",
-                            icon: CloveSymbols.pain,
-                            maxValue: 10
-                        )
-                    }
-
-                    if viewModel.settings.trackEnergy {
-                        AccessibleRatingInput(
-                            value: $viewModel.logData.energyLevel,
-                            label: "Energy Level",
-                            icon: CloveSymbols.energy,
-                            maxValue: 10
-                        )
-                    }
-
-                    if viewModel.settings.trackHydration {
-                        HydrationTracker(ounces: $viewModel.logData.waterIntake) { _ in
-                            viewModel.saveHydration()
-                        }
-                    }
-
-                    if viewModel.settings.trackSymptoms {
-                        symptomsSection
-                    }
-
-                    if viewModel.settings.trackMeals {
-                        FoodTracker(date: viewModel.selectedDate)
-                    }
-
-                    if viewModel.settings.trackActivities {
-                        ActivityTracker(date: viewModel.selectedDate)
-                    }
-
-                    if viewModel.settings.trackMeds {
+                    if visibleModules.isEmpty {
                         VStack(spacing: CloveSpacing.small) {
-                            HStack {
-                                HStack(spacing: CloveSpacing.small) {
-                                    Image(systemName: CloveSymbols.medication)
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundStyle(Theme.shared.accent)
-                                    Text("Medications")
-                                        .font(
-                                            .system(size: 18, weight: .semibold, design: .rounded))
-                                }
-
-                                Spacer()
-
-                                Button(action: {
-                                    showMedicationSelection = true
-                                    // Haptic feedback
-                                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                    impactFeedback.impactOccurred()
-                                }) {
-                                    HStack {
-                                        Text(medicationSummaryText())
-                                            .foregroundStyle(
-                                                viewModel.logData.medicationAdherence.isEmpty
-                                                    ? CloveColors.secondaryText
-                                                    : CloveColors.primary
-                                            )
-                                            .font(.system(.body, design: .rounded).weight(.medium))
-
-                                        if viewModel.logData.medicationAdherence.isEmpty {
-                                            Image(systemName: "plus.circle.fill")
-                                                .foregroundStyle(Theme.shared.accent)
-                                                .font(.system(size: 16))
-                                        }
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(CloveColors.card)
-                                    .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
-                                    .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
-                                }
-                                .accessibilityLabel("Medication tracking")
-                                .accessibilityHint("Opens medication checklist")
+                            Image(systemName: focusedCheckIn ? "scope" : "rectangle.3.group")
+                                .font(.title2)
+                                .foregroundStyle(Theme.shared.accent)
+                            Text(focusedCheckIn ? "No essentials are enabled" : "No Today modules are visible")
+                                .font(.headline)
+                            Text(focusedCheckIn
+                                 ? "Mark enabled modules as Essential in Arrange Today, or return to the full check-in."
+                                 : "You can restore modules from Settings → Tracking & Logging → Arrange Today.")
+                                .font(.caption)
+                                .foregroundStyle(CloveColors.secondaryText)
+                                .multilineTextAlignment(.center)
+                            if focusedCheckIn {
+                                Button("Show all modules") { focusedCheckIn = false }
+                                    .buttonStyle(.bordered)
+                                    .tint(Theme.shared.accent)
                             }
                         }
-                        .padding(.vertical, CloveSpacing.small)
-                    }
-
-                    if viewModel.settings.trackWeather {
-                        VStack(spacing: CloveSpacing.small) {
-                            HStack {
-                                HStack(spacing: CloveSpacing.small) {
-                                    Image(systemName: CloveSymbols.weather(for: viewModel.logData.weather))
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundStyle(Theme.shared.accent)
-                                    Text("Weather")
-                                        .font(
-                                            .system(size: 18, weight: .semibold, design: .rounded))
-                                }
-
-                                Spacer()
-
-                                Button(action: {
-                                    showWeatherSelection = true
-                                    // Haptic feedback
-                                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                    impactFeedback.impactOccurred()
-                                }) {
-                                    HStack {
-                                        Text(viewModel.logData.weather ?? "Tap to select")
-                                            .foregroundStyle(
-                                                viewModel.logData.weather != nil
-                                                    ? CloveColors.primary
-                                                    : CloveColors.secondaryText
-                                            )
-                                            .font(.system(.body, design: .rounded).weight(.medium))
-
-                                        if viewModel.logData.weather == nil {
-                                            Image(systemName: "plus.circle.fill")
-                                                .foregroundStyle(Theme.shared.accent)
-                                                .font(.system(size: 16))
-                                        }
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(CloveColors.card)
-                                    .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
-                                    .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
-                                }
-                                .accessibilityLabel("Weather selection")
-                                .accessibilityHint("Opens weather selection dialog")
-                            }
-                        }
-                        .padding(.vertical, CloveSpacing.small)
-                    }
-
-                    if viewModel.settings.trackBowelMovements {
-                        BowelMovementTracker(date: viewModel.selectedDate)
-                    }
-
-                    // MARK: Cycle
-                    if viewModel.settings.trackCycle && showCycleOnToday {
-                        TodayCycleCard(
-                            date: viewModel.selectedDate,
-                            entry: viewModel.cycleEntry,
-                            cycleDay: viewModel.currentCycleDay,
-                            isPeriodActive: viewModel.isPeriodActive,
-                            onLog: { preset in
-                                cycleEntryPreset = preset
-                                showCycleEntry = true
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            },
-                            onDelete: viewModel.deleteCycleEntry,
-                            onHide: { showCycleOnToday = false }
-                        )
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-
-                    // MARK: Notes
-                    if viewModel.settings.trackNotes {
-                        VStack(spacing: CloveSpacing.small) {
-                            HStack {
-                                HStack(spacing: CloveSpacing.small) {
-                                    Image(systemName: CloveSymbols.notes)
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundStyle(Theme.shared.accent)
-                                    Text("Notes")
-                                        .font(
-                                            .system(size: 18, weight: .semibold, design: .rounded))
-                                }
-
-                                Spacer()
-
-                                Button(action: {
-                                    showNotesEntry = true
-                                    // Haptic feedback
-                                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                    impactFeedback.impactOccurred()
-                                }) {
-                                    HStack {
-                                        Text(notesSummaryText())
-                                            .foregroundStyle(
-                                                viewModel.logData.notes != nil
-                                                    ? CloveColors.primary
-                                                    : CloveColors.secondaryText
-                                            )
-                                            .font(.system(.body, design: .rounded).weight(.medium))
-                                            .lineLimit(1)
-
-                                        if viewModel.logData.notes == nil {
-                                            Image(systemName: "plus.circle.fill")
-                                                .foregroundStyle(Theme.shared.accent)
-                                                .font(.system(size: 16))
-                                        }
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(CloveColors.card)
-                                    .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
-                                    .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
-                                }
-                                .accessibilityLabel("Notes entry")
-                                .accessibilityHint("Opens notes editor for this day")
-                            }
-                        }
-                        .padding(.vertical, CloveSpacing.small)
-                    }
-
-                    // MARK: Flare Toggle
-                    if viewModel.settings.showFlareToggle {
-                        VStack(spacing: CloveSpacing.small) {
-                            HStack {
-                                HStack(spacing: CloveSpacing.small) {
-                                    Image(systemName: CloveSymbols.flare)
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundStyle(.orange)
-                                    Text("Flare Day")
-                                        .font(
-                                            .system(size: 18, weight: .semibold, design: .rounded))
-                                }
-
-                                Spacer()
-
-                                CloveToggle(
-                                    toggled: $viewModel.logData.isFlareDay, onColor: .error,
-                                    handleColor: .card.opacity(0.6)
-                                )
-                                .accessibilityLabel("Flare day toggle")
-                                .accessibilityHint(
-                                    viewModel.logData.isFlareDay
-                                        ? "Currently marked as flare day, tap to unmark"
-                                        : "Currently not marked as flare day, tap to mark"
-                                )
-                                .onChange(of: viewModel.logData.isFlareDay) { _, _ in
-                                    // Haptic feedback for toggle
-                                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                                    impactFeedback.impactOccurred()
-                                }
-                            }
-
-                            if viewModel.logData.isFlareDay {
-                                Text("Take care of yourself today")
-                                    .font(CloveFonts.small())
-                                    .foregroundStyle(CloveColors.secondaryText)
-                                    .italic()
-                            }
-                        }
-                        .padding(.vertical, CloveSpacing.small)
+                        .frame(maxWidth: .infinity)
+                        .padding(CloveSpacing.large)
+                        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
                     }
 
                     } else if viewModel.loadError == nil {
@@ -311,8 +85,23 @@ struct TodayView: View {
                 .padding()
             }
             .padding(.vertical)
+            .overlay(alignment: .bottom) {
+                if viewModel.hasLoadedData, viewModel.saveState != .saved {
+                    DailySaveStatusView(
+                        state: viewModel.saveState,
+                        onRetry: viewModel.retrySave
+                    )
+                    .padding(.horizontal, CloveSpacing.medium)
+                    .padding(.bottom, CloveSpacing.small)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .allowsHitTesting(viewModel.saveState == .failed)
+                    .zIndex(10)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: viewModel.saveState)
         }
         .onAppear {
+            layoutPreferences = .load()
             viewModel.load()
             if TutorialManager.shared.startTutorial(Tutorials.TodayView) == .Failure {
                 print("Tutorial [TodayView] Failed to Start")
@@ -367,6 +156,239 @@ struct TodayView: View {
                 cycleEntryPreset = nil
             }
             .onDisappear { cycleEntryPreset = nil }
+        }
+    }
+
+    private var visibleModules: [TodayModule] {
+        layoutPreferences.order.filter { module in
+            moduleIsEnabled(module)
+                && !layoutPreferences.hidden.contains(module)
+                && (!focusedCheckIn || layoutPreferences.essentials.contains(module))
+        }
+    }
+
+    @ViewBuilder
+    private func moduleContainer(_ module: TodayModule) -> some View {
+        if layoutPreferences.collapsed.contains(module) {
+            Button {
+                layoutPreferences.collapsed.remove(module)
+                layoutPreferences.save()
+            } label: {
+                HStack(spacing: CloveSpacing.small) {
+                    Image(systemName: module.icon)
+                        .foregroundStyle(Theme.shared.accent)
+                        .frame(width: 30)
+                    Text(module.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(CloveColors.primaryText)
+                    Spacer()
+                    if needsEntry(module) == true {
+                        Text("Needs entry")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.orange)
+                    }
+                    Image(systemName: "chevron.down")
+                        .font(.caption.bold())
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+                .padding(CloveSpacing.medium)
+                .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Expands \(module.title)")
+        } else {
+            VStack(alignment: .leading, spacing: 6) {
+                if focusedCheckIn, needsEntry(module) == true {
+                    Label("Not answered yet", systemImage: "circle.dashed")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.orange)
+                }
+                moduleContent(module)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func moduleContent(_ module: TodayModule) -> some View {
+        switch module {
+        case .mood:
+            AccessibleRatingInput(value: $viewModel.logData.mood, label: "Mood", icon: viewModel.currentMoodSymbol, maxValue: 10)
+        case .pain:
+            AccessibleRatingInput(value: $viewModel.logData.painLevel, label: "Pain Level", icon: CloveSymbols.pain, maxValue: 10)
+        case .energy:
+            AccessibleRatingInput(value: $viewModel.logData.energyLevel, label: "Energy Level", icon: CloveSymbols.energy, maxValue: 10)
+        case .hydration:
+            HydrationTracker(ounces: $viewModel.logData.waterIntake) { _ in viewModel.saveHydration() }
+        case .symptoms:
+            symptomsSection
+        case .meals:
+            FoodTracker(date: viewModel.selectedDate)
+        case .activities:
+            ActivityTracker(date: viewModel.selectedDate)
+        case .medications:
+            medicationsModule
+        case .weather:
+            weatherModule
+        case .bowelMovements:
+            BowelMovementTracker(date: viewModel.selectedDate)
+        case .cycle:
+            TodayCycleCard(
+                date: viewModel.selectedDate,
+                entry: viewModel.cycleEntry,
+                cycleDay: viewModel.currentCycleDay,
+                isPeriodActive: viewModel.isPeriodActive,
+                onLog: { preset in
+                    cycleEntryPreset = preset
+                    showCycleEntry = true
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                },
+                onDelete: viewModel.deleteCycleEntry,
+                onHide: { hideModule(.cycle) }
+            )
+        case .notes:
+            notesModule
+        case .flare:
+            flareModule
+        }
+    }
+
+    private var medicationsModule: some View {
+        HStack {
+            Label("Medications", systemImage: CloveSymbols.medication)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(CloveColors.primaryText)
+            Spacer()
+            Button {
+                showMedicationSelection = true
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                HStack {
+                    Text(medicationSummaryText())
+                    if viewModel.logData.medicationAdherence.isEmpty { Image(systemName: "plus.circle.fill") }
+                }
+                .font(.system(.body, design: .rounded).weight(.medium))
+                .foregroundStyle(viewModel.logData.medicationAdherence.isEmpty ? CloveColors.secondaryText : CloveColors.primary)
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.small))
+                .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+            }
+            .accessibilityLabel("Medication tracking")
+            .accessibilityHint("Opens medication checklist")
+        }
+        .padding(.vertical, CloveSpacing.small)
+    }
+
+    private var weatherModule: some View {
+        HStack {
+            Label("Weather", systemImage: CloveSymbols.weather(for: viewModel.logData.weather))
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(CloveColors.primaryText)
+            Spacer()
+            Button {
+                showWeatherSelection = true
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                HStack {
+                    Text(viewModel.logData.weather ?? "Tap to select")
+                    if viewModel.logData.weather == nil { Image(systemName: "plus.circle.fill") }
+                }
+                .font(.system(.body, design: .rounded).weight(.medium))
+                .foregroundStyle(viewModel.logData.weather == nil ? CloveColors.secondaryText : CloveColors.primary)
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.small))
+                .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+            }
+            .accessibilityLabel("Weather selection")
+            .accessibilityHint("Opens weather selection dialog")
+        }
+        .padding(.vertical, CloveSpacing.small)
+    }
+
+    private var notesModule: some View {
+        HStack {
+            Label("Notes", systemImage: CloveSymbols.notes)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(CloveColors.primaryText)
+            Spacer()
+            Button {
+                showNotesEntry = true
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                HStack {
+                    Text(notesSummaryText()).lineLimit(1)
+                    if viewModel.logData.notes == nil { Image(systemName: "plus.circle.fill") }
+                }
+                .font(.system(.body, design: .rounded).weight(.medium))
+                .foregroundStyle(viewModel.logData.notes == nil ? CloveColors.secondaryText : CloveColors.primary)
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.small))
+                .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
+            }
+            .accessibilityLabel("Notes entry")
+            .accessibilityHint("Opens notes editor for this day")
+        }
+        .padding(.vertical, CloveSpacing.small)
+    }
+
+    private var flareModule: some View {
+        VStack(spacing: CloveSpacing.small) {
+            HStack {
+                Label("Flare Day", systemImage: CloveSymbols.flare)
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(CloveColors.primaryText)
+                Spacer()
+                CloveToggle(toggled: $viewModel.logData.isFlareDay, onColor: .error, handleColor: .card.opacity(0.6))
+                    .accessibilityLabel("Flare day toggle")
+                    .onChange(of: viewModel.logData.isFlareDay) { _, _ in
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    }
+            }
+            if viewModel.logData.isFlareDay {
+                Text("Take care of yourself today")
+                    .font(CloveFonts.small()).foregroundStyle(CloveColors.secondaryText).italic()
+            }
+        }
+        .padding(.vertical, CloveSpacing.small)
+    }
+
+    private func moduleIsEnabled(_ module: TodayModule) -> Bool {
+        switch module {
+        case .mood: viewModel.settings.trackMood
+        case .pain: viewModel.settings.trackPain
+        case .energy: viewModel.settings.trackEnergy
+        case .hydration: viewModel.settings.trackHydration
+        case .symptoms: viewModel.settings.trackSymptoms
+        case .meals: viewModel.settings.trackMeals
+        case .activities: viewModel.settings.trackActivities
+        case .medications: viewModel.settings.trackMeds
+        case .weather: viewModel.settings.trackWeather
+        case .bowelMovements: viewModel.settings.trackBowelMovements
+        case .cycle: viewModel.settings.trackCycle
+        case .notes: viewModel.settings.trackNotes
+        case .flare: viewModel.settings.showFlareToggle
+        }
+    }
+
+    private func needsEntry(_ module: TodayModule) -> Bool? {
+        switch module {
+        case .mood: viewModel.logData.mood == nil
+        case .pain: viewModel.logData.painLevel == nil
+        case .energy: viewModel.logData.energyLevel == nil
+        case .hydration: viewModel.logData.waterIntake == 0
+        case .symptoms: viewModel.logData.symptomRatings.contains { $0.ratingDouble == nil }
+        case .medications: viewModel.logData.medicationAdherence.isEmpty
+        case .weather: viewModel.logData.weather == nil
+        case .bowelMovements: viewModel.logData.bowelMovements.isEmpty
+        case .cycle: viewModel.cycleEntry == nil
+        case .notes: viewModel.logData.notes?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false
+        case .meals, .activities, .flare: nil
+        }
+    }
+
+    private func hideModule(_ module: TodayModule) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            layoutPreferences.hidden.insert(module)
+            layoutPreferences.save()
         }
     }
 
@@ -573,11 +595,12 @@ private struct DailySaveStatusView: View {
         }
         .padding(.horizontal, CloveSpacing.medium)
         .padding(.vertical, 12)
-        .background(statusColor.opacity(0.09), in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
         .overlay {
             RoundedRectangle(cornerRadius: CloveCorners.medium)
-                .stroke(statusColor.opacity(0.18), lineWidth: 1)
+                .stroke(statusColor.opacity(0.55), lineWidth: 1.5)
         }
+        .shadow(color: .black.opacity(0.14), radius: 10, x: 0, y: 4)
         .animation(.easeInOut(duration: 0.2), value: state)
         .accessibilityElement(children: state == .failed ? .contain : .combine)
     }

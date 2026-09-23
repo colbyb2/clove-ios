@@ -57,6 +57,10 @@ struct CustomizeTrackerView: View {
                     trackingSection
                         .opacity(trackingOpacity)
                         .offset(y: trackingOffset)
+
+                    todayLayoutSection
+                        .opacity(trackingOpacity)
+                        .offset(y: trackingOffset)
                     
                     // Enhanced input method section
                     inputMethodSection
@@ -77,6 +81,42 @@ struct CustomizeTrackerView: View {
         .onAppear {
             startEntranceAnimations()
         }
+    }
+
+    private var todayLayoutSection: some View {
+        NavigationLink {
+            TodayLayoutSettingsView(settings: viewModel.settings)
+        } label: {
+            HStack(spacing: CloveSpacing.medium) {
+                Image(systemName: "rectangle.3.group.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Theme.shared.accent)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.shared.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Arrange Today")
+                        .font(.headline)
+                        .foregroundStyle(CloveColors.primaryText)
+                    Text("Reorder, collapse, hide, and choose essentials")
+                        .font(.caption)
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.bold())
+                    .foregroundStyle(CloveColors.secondaryText)
+            }
+            .padding(CloveSpacing.large)
+            .background(
+                RoundedRectangle(cornerRadius: CloveCorners.large)
+                    .fill(CloveColors.card)
+                    .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
+            )
+        }
+        .buttonStyle(.plain)
     }
     
     // MARK: - Animation Helpers
