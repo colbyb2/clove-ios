@@ -4,67 +4,37 @@ struct DailyLogDetailView: View {
     let log: DailyLog
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dependencies) private var dependencies
-    @State private var trackedSymptoms: [TrackedSymptom] = []
     @State private var bowelMovements: [BowelMovement] = []
     @State private var foodEntries: [FoodEntry] = []
     @State private var activityEntries: [ActivityEntry] = []
     @State private var cycleEntry: Cycle? = nil
-    @State private var userSettings: UserSettings?
-    @State private var isFoodsExpanded: Bool = true
-    @State private var isActivitiesExpanded: Bool = true
+    @State private var isFoodsExpanded: Bool = false
+    @State private var isActivitiesExpanded: Bool = false
+    @State private var isMedicationsExpanded: Bool = false
+    @State private var isBowelMovementsExpanded: Bool = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: CloveSpacing.large) {
-                    // Header section
                     headerSection
-                    
-                    // Weather section
-                    if let weather = log.weather {
-                        weatherSection(weather: weather)
+
+                    if hasAtAGlanceData {
+                        atAGlanceSection
                     }
 
-                    // Cycle section
-                    if let cycle = cycleEntry {
-                        cycleSection(cycle: cycle)
-                    }
-
-                    // Mental & Physical Health section
-                    if hasPhysicalMentalData {
-                        physicalMentalSection
-                    }
-
-                    if let waterIntake = log.waterIntake, waterIntake > 0 {
-                        hydrationSection(ounces: waterIntake)
-                    }
-                    
-                    // Symptoms section
                     if !log.symptomRatings.isEmpty {
                         symptomsSection
                     }
-                    
-                    // Bowel Movements section
-                    if userSettings?.trackBowelMovements ?? false {
-                        bowelMovementsSection
+
+                    if hasDailyDetails {
+                        dailyDetailsSection
                     }
-                    
-                    // Activities & Lifestyle section
-                    if hasLifestyleData {
-                        lifestyleSection
-                    }
-                    
-                    // Notes section
+
                     if let notes = log.notes, !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         notesSection(notes: notes)
                     }
-                    
-                    // Flare day indicator
-                    if log.isFlareDay {
-                        flareDaySection
-                    }
-                    
-                    // Empty state if no data
+
                     if !hasAnyData {
                         EmptyStateView(
                             icon: "doc.text",
@@ -76,6 +46,8 @@ struct DailyLogDetailView: View {
                 .padding(.horizontal, CloveSpacing.medium)
                 .padding(.bottom, CloveSpacing.xlarge)
             }
+            .background(CloveColors.background.ignoresSafeArea())
+            .navigationTitle("Day details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -95,64 +67,85 @@ struct DailyLogDetailView: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .onAppear {
-            loadUserSettings()
-            loadTrackedSymptoms()
             loadBowelMovements()
             loadFoodEntries()
             loadActivityEntries()
             loadCycleEntry()
         }
     }
-    
+
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: CloveSpacing.small) {
-            Text(log.date.formatted(.dateTime.weekday(.wide)))
-                .font(CloveFonts.small())
-                .foregroundStyle(CloveColors.secondaryText)
-            
-            Text(log.date.formatted(date: .abbreviated, time: .omitted))
-                .font(CloveFonts.title())
-                .foregroundStyle(CloveColors.primaryText)
+        HStack(alignment: .center, spacing: CloveSpacing.medium) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(log.date.formatted(.dateTime.weekday(.wide)))
+                    .font(CloveFonts.small())
+                    .foregroundStyle(CloveColors.secondaryText)
+
+                Text(log.date.formatted(date: .long, time: .omitted))
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                    .foregroundStyle(CloveColors.primaryText)
+            }
+
+            Spacer()
+
+            if log.isFlareDay {
+                Label("Flare day", systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(.caption, design: .rounded, weight: .semibold))
+                    .foregroundStyle(CloveColors.orange)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(CloveColors.orange.opacity(0.12), in: Capsule())
+            }
         }
         .padding(.top, CloveSpacing.medium)
     }
-    
-    // MARK: - Physical & Mental Health Section
-    private var physicalMentalSection: some View {
+
+    // MARK: - Day at a Glance
+    private var atAGlanceSection: some View {
         VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Physical & Mental Health", icon: "heart.text.square.fill")
-            
-            VStack(spacing: CloveSpacing.medium) {
-                if let mood = log.mood {
-                    RatingDisplayView(
-                        value: mood,
-                        maxValue: 10,
-                        label: "Mood",
-                        icon: CloveSymbols.mood(for: Double(mood)),
-                        color: moodColor(for: mood)
-                    )
+            SectionHeaderView(title: "Day at a glance", icon: "sparkles")
+
+            if hasPhysicalMentalData {
+                HStack(spacing: CloveSpacing.small) {
+                    if let mood = log.mood {
+                        DayMetricTile(
+                            title: "Mood",
+                            value: mood,
+                            icon: CloveSymbols.mood(for: Double(mood)),
+                            color: moodColor(for: mood)
+                        )
+                    }
+                    if let pain = log.painLevel {
+                        DayMetricTile(
+                            title: "Pain",
+                            value: pain,
+                            icon: "cross.fill",
+                            color: painColor(for: pain)
+                        )
+                    }
+                    if let energy = log.energyLevel {
+                        DayMetricTile(
+                            title: "Energy",
+                            value: energy,
+                            icon: "bolt.fill",
+                            color: energyColor(for: energy)
+                        )
+                    }
                 }
-                
-                if let pain = log.painLevel {
-                    ProgressRatingView(
-                        value: pain,
-                        maxValue: 10,
-                        label: "Pain Level",
-                        color: painColor(for: pain)
-                    )
-                }
-                
-                if let energy = log.energyLevel {
-                    ProgressRatingView(
-                        value: energy,
-                        maxValue: 10,
-                        label: "Energy Level",
-                        color: energyColor(for: energy)
-                    )
+            }
+
+            if !contextItems.isEmpty {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 135), spacing: CloveSpacing.small)],
+                    spacing: CloveSpacing.small
+                ) {
+                    ForEach(contextItems) { item in
+                        DayContextItemView(item: item)
+                    }
                 }
             }
         }
@@ -163,82 +156,53 @@ struct DailyLogDetailView: View {
         VStack(spacing: CloveSpacing.medium) {
             SectionHeaderView(title: "Symptoms", icon: CloveSymbols.symptom)
 
-            VStack(spacing: CloveSpacing.small) {
+            VStack(spacing: 0) {
                 ForEach(log.symptomRatings, id: \.symptomId) { symptom in
-                    if symptom.isBinary {
-                        BinarySymptomDisplayView(
-                            label: symptom.symptomName,
-                            isPresent: symptom.rating > 0
-                        )
-                    } else {
-                        ProgressRatingView(
-                            value: symptom.rating,
-                            maxValue: 10,
-                            label: symptom.symptomName,
-                            color: symptomColor(for: symptom.rating)
-                        )
+                    SymptomSummaryRow(symptom: symptom, color: symptomColor(for: symptom.rating))
+
+                    if symptom.symptomId != log.symptomRatings.last?.symptomId {
+                        Divider()
+                            .padding(.leading, CloveSpacing.medium)
                     }
                 }
             }
+            .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
         }
     }
 
-    private func hydrationSection(ounces: Int) -> some View {
-        let unit = HydrationPreferences.unit()
-        return VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Hydration", icon: CloveSymbols.hydration)
-
-            HStack {
-                Image(systemName: "drop.fill")
-                    .font(.system(size: 24))
-                    .foregroundStyle(CloveColors.blue)
-                Text("Water intake")
-                    .font(CloveFonts.body())
-                    .foregroundStyle(CloveColors.primaryText)
-                Spacer()
-                Text(unit.formatted(canonicalOunces: ounces))
-                    .font(.system(.title3, design: .rounded, weight: .bold))
-                    .foregroundStyle(CloveColors.blue)
-            }
-            .padding(CloveSpacing.medium)
-            .background(
-                RoundedRectangle(cornerRadius: CloveCorners.medium)
-                    .fill(CloveColors.card)
-            )
-        }
-    }
-    
-    // MARK: - Lifestyle Section
-    private var lifestyleSection: some View {
+    // MARK: - Daily Details
+    private var dailyDetailsSection: some View {
         VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Activities & Lifestyle", icon: "figure.mind.and.body")
+            SectionHeaderView(title: "Daily details", icon: "list.bullet.rectangle")
 
-            VStack(spacing: CloveSpacing.medium) {
-                // Food Entries Section
+            VStack(spacing: CloveSpacing.small) {
                 if !foodEntries.isEmpty {
                     FoodEntriesDetailSection(entries: foodEntries, isExpanded: $isFoodsExpanded)
                 }
 
-                // Activity Entries Section
                 if !activityEntries.isEmpty {
                     ActivityEntriesDetailSection(entries: activityEntries, isExpanded: $isActivitiesExpanded)
                 }
 
-                // Medications Section
                 if !log.medicationAdherence.isEmpty {
-                    VStack(alignment: .leading, spacing: CloveSpacing.small) {
-                        HStack {
-                            Image(systemName: CloveSymbols.medication)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Theme.shared.accent)
-                            Text("Medications")
-                                .font(CloveFonts.body())
-                                .foregroundStyle(CloveColors.primaryText)
-                            Spacer()
-                        }
-                        .padding(.horizontal, CloveSpacing.medium)
-
+                    DailyDetailDisclosure(
+                        title: "Medications",
+                        summary: medicationSummary,
+                        icon: CloveSymbols.medication,
+                        isExpanded: $isMedicationsExpanded
+                    ) {
                         MedicationAdherenceView(adherence: log.medicationAdherence)
+                    }
+                }
+
+                if !bowelMovements.isEmpty {
+                    DailyDetailDisclosure(
+                        title: "Bowel movements",
+                        summary: entryCountText(bowelMovements.count),
+                        icon: CloveSymbols.bowelMovement,
+                        isExpanded: $isBowelMovementsExpanded
+                    ) {
+                        bowelMovementRows
                     }
                 }
             }
@@ -253,169 +217,9 @@ struct DailyLogDetailView: View {
         }
     }
     
-    // MARK: - Flare Day Section
-    private var flareDaySection: some View {
-        HStack(spacing: CloveSpacing.medium) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 20))
-                .foregroundStyle(.orange)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Flare Day")
-                    .font(CloveFonts.sectionTitle())
-                    .foregroundStyle(CloveColors.primaryText)
-                
-                Text("This was marked as a flare-up day")
-                    .font(CloveFonts.small())
-                    .foregroundStyle(CloveColors.secondaryText)
-            }
-            
-            Spacer()
-        }
-        .padding(CloveSpacing.medium)
-        .background(
-            RoundedRectangle(cornerRadius: CloveCorners.medium)
-                .fill(Color.orange.opacity(0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                )
-        )
-    }
-    
-    // MARK: - Weather Section
-    private func weatherSection(weather: String) -> some View {
-        VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Weather", icon: CloveSymbols.weather)
-
-            HStack(spacing: CloveSpacing.medium) {
-                Image(systemName: CloveSymbols.weather(for: weather))
-                    .font(.system(size: 42, weight: .semibold))
-                    .foregroundStyle(weatherBorderColor(for: weather))
-                    .scaleEffect(1.0)
-                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(weather)
-                        .font(.system(.title2, design: .rounded).weight(.semibold))
-                        .foregroundStyle(CloveColors.primaryText)
-
-                    Text("Weather conditions")
-                        .font(CloveFonts.small())
-                        .foregroundStyle(CloveColors.secondaryText)
-                }
-
-                Spacer()
-            }
-            .padding(CloveSpacing.medium)
-            .background(
-                RoundedRectangle(cornerRadius: CloveCorners.medium)
-                    .fill(weatherBackgroundColor(for: weather))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CloveCorners.medium)
-                            .stroke(weatherBorderColor(for: weather), lineWidth: 1)
-                    )
-            )
-        }
-    }
-
-    // MARK: - Cycle Section
-    private func cycleSection(cycle: Cycle) -> some View {
-        VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Cycle", icon: CloveSymbols.cycle)
-
-            HStack(spacing: CloveSpacing.small) {
-                // Flow icon
-                ZStack {
-                    Circle()
-                        .fill(flowColor(for: cycle.flow).opacity(0.15))
-                        .frame(width: 36, height: 36)
-
-                    Image(systemName: flowIcon(for: cycle.flow))
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(flowColor(for: cycle.flow))
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(cycle.flow.displayName)
-                        .font(.system(.body, design: .rounded).weight(.semibold))
-                        .foregroundStyle(CloveColors.primaryText)
-
-                    // Badges for additional info
-                    HStack(spacing: 6) {
-                        if cycle.isStartOfCycle {
-                            HStack(spacing: 3) {
-                                Image(systemName: "arrow.counterclockwise")
-                                    .font(.system(size: 9, weight: .bold))
-                                Text("Day 1")
-                                    .font(.system(size: 10, weight: .semibold))
-                            }
-                            .foregroundStyle(.blue)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(.blue.opacity(0.1))
-                            .clipShape(Capsule())
-                        }
-
-                        if cycle.hasCramps {
-                            HStack(spacing: 3) {
-                                Image(systemName: "bolt.heart.fill")
-                                    .font(.system(size: 9, weight: .bold))
-                                Text("Cramps")
-                                    .font(.system(size: 10, weight: .semibold))
-                            }
-                            .foregroundStyle(.orange)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(.orange.opacity(0.1))
-                            .clipShape(Capsule())
-                        }
-                    }
-                }
-
-                Spacer()
-            }
-            .padding(CloveSpacing.small)
-            .background(
-                RoundedRectangle(cornerRadius: CloveCorners.small)
-                    .fill(flowColor(for: cycle.flow).opacity(0.05))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CloveCorners.small)
-                            .stroke(flowColor(for: cycle.flow).opacity(0.2), lineWidth: 1)
-                    )
-            )
-        }
-    }
-    
-    // MARK: - Bowel Movements Section
-    private var bowelMovementsSection: some View {
-        VStack(spacing: CloveSpacing.medium) {
-            SectionHeaderView(title: "Bowel Movements", icon: CloveSymbols.bowelMovement)
-            
-            if bowelMovements.isEmpty {
-                HStack(spacing: CloveSpacing.medium) {
-                    Image(systemName: "circle.dashed")
-                        .font(.system(size: 20))
-                        .foregroundStyle(CloveColors.secondaryText)
-                    
-                    Text("No bowel movements recorded")
-                        .font(CloveFonts.body())
-                        .foregroundStyle(CloveColors.secondaryText)
-                    
-                    Spacer()
-                }
-                .padding(CloveSpacing.medium)
-                .background(
-                    RoundedRectangle(cornerRadius: CloveCorners.medium)
-                        .fill(CloveColors.card)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: CloveCorners.medium)
-                                .stroke(CloveColors.secondaryText.opacity(0.2), lineWidth: 1)
-                        )
-                )
-            } else {
-                VStack(spacing: CloveSpacing.small) {
-                    ForEach(bowelMovements.sorted(by: { $0.date < $1.date })) { movement in
+    private var bowelMovementRows: some View {
+        VStack(spacing: CloveSpacing.small) {
+            ForEach(bowelMovements.sorted(by: { $0.date < $1.date })) { movement in
                     HStack(spacing: CloveSpacing.medium) {
                         // Bristol stool type indicator
                         VStack {
@@ -471,36 +275,95 @@ struct DailyLogDetailView: View {
                             )
                     )
                 }
-                }
             }
         }
-    }
-    
+
     // MARK: - Helper Properties
     private var hasPhysicalMentalData: Bool {
         log.mood != nil || log.painLevel != nil || log.energyLevel != nil
     }
-    
-    private var hasLifestyleData: Bool {
-        !foodEntries.isEmpty || !activityEntries.isEmpty || !log.medicationAdherence.isEmpty
+
+    private var hasAtAGlanceData: Bool {
+        hasPhysicalMentalData || !contextItems.isEmpty
     }
-    
+
+    private var hasDailyDetails: Bool {
+        !foodEntries.isEmpty || !activityEntries.isEmpty ||
+        !log.medicationAdherence.isEmpty || !bowelMovements.isEmpty
+    }
+
+    private var contextItems: [DayContextItem] {
+        var items: [DayContextItem] = []
+
+        if let weather = log.weather {
+            items.append(
+                DayContextItem(
+                    id: "weather",
+                    title: "Weather",
+                    value: weather,
+                    icon: CloveSymbols.weather(for: weather),
+                    color: weatherAccentColor(for: weather)
+                )
+            )
+        }
+
+        if let waterIntake = log.waterIntake, waterIntake > 0 {
+            items.append(
+                DayContextItem(
+                    id: "hydration",
+                    title: "Hydration",
+                    value: HydrationPreferences.unit().formatted(canonicalOunces: waterIntake),
+                    icon: "drop.fill",
+                    color: CloveColors.blue
+                )
+            )
+        }
+
+        if let cycle = cycleEntry {
+            let prefix = cycle.isStartOfCycle ? "Day 1 · " : ""
+            items.append(
+                DayContextItem(
+                    id: "cycle",
+                    title: "Cycle",
+                    value: "\(prefix)\(cycle.flow.displayName) flow",
+                    icon: flowIcon(for: cycle.flow),
+                    color: flowColor(for: cycle.flow)
+                )
+            )
+
+            if cycle.hasCramps {
+                items.append(
+                    DayContextItem(
+                        id: "cramps",
+                        title: "Cycle symptom",
+                        value: "Cramps",
+                        icon: "bolt.heart.fill",
+                        color: CloveColors.orange
+                    )
+                )
+            }
+        }
+
+        return items
+    }
+
+    private var medicationSummary: String {
+        let adherence = log.medicationAdherence
+        let taken = adherence.filter(\.wasTaken).count
+        return "\(taken) of \(adherence.count) taken"
+    }
+
+    private func entryCountText(_ count: Int) -> String {
+        "\(count) \(count == 1 ? "entry" : "entries")"
+    }
+
     private var hasAnyData: Bool {
-        hasPhysicalMentalData || (log.waterIntake ?? 0) > 0 || !log.symptomRatings.isEmpty || hasLifestyleData ||
+        hasAtAGlanceData || !log.symptomRatings.isEmpty || hasDailyDetails ||
         (log.notes != nil && !log.notes!.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ||
-        log.isFlareDay || log.weather != nil || (userSettings?.trackBowelMovements ?? false && !bowelMovements.isEmpty) ||
-        cycleEntry != nil
+        log.isFlareDay
     }
-    
+
     // MARK: - Helper Functions
-    private func loadUserSettings() {
-        userSettings = dependencies.settingsRepository.getSettings()
-    }
-
-    private func loadTrackedSymptoms() {
-        trackedSymptoms = dependencies.symptomsRepository.getTrackedSymptoms()
-    }
-
     private func loadBowelMovements() {
         bowelMovements = dependencies.bowelMovementRepository.getBowelMovementsForDate(log.date)
     }
@@ -532,26 +395,31 @@ struct DailyLogDetailView: View {
     
     private func moodColor(for mood: Int) -> Color {
         switch mood {
-        case 7...10: return CloveColors.green
-        case 4...6: return CloveColors.blue
-        default: return CloveColors.red
+        case 9...10: return Color(red: 0.2, green: 0.78, blue: 0.55)
+        case 7...8: return Color(red: 0.3, green: 0.72, blue: 0.65)
+        case 5...6: return Color(red: 1.0, green: 0.75, blue: 0.3)
+        case 3...4: return Color(red: 0.95, green: 0.5, blue: 0.3)
+        default: return Color(red: 0.85, green: 0.25, blue: 0.35)
         }
     }
     
     private func painColor(for pain: Int) -> Color {
         switch pain {
-        case 8...10: return CloveColors.red
-        case 5...7: return CloveColors.orange
-        case 3...4: return CloveColors.blue
-        default: return CloveColors.green
+        case 8...10: return Color(red: 0.9, green: 0.2, blue: 0.25)
+        case 5...7: return Color(red: 0.95, green: 0.52, blue: 0.2)
+        case 3...4: return Color(red: 1.0, green: 0.8, blue: 0.4)
+        case 1...2: return Color(red: 0.4, green: 0.85, blue: 0.65)
+        default: return Color(red: 0.35, green: 0.75, blue: 0.85)
         }
     }
     
     private func energyColor(for energy: Int) -> Color {
         switch energy {
-        case 7...10: return CloveColors.green
-        case 4...6: return CloveColors.blue
-        default: return CloveColors.red
+        case 8...10: return Color(red: 1.0, green: 0.85, blue: 0.2)
+        case 5...7: return Color(red: 0.25, green: 0.7, blue: 0.95)
+        case 3...4: return Color(red: 0.65, green: 0.6, blue: 0.85)
+        case 1...2: return Color(red: 0.5, green: 0.5, blue: 0.7)
+        default: return Color(red: 0.35, green: 0.35, blue: 0.55)
         }
     }
     
@@ -568,27 +436,14 @@ struct DailyLogDetailView: View {
         }
     }
     
-    private func weatherBackgroundColor(for weather: String) -> Color {
+    private func weatherAccentColor(for weather: String) -> Color {
         switch weather {
-        case "Sunny": return Color.yellow.opacity(0.1)
-        case "Cloudy": return Color.gray.opacity(0.1)
-        case "Rainy": return Color.blue.opacity(0.1)
-        case "Stormy": return Color.purple.opacity(0.1)
-        case "Snow": return Color.cyan.opacity(0.1)
-        case "Gloomy": return Color.gray.opacity(0.15)
-        default: return Color.blue.opacity(0.05)
-        }
-    }
-    
-    private func weatherBorderColor(for weather: String) -> Color {
-        switch weather {
-        case "Sunny": return Color.yellow.opacity(0.3)
-        case "Cloudy": return Color.gray.opacity(0.3)
-        case "Rainy": return Color.blue.opacity(0.3)
-        case "Stormy": return Color.purple.opacity(0.3)
-        case "Snow": return Color.cyan.opacity(0.3)
-        case "Gloomy": return Color.gray.opacity(0.4)
-        default: return Color.blue.opacity(0.2)
+        case "Sunny": return Color.yellow
+        case "Cloudy", "Gloomy": return Color.gray
+        case "Rainy": return CloveColors.blue
+        case "Stormy": return Color.purple
+        case "Snow": return Color.cyan
+        default: return CloveColors.blue
         }
     }
 
@@ -608,6 +463,184 @@ struct DailyLogDetailView: View {
         case .medium, .heavy: return "drop.fill"
         case .veryHeavy: return "drop.triangle.fill"
         }
+    }
+}
+
+private struct DayMetricTile: View {
+    let title: String
+    let value: Int
+    let icon: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 5) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                Text("\(value)")
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+            }
+            .foregroundStyle(color)
+
+            Text(title)
+                .font(.system(.caption, design: .rounded, weight: .medium))
+                .foregroundStyle(CloveColors.secondaryText)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, CloveSpacing.medium)
+        .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title), \(value) out of 10")
+    }
+}
+
+private struct DayContextItem: Identifiable {
+    let id: String
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+}
+
+private struct DayContextItemView: View {
+    let item: DayContextItem
+
+    var body: some View {
+        HStack(spacing: CloveSpacing.small) {
+            Image(systemName: item.icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(item.color)
+                .frame(width: 32, height: 32)
+                .background(item.color.opacity(0.12), in: Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.title)
+                    .font(.system(.caption2, design: .rounded, weight: .medium))
+                    .foregroundStyle(CloveColors.secondaryText)
+                Text(item.value)
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(CloveColors.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(CloveSpacing.small)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+    }
+}
+
+private struct SymptomSummaryRow: View {
+    let symptom: SymptomRating
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: CloveSpacing.medium) {
+            VStack(alignment: .leading, spacing: 7) {
+                Text(symptom.symptomName)
+                    .font(.system(.body, design: .rounded, weight: .medium))
+                    .foregroundStyle(CloveColors.primaryText)
+
+                if !symptom.isBinary {
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(CloveColors.background)
+                            Capsule()
+                                .fill(color)
+                                .frame(width: geometry.size.width * Double(symptom.rating) / 10)
+                        }
+                    }
+                    .frame(height: 5)
+                }
+            }
+
+            Spacer()
+
+            if symptom.isBinary {
+                Label(
+                    symptom.rating > 0 ? "Present" : "Not present",
+                    systemImage: symptom.rating > 0 ? "checkmark.circle.fill" : "minus.circle"
+                )
+                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .foregroundStyle(symptom.rating > 0 ? color : CloveColors.secondaryText)
+            } else {
+                Text("\(symptom.rating)")
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .foregroundStyle(color)
+                + Text(" / 10")
+                    .font(.system(.caption, design: .rounded))
+                    .foregroundStyle(CloveColors.secondaryText)
+            }
+        }
+        .padding(CloveSpacing.medium)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct DailyDetailDisclosure<Content: View>: View {
+    let title: String
+    let summary: String
+    let icon: String
+    @Binding var isExpanded: Bool
+    let content: Content
+
+    init(
+        title: String,
+        summary: String,
+        icon: String,
+        isExpanded: Binding<Bool>,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.summary = summary
+        self.icon = icon
+        self._isExpanded = isExpanded
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(spacing: CloveSpacing.small) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: CloveSpacing.small) {
+                    Image(systemName: icon)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.shared.accent)
+                        .frame(width: 28, height: 28)
+                        .background(Theme.shared.accent.opacity(0.1), in: Circle())
+
+                    Text(title)
+                        .font(.system(.body, design: .rounded, weight: .semibold))
+                        .foregroundStyle(CloveColors.primaryText)
+
+                    Spacer()
+
+                    Text(summary)
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(CloveColors.secondaryText)
+
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                Divider()
+                content
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(CloveSpacing.medium)
+        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
     }
 }
 
@@ -666,8 +699,7 @@ struct MedicationAdherenceView: View {
             ForEach(adherence.indices, id: \.self) { index in
                 let medication = adherence[index]
 
-               if !medication.isAsNeeded {
-                   HStack(spacing: CloveSpacing.medium) {
+                HStack(spacing: CloveSpacing.medium) {
                        // Status indicator
                        Image(systemName: medication.wasTaken ? "checkmark.circle.fill" : "circle")
                            .font(.system(size: 20))
@@ -711,7 +743,6 @@ struct MedicationAdherenceView: View {
                                    .stroke(medication.wasTaken ? CloveColors.success.opacity(0.2) : Color.clear, lineWidth: 1)
                            )
                    )
-                }
             }
         }
     }
@@ -723,38 +754,15 @@ struct FoodEntriesDetailSection: View {
     @Binding var isExpanded: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: CloveSpacing.small) {
-            // Collapsible header
-            Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    isExpanded.toggle()
-                }
-            }) {
-                HStack {
-                    Image(systemName: CloveSymbols.meals)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Theme.shared.accent)
-                    Text("Meals")
-                        .font(CloveFonts.body())
-                        .foregroundStyle(CloveColors.primaryText)
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(CloveColors.secondaryText)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-
-                    Spacer()
-                }
-                .padding(.horizontal, CloveSpacing.medium)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            if isExpanded {
-                VStack(spacing: CloveSpacing.xsmall) {
-                    ForEach(entries.sorted(by: { $0.date < $1.date })) { entry in
-                        FoodEntryDetailRow(entry: entry)
-                    }
+        DailyDetailDisclosure(
+            title: "Meals",
+            summary: "\(entries.count) \(entries.count == 1 ? "entry" : "entries")",
+            icon: CloveSymbols.meals,
+            isExpanded: $isExpanded
+        ) {
+            VStack(spacing: CloveSpacing.xsmall) {
+                ForEach(entries.sorted(by: { $0.date < $1.date })) { entry in
+                    FoodEntryDetailRow(entry: entry)
                 }
             }
         }
@@ -808,7 +816,6 @@ struct FoodEntryDetailRow: View {
         .padding(.vertical, CloveSpacing.xsmall)
         .background(CloveColors.card.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
-        .padding(.horizontal, CloveSpacing.medium)
     }
 
     private var categoryColor: Color {
@@ -828,44 +835,17 @@ struct ActivityEntriesDetailSection: View {
     @Binding var isExpanded: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: CloveSpacing.small) {
-            // Collapsible header
-            Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    isExpanded.toggle()
-                }
-            }) {
-                HStack {
-                    Image(systemName: CloveSymbols.activities)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Theme.shared.accent)
-                    Text("Activities")
-                        .font(CloveFonts.body())
-                        .foregroundStyle(CloveColors.primaryText)
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(CloveColors.secondaryText)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-
-                    Spacer()
-
-                    if totalDuration > 0 {
-                        Text(formattedTotalDuration)
-                            .font(.system(.caption, design: .rounded))
-                            .foregroundStyle(CloveColors.secondaryText)
-                    }
-                }
-                .padding(.horizontal, CloveSpacing.medium)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            if isExpanded {
-                VStack(spacing: CloveSpacing.xsmall) {
-                    ForEach(entries.sorted(by: { $0.date < $1.date })) { entry in
-                        ActivityEntryDetailRow(entry: entry)
-                    }
+        DailyDetailDisclosure(
+            title: "Activities",
+            summary: totalDuration > 0
+                ? formattedTotalDuration
+                : "\(entries.count) \(entries.count == 1 ? "entry" : "entries")",
+            icon: CloveSymbols.activities,
+            isExpanded: $isExpanded
+        ) {
+            VStack(spacing: CloveSpacing.xsmall) {
+                ForEach(entries.sorted(by: { $0.date < $1.date })) { entry in
+                    ActivityEntryDetailRow(entry: entry)
                 }
             }
         }
@@ -950,7 +930,6 @@ struct ActivityEntryDetailRow: View {
         .padding(.vertical, CloveSpacing.xsmall)
         .background(CloveColors.card.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: CloveCorners.small))
-        .padding(.horizontal, CloveSpacing.medium)
     }
 
     private var categoryColor: Color {
