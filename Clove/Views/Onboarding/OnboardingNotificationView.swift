@@ -1,282 +1,214 @@
 import SwiftUI
+import UserNotifications
 
 struct OnboardingNotificationView: View {
-    @Environment(OnboardingViewModel.self) var viewModel
+    @Environment(OnboardingViewModel.self) private var viewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
     @State private var notificationManager = NotificationManager.shared
     @State private var notificationStore = NotificationStore.shared
-    @State private var iconScale: CGFloat = 0.8
-    @State private var contentOpacity: Double = 0
-    @State private var buttonOffset: CGFloat = 50
-    @State private var showingTimePicker = false
-    @State private var selectedTime = Date()
-    @State private var isNotificationEnabled = false
-    @State private var isToggleAnimating = false
-    
-    // Get the first (and only) daily reminder
-    private var dailyReminder: ScheduledNotification? {
-        notificationStore.notifications.first
+    @State private var selectedTime = Self.defaultReminderTime
+    @State private var isRequesting = false
+    @State private var permissionDenied = false
+    @State private var appeared = false
+
+    private static var defaultReminderTime: Date {
+        Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? Date()
     }
-    
-    private var timeString: String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: selectedTime)
+
+    private var onboardingReminder: ScheduledNotification? {
+        notificationStore.notifications.first { $0.title == "Daily Log Reminder" }
     }
-    
+
     var body: some View {
         GeometryReader { geometry in
-            ZStack {
-                // Gradient background
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Theme.shared.accent.opacity(0.05),
-                        Theme.shared.accent.opacity(0.1),
-                        Color.clear
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    Spacer()
-                    
-                    // Hero content
-                    VStack(spacing: 24) {
-                        // Icon with enhanced styling
-                        ZStack {
-                            // Soft shadow circle
-                            Circle()
-                                .fill(Theme.shared.accent.opacity(0.1))
-                                .frame(width: 140, height: 140)
-                                .blur(radius: 20)
-                                .offset(y: 10)
-                            
-                            // Icon background
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            isNotificationEnabled ? Theme.shared.accent.opacity(0.8) : Color.gray.opacity(0.6),
-                                            isNotificationEnabled ? Theme.shared.accent.opacity(0.6) : Color.gray.opacity(0.4)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
+            ScrollView {
+                VStack(spacing: 26) {
+                    Spacer(minLength: 12)
+
+                    ZStack {
+                        Circle()
+                            .fill(Theme.shared.accent.opacity(0.12))
+                            .frame(width: 132, height: 132)
+                            .blur(radius: 8)
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Theme.shared.accent, Theme.shared.accent.opacity(0.68)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
                                 )
-                                .frame(width: 120, height: 120)
-                                .animation(.easeInOut(duration: 0.3), value: isNotificationEnabled)
-                            
-                            // Main icon
-                            Image(systemName: isNotificationEnabled ? "bell.fill" : "bell.slash.fill")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 60, height: 60)
-                                .foregroundStyle(.white)
-                                .scaleEffect(isToggleAnimating ? 1.1 : 1.0)
-                                .animation(.easeInOut(duration: 0.2), value: isToggleAnimating)
-                        }
-                        .scaleEffect(iconScale)
-                        .animation(.spring(response: 0.8, dampingFraction: 0.6), value: iconScale)
-                        
-                        // Text content
-                        VStack(spacing: 16) {
-                            Text("Stay Consistent")
-                                .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Theme.shared.accent,
-                                            Theme.shared.accent.opacity(0.8)
-                                        ]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
-                            
-                            Text(isNotificationEnabled ? "You'll be reminded at \(timeString)" : "Get gentle daily reminders to track your progress and build healthy habits.")
-                                .font(.system(.title3, design: .rounded))
-                                .foregroundStyle(CloveColors.secondaryText)
-                                .multilineTextAlignment(.center)
-                                .lineSpacing(4)
-                                .padding(.horizontal, 32)
-                                .animation(.easeInOut(duration: 0.3), value: isNotificationEnabled)
-                        }
-                        .opacity(contentOpacity)
-                        .animation(.easeInOut(duration: 0.8).delay(0.3), value: contentOpacity)
+                            )
+                            .frame(width: 98, height: 98)
+                            .shadow(color: Theme.shared.accent.opacity(0.24), radius: 16, y: 8)
+                        Image(systemName: "bell.badge.fill")
+                            .font(.system(size: 40, weight: .medium))
+                            .foregroundStyle(.white)
                     }
-                    .padding(.horizontal, 24)
-                    
-                    Spacer()
-                    
-                    // Settings Controls
-                    VStack(spacing: 16) {
-                        // Toggle Switch
-                        HStack {
-                            Text("Enable Daily Reminders")
-                                .font(.body)
-                                .fontWeight(.medium)
-                                .foregroundStyle(CloveColors.primaryText)
-                            
-                            Spacer()
-                            
-                            Toggle("", isOn: .init(
-                                get: { isNotificationEnabled },
-                                set: { newValue in
-                                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                                        isToggleAnimating = true
-                                        toggleReminder(enabled: newValue)
-                                    }
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                        isToggleAnimating = false
-                                    }
-                                }
-                            ))
-                            .tint(Theme.shared.accent)
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 16)
-                        .background(Color(UIColor.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        
-                        // Time Picker Button
-                        if isNotificationEnabled {
-                            Button(action: {
-                                showingTimePicker = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "clock")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(Theme.shared.accent)
-                                    
-                                    Text("Reminder Time")
-                                        .font(.body)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.primary)
-                                    
-                                    Spacer()
-                                    
-                                    Text(timeString)
-                                        .font(.body)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(Theme.shared.accent)
-                                    
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                }
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 16)
-                                .background(Color(UIColor.systemGray6))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .scaleEffect(appeared ? 1 : 0.72)
+
+                    VStack(spacing: 9) {
+                        Text("A gentle reminder")
+                            .font(.system(.title, design: .rounded, weight: .bold))
+                            .foregroundStyle(CloveColors.primaryText)
+                        Text("Choose a time that fits naturally into your day. Reminders stay on this device and can be changed anytime.")
+                            .font(.subheadline)
+                            .foregroundStyle(CloveColors.secondaryText)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(3)
+                    }
+                    .padding(.horizontal, 18)
+
+                    VStack(spacing: 0) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "clock.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(Theme.shared.accent)
+                                .frame(width: 38, height: 38)
+                                .background(Theme.shared.accent.opacity(0.11), in: RoundedRectangle(cornerRadius: 10))
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Daily check-in")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(CloveColors.primaryText)
+                                Text("Pick a time that works for most days")
+                                    .font(.caption)
+                                    .foregroundStyle(CloveColors.secondaryText)
                             }
-                            .transition(.asymmetric(
-                                insertion: .scale.combined(with: .opacity),
-                                removal: .scale.combined(with: .opacity)
-                            ))
+
+                            Spacer()
+
+                            DatePicker("Reminder time", selection: $selectedTime, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                                .tint(Theme.shared.accent)
                         }
+                        .padding(14)
                     }
-                    .padding(.horizontal, 24)
-                    .animation(.easeInOut(duration: 0.3), value: isNotificationEnabled)
-                    
-                    Spacer()
-                    
-                    // Enhanced button area
-                    VStack(spacing: 16) {
-                        CloveButton(text: "Continue", fontColor: .white) {
-                            viewModel.nextStep()
-                        }
-                        .shadow(color: Theme.shared.accent.opacity(0.3), radius: 8, x: 0, y: 4)
-                        
-                        // Skip button
-                        Button(action: {
-                            viewModel.nextStep()
-                        }) {
-                            Text("Skip for now")
-                                .font(.system(.body, design: .rounded))
+                    .background(CloveColors.card, in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(CloveColors.secondaryText.opacity(0.09)))
+
+                    if permissionDenied || notificationManager.authorizationStatus == .denied {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("Notifications are currently off", systemImage: "bell.slash.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(CloveColors.primaryText)
+                            Text("You can continue without a reminder, or allow notifications in iOS Settings.")
+                                .font(.caption)
                                 .foregroundStyle(CloveColors.secondaryText)
-                                .padding(.vertical, 12)
+                            Button("Open Settings") {
+                                guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                                openURL(url)
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.shared.accent)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background(CloveColors.error.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(CloveColors.error.opacity(0.18)))
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, max(geometry.safeAreaInsets.bottom, 24))
-                    .offset(y: buttonOffset)
-                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.6), value: buttonOffset)
+
+                    Spacer(minLength: 8)
+
+                    VStack(spacing: 12) {
+                        Button(action: enableReminder) {
+                            HStack(spacing: 8) {
+                                if isRequesting {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Image(systemName: "bell.fill")
+                                }
+                                Text(isRequesting ? "Requesting permission…" : "Enable reminder")
+                            }
+                            .font(.system(.headline, design: .rounded, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .background(Theme.shared.accent, in: RoundedRectangle(cornerRadius: 14))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isRequesting || notificationManager.authorizationStatus == .denied)
+                        .opacity(notificationManager.authorizationStatus == .denied ? 0.45 : 1)
+
+                        Button("Not now") {
+                            viewModel.nextStep()
+                        }
+                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .frame(minHeight: 42)
+                    }
                 }
+                .frame(minHeight: geometry.size.height - 16)
+                .padding(.horizontal, CloveSpacing.large)
+                .padding(.bottom, max(geometry.safeAreaInsets.bottom, 14))
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 20)
             }
+            .scrollIndicators(.hidden)
         }
         .onAppear {
-            // Check current authorization status
             notificationManager.checkAuthorizationStatus()
-            
-            // Check if we already have a reminder
-            if let reminder = dailyReminder {
-                isNotificationEnabled = reminder.isEnabled
-                var components = DateComponents()
-                components.hour = reminder.hour
-                components.minute = reminder.minute
-                selectedTime = Calendar.current.date(from: components) ?? Date()
+            if let reminder = onboardingReminder {
+                selectedTime = Calendar.current.date(from: DateComponents(hour: reminder.hour, minute: reminder.minute)) ?? selectedTime
+            }
+
+            if reduceMotion {
+                appeared = true
             } else {
-                // Default to 9:00 AM
-                var components = DateComponents()
-                components.hour = 9
-                components.minute = 0
-                selectedTime = Calendar.current.date(from: components) ?? Date()
+                withAnimation(.spring(response: 0.65, dampingFraction: 0.84)) {
+                    appeared = true
+                }
             }
-            
-            // Trigger animations
-            withAnimation {
-                iconScale = 1.0
-                contentOpacity = 1.0
-                buttonOffset = 0
-            }
-        }
-        .sheet(isPresented: $showingTimePicker) {
-            TimePickerSheet(
-                selectedTime: $selectedTime,
-                existingReminder: dailyReminder
-            )
         }
     }
-    
-    private func toggleReminder(enabled: Bool) {
-        if enabled {
-            // Request permission first
-            Task {
-                await notificationManager.requestPermission()
-                
-                // Create a new daily reminder if none exists
-                if dailyReminder == nil {
-                    let calendar = Calendar.current
-                    let hour = calendar.component(.hour, from: selectedTime)
-                    let minute = calendar.component(.minute, from: selectedTime)
-                    
-                    let newReminder = ScheduledNotification(
-                        title: "Daily Log Reminder",
-                        body: ScheduledNotification.defaultBody,
-                        hour: hour,
-                        minute: minute,
-                        isEnabled: true
-                    )
-                    notificationStore.addNotification(newReminder)
-                } else if let reminder = dailyReminder {
-                    // Toggle existing reminder
-                    notificationStore.toggleNotification(reminder)
-                }
-                
-                // Update UI state
-                await MainActor.run {
-                    isNotificationEnabled = enabled
-                }
+
+    private func enableReminder() {
+        guard !isRequesting else { return }
+        isRequesting = true
+
+        Task {
+            let granted: Bool
+            if notificationManager.isAuthorized {
+                granted = true
+            } else {
+                granted = await notificationManager.requestPermission()
             }
+
+            await MainActor.run {
+                isRequesting = false
+                permissionDenied = !granted
+                guard granted else { return }
+                saveReminder()
+                viewModel.nextStep()
+            }
+        }
+    }
+
+    private func saveReminder() {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: selectedTime)
+        let hour = components.hour ?? 20
+        let minute = components.minute ?? 0
+
+        if let existing = onboardingReminder {
+            let updated = ScheduledNotification(
+                id: existing.id,
+                title: existing.title,
+                body: existing.body,
+                hour: hour,
+                minute: minute,
+                isEnabled: true,
+                weekdays: existing.weekdays,
+                createdAt: existing.createdAt
+            )
+            notificationStore.updateNotification(updated)
         } else {
-            // Disable existing reminder
-            if let reminder = dailyReminder {
-                notificationStore.toggleNotification(reminder)
-            }
-            isNotificationEnabled = enabled
+            notificationStore.addNotification(
+                ScheduledNotification(
+                    title: "Daily Log Reminder",
+                    body: "Take a moment for your Clove check-in.",
+                    hour: hour,
+                    minute: minute
+                )
+            )
         }
     }
 }

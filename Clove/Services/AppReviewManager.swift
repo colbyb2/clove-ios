@@ -250,14 +250,9 @@ class AppReviewManager: AppReviewManaging {
             return false
         }
 
-        // Check that user has configured at least one symptom (completed onboarding meaningfully)
-        let trackedSymptoms = symptomsRepository.getTrackedSymptoms()
-        guard !trackedSymptoms.isEmpty else {
-            return false
-        }
-
         // Review eligibility should stay lightweight and must not make a successful save depend
-        // on the analytics/dashboard pipeline. Count distinct consecutive logging days directly.
+        // on the analytics/dashboard pipeline or a particular onboarding choice. Count distinct
+        // consecutive logging days directly, including for people who do not track symptoms.
         return hasCurrentLoggingStreak(in: logs, minimumDays: minimumStreakForPrompt)
     }
 

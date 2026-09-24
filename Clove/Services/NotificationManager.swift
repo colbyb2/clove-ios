@@ -15,15 +15,18 @@ class NotificationManager: LocalNotificationScheduling {
    
    // MARK: Authorization
    
-   func requestPermission() async {
+   @discardableResult
+   func requestPermission() async -> Bool {
       do {
          let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
          await MainActor.run {
             self.isAuthorized = granted
+            self.authorizationStatus = granted ? .authorized : .denied
          }
-         checkAuthorizationStatus()
+         return granted
       } catch {
          print("Failed to request notification permission: \(error)")
+         return false
       }
    }
    

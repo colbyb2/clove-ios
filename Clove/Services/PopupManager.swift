@@ -23,8 +23,14 @@ class PopupManager {
    func check() {
       // Clear existing stack to prevent duplicates
       stack.removeAll()
+      let onboardingCompleted = defaults.bool(forKey: Constants.ONBOARDING_FLAG)
       
       Popups.all.forEach { popup in
+         // New users review and accept terms as the final onboarding step.
+         // Updated terms can still appear here for people who already use Clove.
+         if popup.type == .terms && !onboardingCompleted {
+            return
+         }
          let isDismissed = defaults.bool(forKey: popup.id)
          
          if !isDismissed {
@@ -69,6 +75,15 @@ class PopupManager {
    func dismissAll() {
       currentPopup = nil
       stack.removeAll()
+   }
+
+   func markAccepted(_ popup: Popup) {
+      defaults.set(true, forKey: popup.id)
+      defaults.synchronize()
+      if currentPopup?.id == popup.id {
+         currentPopup = nil
+      }
+      stack.removeAll { $0.id == popup.id }
    }
 }
 
@@ -239,7 +254,7 @@ enum Popups {
               
               Remember: Your health is precious. This App is a tool to help you track and understand your data, but your healthcare team provides the medical expertise needed for proper health management.
               
-              By clicking "Done" below, you acknowledge that you have read, understood, and agree to all terms outlined above.
+              By accepting these terms, you acknowledge that you have read, understood, and agree to all terms outlined above.
               """
           ),
    ] + WhatsNewContent.allWhatsNewPopups
