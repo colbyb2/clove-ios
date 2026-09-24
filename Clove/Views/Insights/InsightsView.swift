@@ -89,7 +89,9 @@ final class InsightsHomeViewModel {
             }.sorted { lhs, rhs in
                 if lhs.position == .typical, rhs.position != .typical { return false }
                 if lhs.position != .typical, rhs.position == .typical { return true }
-                return abs(lhs.difference) > abs(rhs.difference)
+                let lhsDeviation = abs(lhs.difference) / max(0.1, lhs.variation)
+                let rhsDeviation = abs(rhs.difference) / max(0.1, rhs.variation)
+                return lhsDeviation > rhsDeviation
             }
             savedAnalyses = (try? SavedAnalysisRepo().fetchAll()) ?? []
             reloadAdvancedPersistence()

@@ -39,14 +39,36 @@ struct AutomaticDiscoveryEngine {
                 && (dataset.coverage[definition.id]?.sourceDayCount ?? 0) >= definition.minimumSamples.relationship
         }.sorted { $0.id.rawValue < $1.id.rawValue }
 
-        var candidates: [(MetricDefinition, MetricDefinition)] = []
+        struct Candidate {
+            let factor: MetricDefinition
+            let outcome: MetricDefinition
+            let priority: Double
+        }
+        var candidates: [Candidate] = []
         for left in definitions.indices {
             for right in definitions.indices where right > left {
                 let pair = (definitions[left], definitions[right])
-                if RelationshipMethodSelector().select(factor: pair.0, outcome: pair.1) != nil { candidates.append(pair) }
+                guard RelationshipMethodSelector().select(factor: pair.0, outcome: pair.1) != nil else { continue }
+                let factorCoverage = dataset.coverage[pair.0.id]
+                let outcomeCoverage = dataset.coverage[pair.1.id]
+                let coverage = min(factorCoverage?.observedDayFraction ?? 0,
+                                   outcomeCoverage?.observedDayFraction ?? 0)
+                let latest = [factorCoverage?.lastObservation, outcomeCoverage?.lastObservation]
+                    .compactMap { $0 }.min() ?? dataset.interval.start
+                let daysOld = max(0, dataset.interval.end.timeIntervalSince(latest) / 86_400)
+                let recency = exp(-daysOld / 30)
+                let actionability = pair.0.directionality == .neutral && pair.1.directionality == .neutral ? 0.25 : 1.0
+                candidates.append(Candidate(factor: pair.0, outcome: pair.1,
+                                            priority: coverage * 0.6 + recency * 0.25 + actionability * 0.15))
             }
         }
         let eligibleCount = candidates.count
+        candidates.sort {
+            if $0.priority != $1.priority { return $0.priority > $1.priority }
+            let lhs = [$0.factor.id.rawValue, $0.outcome.id.rawValue].sorted().joined(separator: "|")
+            let rhs = [$1.factor.id.rawValue, $1.outcome.id.rawValue].sorted().joined(separator: "|")
+            return lhs < rhs
+        }
         candidates = Array(candidates.prefix(configuration.maximumTests))
 
         struct Tested {
@@ -59,7 +81,9 @@ struct AutomaticDiscoveryEngine {
         var tested: [Tested] = []
         let aligner = PairAlignmentEngine()
         let statistics = RelationshipStatisticsEngine()
-        for (factor, outcome) in candidates {
+        for candidate in candidates {
+            let factor = candidate.factor
+            let outcome = candidate.outcome
             let alignment = aligner.align(factor: factor, outcome: outcome, dataset: dataset)
             let estimate = statistics.estimate(alignment: alignment, factor: factor, outcome: outcome)
             guard estimate.isSufficient, estimate.pValue != nil else { continue }

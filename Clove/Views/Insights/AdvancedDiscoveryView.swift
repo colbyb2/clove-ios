@@ -1,41 +1,58 @@
 import SwiftUI
 
 struct AdvancedDiscoveryView: View {
-    enum Section: String, CaseIterable, Identifiable {
-        case discoveries = "Findings"
-        case context = "Context"
-        case baselines = "Baselines"
-        case hypotheses = "Hypotheses"
+    enum ExploreSection: String, CaseIterable, Identifiable {
+        case connections = "Connections"
+        case changes = "Changes & trends"
+        case flares = "Flare days"
+        case cycles = "Cycle patterns"
+        case baselines = "Compared with usual"
         var id: String { rawValue }
         var icon: String {
             switch self {
-            case .discoveries: return "sparkles"
-            case .context: return "calendar.badge.clock"
+            case .connections: return "point.3.connected.trianglepath.dotted"
+            case .changes: return "chart.line.uptrend.xyaxis"
+            case .flares: return "waveform.path.ecg"
+            case .cycles: return "calendar.badge.clock"
             case .baselines: return "scope"
-            case .hypotheses: return "lightbulb"
+            }
+        }
+        var tint: Color {
+            switch self {
+            case .connections: return .cyan
+            case .changes: return .purple
+            case .flares: return .orange
+            case .cycles: return .pink
+            case .baselines: return .green
             }
         }
     }
 
     let viewModel: InsightsHomeViewModel
-    @State private var section: Section = .discoveries
     @State private var showingNewHypothesis = false
+    @State private var exploreSearchText = ""
+
+    private enum SpotlightItem: Identifiable {
+        case discovery(AutomaticDiscovery)
+        case pattern(HealthInsight)
+
+        var id: String {
+            switch self {
+            case .discovery(let value): return "discovery|\(value.id)"
+            case .pattern(let value): return "pattern|\(value.id)"
+            }
+        }
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            sectionPicker
-            ScrollView {
-                Group {
-                    switch section {
-                    case .discoveries: discoveries
-                    case .context: context
-                    case .baselines: baselines
-                    case .hypotheses: hypotheses
-                    }
-                }
-                .padding(CloveSpacing.large)
-                .padding(.bottom, 80)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 22) {
+                worthALook
+                explore
+                watchingPreview
             }
+            .padding(CloveSpacing.large)
+            .padding(.bottom, 80)
         }
         .background(CloveColors.background.ignoresSafeArea())
         .navigationTitle("Discover")
@@ -45,55 +62,390 @@ struct AdvancedDiscoveryView: View {
         }
     }
 
-    private var sectionPicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(Section.allCases) { item in
-                    Button {
-                        section = item
+    @ViewBuilder private var worthALook: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeading("Worth a look", caption: "The clearest, most relevant signals in this range")
+            if spotlightItems.isEmpty {
+                compactEmpty("Nothing strong enough to highlight yet", icon: "sparkles",
+                             detail: "Keep tracking and Clove will surface reliable changes and connections here.")
+            } else {
+                ForEach(spotlightItems) { item in
+                    NavigationLink {
+                        spotlightDetail(item)
                     } label: {
-                        Label(item.rawValue, systemImage: item.icon)
-                            .font(.subheadline.bold())
-                            .padding(.horizontal, 13)
-                            .padding(.vertical, 9)
-                            .foregroundStyle(section == item ? Color.white : CloveColors.primaryText)
-                            .background(section == item ? Theme.shared.accent : CloveColors.card, in: Capsule())
+                        spotlightCard(item)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, CloveSpacing.large)
-            .padding(.vertical, 10)
         }
-        .background(CloveColors.background)
     }
 
-    @ViewBuilder private var discoveries: some View {
-        LazyVStack(alignment: .leading, spacing: 12) {
-            sectionHeading("Automatic findings", caption: discoveryCaption)
-            if viewModel.visibleDiscoveries.isEmpty {
-                compactEmpty("No reliable findings yet", icon: "sparkles",
-                             detail: "This range did not contain a relationship that passed the data, effect-size, and false-discovery checks.")
-            } else {
-                ForEach(viewModel.visibleDiscoveries) { discovery in
-                    discoveryCard(discovery)
+    private var explore: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeading("Explore your data", caption: "Choose a question instead of sorting through one long feed")
+            VStack(spacing: 0) {
+                ForEach(Array(ExploreSection.allCases.enumerated()), id: \.element.id) { index, item in
+                    NavigationLink {
+                        explorePage(item)
+                    } label: {
+                        HStack(spacing: 13) {
+                            Image(systemName: item.icon)
+                                .font(.headline)
+                                .foregroundStyle(item.tint)
+                                .frame(width: 38, height: 38)
+                                .background(item.tint.opacity(0.13), in: RoundedRectangle(cornerRadius: 11))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.rawValue).font(.subheadline.bold())
+                                Text(exploreCaption(item)).font(.caption).foregroundStyle(CloveColors.secondaryText)
+                            }
+                            Spacer()
+                            Text(exploreCount(item).formatted())
+                                .font(.caption.bold()).foregroundStyle(CloveColors.secondaryText)
+                                .padding(.horizontal, 8).padding(.vertical, 5)
+                                .background(CloveColors.background, in: Capsule())
+                            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(CloveColors.secondaryText)
+                        }
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                    if index < ExploreSection.allCases.count - 1 { Divider().padding(.leading, 51) }
                 }
             }
-
-            sectionHeading("Recorded patterns", caption: "Patterns found directly in your tracked history")
-                .padding(.top, 6)
-            if viewModel.insights.isEmpty {
-                compactEmpty("No repeated patterns yet", icon: "calendar",
-                             detail: "Consistent tracking gives the app more recorded days to compare.")
-            } else {
-                ForEach(viewModel.insights) { insight in patternCard(insight) }
-            }
+            .padding(.horizontal, CloveSpacing.medium)
+            .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
         }
     }
 
-    private var discoveryCaption: String {
-        guard let run = viewModel.discoveryRun else { return "Looking for useful patterns in what you recorded" }
-        return "Clove checked \(run.testedPairCount) possible connections and only shows patterns that passed its reliability checks."
+    private var watchingPreview: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeading("Watching", caption: "Saved findings and questions you want to revisit")
+            NavigationLink {
+                watching
+            } label: {
+                HStack(spacing: 13) {
+                    Image(systemName: "bookmark.fill").foregroundStyle(.yellow)
+                        .frame(width: 38, height: 38).background(Color.yellow.opacity(0.13), in: RoundedRectangle(cornerRadius: 11))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(watchingCount == 0 ? "Start watching what matters" : "\(watchingCount) saved to revisit")
+                            .font(.subheadline.bold())
+                        Text("Keep findings and personal tracking questions together")
+                            .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(CloveColors.secondaryText)
+                }
+                .cardStyle()
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var spotlightItems: [SpotlightItem] {
+        var results: [SpotlightItem] = []
+        var usedMetrics = Set<String>()
+
+        for discovery in rankedDiscoveries where viewModel.feedback(for: discovery.id).feedbackRating != .notUseful {
+            let metrics = [discovery.factor.id.rawValue, discovery.outcome.id.rawValue]
+            guard usedMetrics.isDisjoint(with: metrics) else { continue }
+            results.append(.discovery(discovery))
+            usedMetrics.formUnion(metrics)
+            if results.count == 3 { return results }
+        }
+
+        for insight in curatedPatterns {
+            guard usedMetrics.isDisjoint(with: insight.associatedMetrics) else { continue }
+            results.append(.pattern(insight))
+            usedMetrics.formUnion(insight.associatedMetrics)
+            if results.count == 3 { break }
+        }
+        return results
+    }
+
+    private var curatedPatterns: [HealthInsight] {
+        var seen = Set<String>()
+        return viewModel.insights
+            .sorted { lhs, rhs in
+                if lhs.priority != rhs.priority { return lhs.priority.rawValue > rhs.priority.rawValue }
+                return lhs.confidence > rhs.confidence
+            }
+            .filter { insight in
+                let key = insight.associatedMetrics.sorted().joined(separator: "|")
+                return seen.insert(key).inserted
+            }
+    }
+
+    private var rankedDiscoveries: [AutomaticDiscovery] {
+        viewModel.visibleDiscoveries.sorted { lhs, rhs in
+            let lhsFeedback = viewModel.feedback(for: lhs.id).feedbackRating
+            let rhsFeedback = viewModel.feedback(for: rhs.id).feedbackRating
+            let lhsBoost = lhsFeedback == .useful ? 1 : lhsFeedback == .notUseful ? -1 : 0
+            let rhsBoost = rhsFeedback == .useful ? 1 : rhsFeedback == .notUseful ? -1 : 0
+            if lhsBoost != rhsBoost { return lhsBoost > rhsBoost }
+            return lhs.rankScore > rhs.rankScore
+        }
+    }
+
+    private var atypicalBaselines: [PersonalBaseline] { viewModel.baselines.filter { $0.position != .typical } }
+    private var typicalBaselines: [PersonalBaseline] { viewModel.baselines.filter { $0.position == .typical } }
+    private var savedDiscoveries: [AutomaticDiscovery] { viewModel.visibleDiscoveries.filter { viewModel.feedback(for: $0.id).isSaved } }
+    private var savedPatterns: [HealthInsight] { viewModel.insights.filter { viewModel.feedback(for: "pattern|\($0.id)").isSaved } }
+    private var watchingCount: Int { savedDiscoveries.count + savedPatterns.count + viewModel.hypotheses.count }
+
+    private func exploreCount(_ section: ExploreSection) -> Int {
+        switch section {
+        case .connections: return viewModel.visibleDiscoveries.count
+        case .changes: return curatedPatterns.count
+        case .flares: return viewModel.contextAnalysis?.flareComparisons.count ?? 0
+        case .cycles: return viewModel.contextAnalysis?.phaseSummaries.count ?? 0
+        case .baselines: return atypicalBaselines.count
+        }
+    }
+
+    private func exploreCaption(_ section: ExploreSection) -> String {
+        switch section {
+        case .connections: return "Metrics that moved together"
+        case .changes: return "Shifts, trends, and repeated patterns"
+        case .flares: return "What differed on marked flare days"
+        case .cycles: return "Patterns across recorded cycle phases"
+        case .baselines: return "What recently changed from your usual"
+        }
+    }
+
+    private func spotlightCard(_ item: SpotlightItem) -> some View {
+        let presentation: (icon: String, color: Color, eyebrow: String, title: String, detail: String)
+        switch item {
+        case .discovery(let discovery):
+            presentation = ("point.3.connected.trianglepath.dotted", .cyan, "CONNECTION",
+                            discoverySummary(discovery),
+                            "Based on \(discovery.estimate.sampleCount) matched days")
+        case .pattern(let insight):
+            presentation = (insight.typeIcon, .purple, "CHANGE",
+                            insight.title,
+                            insight.evidence?.compactSummary ?? insight.description)
+        }
+        return HStack(alignment: .top, spacing: 13) {
+            Image(systemName: presentation.icon)
+                .font(.headline).foregroundStyle(presentation.color)
+                .frame(width: 40, height: 40)
+                .background(presentation.color.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+            VStack(alignment: .leading, spacing: 5) {
+                Text(presentation.eyebrow).font(.caption2.bold()).foregroundStyle(presentation.color)
+                Text(presentation.title).font(.headline).foregroundStyle(CloveColors.primaryText)
+                Text(presentation.detail).font(.caption).foregroundStyle(CloveColors.secondaryText)
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(CloveColors.secondaryText)
+                .padding(.top, 12)
+        }
+        .cardStyle()
+    }
+
+    @ViewBuilder private func spotlightDetail(_ item: SpotlightItem) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                switch item {
+                case .discovery(let discovery): discoveryCard(discovery)
+                case .pattern(let insight): patternCard(insight)
+                }
+                Text("Clove describes patterns in what you recorded. A pattern is not proof that one item caused another and is not a diagnosis.")
+                    .font(.caption).foregroundStyle(CloveColors.secondaryText)
+            }
+            .padding(CloveSpacing.large).padding(.bottom, 60)
+        }
+        .background(CloveColors.background.ignoresSafeArea())
+        .navigationTitle("Finding")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder private func explorePage(_ section: ExploreSection) -> some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+                sectionHeading(section.rawValue, caption: exploreCaption(section))
+                exploreSearchField
+                switch section {
+                case .connections:
+                    let discoveries = rankedDiscoveries.filter {
+                        matchesSearch($0.title, discoverySummary($0), $0.factor.displayName, $0.outcome.displayName)
+                    }
+                    if discoveries.isEmpty {
+                        compactEmpty("No reliable connections yet", icon: section.icon,
+                                     detail: exploreSearchText.isEmpty
+                                        ? "No pair in this range passed Clove’s data and reliability checks."
+                                        : "Try a different metric or phrase.")
+                    } else {
+                        ForEach(discoveries) { discovery in discoveryCard(discovery) }
+                    }
+                case .changes:
+                    let patterns = curatedPatterns.filter { matchesSearch($0.title, $0.description, $0.associatedMetrics.joined(separator: " ")) }
+                    if patterns.isEmpty {
+                        compactEmpty("No clear changes yet", icon: section.icon,
+                                     detail: exploreSearchText.isEmpty
+                                        ? "More consistent tracking gives Clove more history to compare."
+                                        : "Try a different metric or phrase.")
+                    } else {
+                        ForEach(patterns) { insight in patternCard(insight) }
+                    }
+                case .flares:
+                    flareContent
+                case .cycles:
+                    cycleContent
+                case .baselines:
+                    baselineContent
+                }
+            }
+            .padding(CloveSpacing.large).padding(.bottom, 80)
+        }
+        .background(CloveColors.background.ignoresSafeArea())
+        .navigationTitle(section.rawValue)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear { exploreSearchText = "" }
+    }
+
+    private var exploreSearchField: some View {
+        HStack(spacing: 9) {
+            Image(systemName: "magnifyingglass").foregroundStyle(CloveColors.secondaryText)
+            TextField("Search this section", text: $exploreSearchText)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            if !exploreSearchText.isEmpty {
+                Button { exploreSearchText = "" } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(CloveColors.secondaryText)
+                }
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .font(.subheadline)
+        .padding(.horizontal, 12).padding(.vertical, 11)
+        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+    }
+
+    private func matchesSearch(_ values: String...) -> Bool {
+        let query = exploreSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return query.isEmpty || values.joined(separator: " ").localizedCaseInsensitiveContains(query)
+    }
+
+    @ViewBuilder private var flareContent: some View {
+        if let source = viewModel.contextAnalysis?.flareComparisons, !source.isEmpty {
+            let comparisons = source.sorted {
+                normalizedMagnitude(metricID: $0.metricID, difference: $0.difference)
+                    > normalizedMagnitude(metricID: $1.metricID, difference: $1.difference)
+            }
+            ForEach(comparisons.filter { matchesSearch($0.metricName, flareSummary($0)) }) { comparison in
+                VStack(alignment: .leading, spacing: 7) {
+                    Text(comparison.metricName).font(.headline)
+                    Text(flareSummary(comparison)).font(.subheadline)
+                    Text("Compared \(comparison.flareDayCount) flare days with \(comparison.nonFlareDayCount) other days")
+                        .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                }.cardStyle()
+            }
+            limitationsFooter("These comparisons describe recorded flare days. They do not establish a cause or diagnose a condition.")
+        } else {
+            compactEmpty("Not enough flare comparisons", icon: "waveform.path.ecg",
+                         detail: "Mark at least three flare days and track at least three other days to compare them.")
+        }
+    }
+
+    @ViewBuilder private var cycleContent: some View {
+        if let summaries = viewModel.contextAnalysis?.phaseSummaries, !summaries.isEmpty {
+            ForEach(CyclePhase.allCases, id: \.self) { phase in
+                let matches = summaries.filter { $0.phase == phase && matchesSearch($0.metricName, cycleSummary($0), phase.rawValue) }.sorted {
+                    normalizedMagnitude(metricID: $0.metricID, difference: $0.differenceFromPersonalMean)
+                        > normalizedMagnitude(metricID: $1.metricID, difference: $1.differenceFromPersonalMean)
+                }
+                if !matches.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(phase.rawValue).font(.headline).foregroundStyle(Color.pink)
+                        ForEach(matches.prefix(4)) { summary in
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(summary.metricName).font(.subheadline.bold())
+                                Text(cycleSummary(summary)).font(.caption).foregroundStyle(CloveColors.secondaryText)
+                            }
+                            if summary.id != matches.prefix(4).last?.id { Divider() }
+                        }
+                        if matches.count > 4 {
+                            Text("+ \(matches.count - 4) more recorded patterns")
+                                .font(.caption.bold()).foregroundStyle(CloveColors.secondaryText)
+                        }
+                    }.cardStyle()
+                }
+            }
+            limitationsFooter("Cycle phases are estimated only between explicitly recorded cycle starts.")
+        } else {
+            compactEmpty("Not enough repeated cycle data", icon: "calendar.badge.clock",
+                         detail: "Record at least three cycle starts and the same metric during two complete cycles.")
+        }
+    }
+
+    @ViewBuilder private var baselineContent: some View {
+        if viewModel.baselines.isEmpty {
+            compactEmpty("No qualified comparisons yet", icon: "scope",
+                         detail: "Clove needs 28 earlier and 7 recent recordings for a metric.")
+        } else {
+            if atypicalBaselines.isEmpty {
+                compactEmpty("Your recent metrics are within their usual ranges", icon: "checkmark.circle",
+                             detail: "Nothing currently stands out from your own recorded history.")
+            } else {
+                ForEach(atypicalBaselines.filter { matchesSearch($0.metricName, baselineSummary($0)) }) { baseline in baselineCard(baseline) }
+            }
+            if !typicalBaselines.isEmpty {
+                DisclosureGroup {
+                    VStack(spacing: 10) {
+                        ForEach(typicalBaselines.filter { matchesSearch($0.metricName) }) { baseline in
+                            HStack {
+                                Text(baseline.metricName).font(.subheadline)
+                                Spacer()
+                                Text("Within usual").font(.caption.bold()).foregroundStyle(.green)
+                            }
+                        }
+                    }.padding(.top, 10)
+                } label: {
+                    Label("\(typicalBaselines.count) metrics within your usual range", systemImage: "checkmark.circle")
+                        .font(.subheadline.bold()).foregroundStyle(.green)
+                }
+                .cardStyle()
+            }
+            limitationsFooter("Higher or lower only means different from your usual pattern—not automatically better or worse.")
+        }
+    }
+
+    private func baselineCard(_ baseline: PersonalBaseline) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack {
+                Text(baseline.metricName).font(.headline)
+                Spacer()
+                Text(baselineStatus(baseline)).font(.caption.bold())
+                    .foregroundStyle(Theme.shared.accent)
+                    .padding(.horizontal, 9).padding(.vertical, 5)
+                    .background(Theme.shared.accent.opacity(0.12), in: Capsule())
+            }
+            Text(baselineSummary(baseline)).font(.subheadline)
+            Text("Recent: \(plainNumber(baseline.recentValue)) · Usual: \(plainNumber(baseline.center))")
+                .font(.caption).foregroundStyle(CloveColors.secondaryText)
+        }.cardStyle()
+    }
+
+    private func limitationsFooter(_ text: String) -> some View {
+        Label(text, systemImage: "info.circle")
+            .font(.caption).foregroundStyle(CloveColors.secondaryText)
+            .padding(.top, 4)
+    }
+
+    private func normalizedMagnitude(metricID: MetricID, difference: Double) -> Double {
+        guard let definition = viewModel.dataset?.definitions.first(where: { $0.id == metricID }) else {
+            return abs(difference)
+        }
+        switch definition.domain {
+        case .numeric(let range):
+            return abs(difference) / max(0.1, range.upperBound - range.lowerBound)
+        case .nonNegative, .categories, .unrestricted:
+            let values = viewModel.dataset?.observations(for: metricID).compactMap { observation -> Double? in
+                guard case .observed(let value) = observation.state else { return nil }
+                return value.numericValue
+            } ?? []
+            let span = (values.max() ?? 0) - (values.min() ?? 0)
+            return abs(difference) / max(1, span)
+        }
     }
 
     private func discoveryCard(_ discovery: AutomaticDiscovery) -> some View {
@@ -205,85 +557,20 @@ struct AdvancedDiscoveryView: View {
             .frame(minWidth: 32, minHeight: 32)
     }
 
-    @ViewBuilder private var context: some View {
-        LazyVStack(alignment: .leading, spacing: 12) {
-            sectionHeading("Patterns during your cycle", caption: "How your tracked metrics compared with your usual levels during each cycle phase")
-            if let result = viewModel.contextAnalysis, !result.phaseSummaries.isEmpty {
-                ForEach(result.phaseSummaries.prefix(12)) { summary in
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text(summary.metricName).font(.headline)
-                        Text(cycleSummary(summary))
-                            .font(.subheadline)
-                        Text("Seen in \(summary.observationCount) recordings across \(summary.cycleCount) cycles")
-                            .font(.caption).foregroundStyle(CloveColors.secondaryText)
-                    }
-                    .cardStyle()
-                }
+    @ViewBuilder private var watching: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+            sectionHeading("Saved findings", caption: "Signals you chose to keep nearby")
+            if savedDiscoveries.isEmpty && savedPatterns.isEmpty {
+                compactEmpty("No saved findings", icon: "bookmark",
+                             detail: "Save a connection or change and it will appear here.")
             } else {
-                compactEmpty("Not enough repeated cycle data", icon: "calendar.badge.clock",
-                    detail: "Mark at least three cycle starts and record the same metric during two complete cycles.")
+                ForEach(savedDiscoveries) { discovery in discoveryCard(discovery) }
+                ForEach(savedPatterns) { insight in patternCard(insight) }
             }
 
-            sectionHeading("What was different on flare days", caption: "Flare days compared with your other logged days")
-                .padding(.top, 6)
-            if let result = viewModel.contextAnalysis, !result.flareComparisons.isEmpty {
-                ForEach(result.flareComparisons.prefix(12)) { comparison in
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text(comparison.metricName).font(.headline)
-                        Text(flareSummary(comparison))
-                            .font(.subheadline)
-                        Text("Compared \(comparison.flareDayCount) flare days with \(comparison.nonFlareDayCount) other days")
-                            .font(.caption).foregroundStyle(CloveColors.secondaryText)
-                    }
-                    .cardStyle()
-                }
-            } else {
-                compactEmpty("Not enough flare comparisons", icon: "waveform.path.ecg",
-                    detail: "At least three explicitly marked flare days and three other logged days are required.")
-            }
-            Text("Context comparisons describe your recorded history. They do not diagnose a condition or establish a cause.")
-                .font(.caption).foregroundStyle(CloveColors.secondaryText)
-        }
-    }
-
-    @ViewBuilder private var baselines: some View {
-        LazyVStack(alignment: .leading, spacing: 12) {
-            sectionHeading("Compared with your usual", caption: "Your latest seven recordings compared with your own recent history")
-            if viewModel.baselines.isEmpty {
-                compactEmpty("No qualified baselines yet", icon: "scope",
-                    detail: "A baseline needs 28 historical and 7 recent observations within the last 120 days.")
-            } else {
-                ForEach(viewModel.baselines) { baseline in
-                    VStack(alignment: .leading, spacing: 9) {
-                        HStack {
-                            Text(baseline.metricName).font(.headline)
-                            Spacer()
-                            Text(baselineStatus(baseline)).font(.caption.bold())
-                                .foregroundStyle(baseline.position == .typical ? Color.green : Theme.shared.accent)
-                                .padding(.horizontal, 9).padding(.vertical, 5)
-                                .background((baseline.position == .typical ? Color.green : Theme.shared.accent).opacity(0.12), in: Capsule())
-                        }
-                        Text(baselineSummary(baseline)).font(.subheadline)
-                        Text("Recent: \(plainNumber(baseline.recentValue)) · Your usual: \(plainNumber(baseline.center))")
-                            .font(.caption).foregroundStyle(CloveColors.secondaryText)
-                        Text("Your usual range is based on \(baseline.baselineObservationCount) earlier recordings")
-                            .font(.caption).foregroundStyle(CloveColors.secondaryText)
-                        if baseline.isQualifiedByGap {
-                            Label("Includes a tracking gap longer than 30 days", systemImage: "exclamationmark.triangle")
-                                .font(.caption).foregroundStyle(.orange)
-                        }
-                    }.cardStyle()
-                }
-            }
-            Text("Higher or lower only means different from your own usual pattern. It does not automatically mean better or worse.")
-                .font(.caption).foregroundStyle(CloveColors.secondaryText)
-        }
-    }
-
-    @ViewBuilder private var hypotheses: some View {
-        LazyVStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .bottom) {
-                sectionHeading("Things to watch", caption: "Personal questions you want to revisit")
+                sectionHeading("Your questions", caption: "Personal ideas you want to revisit")
                 Spacer()
                 Button { showingNewHypothesis = true } label: { Label("New", systemImage: "plus") }
                     .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).tint(Theme.shared.accent)
@@ -311,7 +598,12 @@ struct AdvancedDiscoveryView: View {
             }
             Text("A saved hypothesis is a tracking plan, not evidence or proof. Results remain exploratory until the recorded data supports them.")
                 .font(.caption).foregroundStyle(CloveColors.secondaryText)
+            }
+            .padding(CloveSpacing.large).padding(.bottom, 80)
         }
+        .background(CloveColors.background.ignoresSafeArea())
+        .navigationTitle("Watching")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private func reviewText(_ hypothesis: SavedHypothesis) -> String {
