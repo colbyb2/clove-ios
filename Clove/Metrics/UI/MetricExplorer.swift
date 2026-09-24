@@ -91,6 +91,7 @@ struct MetricExplorer: View {
                 // All categories chip
                 MetricCategoryChip(
                     title: "All",
+                    tint: Theme.shared.accent,
                     isSelected: viewModel.selectedCategory == nil,
                     onTap: {
                         viewModel.selectedCategory = nil
@@ -101,6 +102,7 @@ struct MetricExplorer: View {
                 ForEach(MetricCategory.allCases) { category in
                     MetricCategoryChip(
                         title: category.displayName,
+                        tint: MetricPresentation.tint(for: category),
                         isSelected: viewModel.selectedCategory == category,
                         onTap: {
                             viewModel.selectedCategory = category == viewModel.selectedCategory ? nil : category
@@ -348,6 +350,7 @@ struct MetricExplorer: View {
 
 struct MetricCategoryChip: View {
     let title: String
+    let tint: Color
     let isSelected: Bool
     let onTap: () -> Void
 
@@ -356,13 +359,16 @@ struct MetricCategoryChip: View {
             Text(title)
                 .font(CloveFonts.small())
                 .fontWeight(.medium)
-                .foregroundStyle(isSelected ? .white : CloveColors.secondaryText)
+                .foregroundStyle(isSelected ? .white : tint)
                 .padding(.horizontal, CloveSpacing.medium)
                 .padding(.vertical, CloveSpacing.small)
                 .background(
                     RoundedRectangle(cornerRadius: CloveCorners.full)
-                        .fill(isSelected ? Theme.shared.accent : CloveColors.card)
-                        .shadow(color: .gray.opacity(0.8), radius: 1)
+                        .fill(isSelected ? tint : tint.opacity(0.1))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: CloveCorners.full)
+                                .stroke(tint.opacity(isSelected ? 0 : 0.25), lineWidth: 1)
+                        }
                 )
         }
         .buttonStyle(PlainButtonStyle())
@@ -374,11 +380,12 @@ struct RecentMetricChip: View {
     let onTap: () -> Void
 
     var body: some View {
+        let tint = MetricPresentation.tint(for: metric.category)
         Button(action: onTap) {
             HStack(spacing: CloveSpacing.small) {
                 Image(systemName: metric.icon)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Theme.shared.accent)
+                    .foregroundStyle(tint)
 
                 Text(metric.displayName)
                     .font(CloveFonts.small())
@@ -393,7 +400,7 @@ struct RecentMetricChip: View {
                     .fill(CloveColors.card)
                     .overlay(
                         RoundedRectangle(cornerRadius: CloveCorners.medium)
-                            .stroke(Theme.shared.accent.opacity(0.3), lineWidth: 1)
+                            .stroke(tint.opacity(0.3), lineWidth: 1)
                     )
                     .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
             )
@@ -436,12 +443,15 @@ struct MetricCardV2: View {
     let onTap: () -> Void
     
     var body: some View {
+        let tint = MetricPresentation.tint(for: metric.category)
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: CloveSpacing.medium) {
                 HStack {
                     Image(systemName: metric.icon)
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Theme.shared.accent)
+                        .foregroundStyle(tint)
+                        .frame(width: 36, height: 36)
+                        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
                     
                     Spacer()
                     
@@ -469,7 +479,7 @@ struct MetricCardV2: View {
                             
                             Text(lastValue)
                                 .font(CloveFonts.body())
-                                .foregroundStyle(Theme.shared.accent)
+                                .foregroundStyle(tint)
                                 .fontWeight(.semibold)
                         }
                     }
@@ -495,7 +505,7 @@ struct MetricCardV2: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: CloveCorners.medium)
                             .stroke(
-                                metric.isAvailable ? Theme.shared.accent.opacity(0.2) : CloveColors.secondaryText.opacity(0.1),
+                                metric.isAvailable ? tint.opacity(0.22) : CloveColors.secondaryText.opacity(0.1),
                                 lineWidth: 1
                             )
                     )

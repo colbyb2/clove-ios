@@ -210,6 +210,39 @@ final class AnalyticsChartPipelineTests: XCTestCase {
     }
 }
 
+final class MetricPresentationTests: XCTestCase {
+    func testMedicationOccurrenceExplainsMissingDaysWithoutCallingThemMissedDoses() {
+        let definition = MetricCatalog.medicationOccurrence(
+            id: MetricID(rawValue: "medication:ibuprofen"),
+            name: "Ibuprofen"
+        )
+        let interval = DateInterval(
+            start: AnalyticsTestDates.date(2026, 7, 1),
+            end: AnalyticsTestDates.date(2026, 7, 8)
+        )
+        let summary = MetricAnalysisSummaryEngine().summarize(
+            definition: definition,
+            dataset: dataset(definition: definition, interval: interval, values: [.number(1), .number(1), .number(1)])
+        )
+
+        let narrative = MetricPresentation.narrative(
+            definition: definition,
+            summary: summary,
+            format: { String(Int($0)) }
+        )
+
+        XCTAssertEqual(narrative?.headline, "Recorded on 3 days")
+        XCTAssertEqual(narrative?.detail, "Unrecorded days are not treated as missed doses.")
+        XCTAssertEqual(MetricPresentation.chartTitle(for: .eventOccurrences), "Recorded dates")
+    }
+
+    func testDistributionChartsUseAPlainLanguageTitle() {
+        XCTAssertEqual(MetricPresentation.chartTitle(for: .bristolDistribution), "Distribution")
+        XCTAssertEqual(MetricPresentation.chartTitle(for: .categoricalDistribution), "Distribution")
+        XCTAssertEqual(MetricPresentation.chartTitle(for: .numericLine), "Over time")
+    }
+}
+
 private func dataset(
     definition: MetricDefinition,
     interval: DateInterval,

@@ -457,17 +457,35 @@ private struct MetricExplorerDashboardView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: CloveSpacing.medium) {
                 Button { showingPicker = true } label: {
-                    HStack {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                        Text(viewModel.provider(forRawID: selectedMetricID)?.displayName ?? "Choose Metric").bold()
+                    let provider = viewModel.provider(forRawID: selectedMetricID)
+                    let tint = provider.map { MetricPresentation.tint(for: $0.category) } ?? Theme.shared.accent
+                    HStack(spacing: 12) {
+                        Image(systemName: provider?.icon ?? "chart.xyaxis.line")
+                            .font(.system(size: 17, weight: .semibold))
+                            .frame(width: 38, height: 38)
+                            .foregroundStyle(tint)
+                            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 11))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(provider?.displayName ?? "Choose Metric")
+                                .font(.system(.body, design: .rounded).weight(.semibold))
+                                .foregroundStyle(CloveColors.primaryText)
+                            Text("Tap to explore another metric")
+                                .font(.caption)
+                                .foregroundStyle(CloveColors.secondaryText)
+                        }
                         Spacer()
-                        Text("Browse All").font(.caption.bold())
+                        Image(systemName: "chevron.right")
+                            .font(.caption.bold())
+                            .foregroundStyle(tint)
                     }
                     .padding(CloveSpacing.medium)
                     .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: CloveCorners.medium)
+                            .stroke(tint.opacity(0.18), lineWidth: 1)
+                    }
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(Theme.shared.accent)
 
                 if let provider = viewModel.provider(forRawID: selectedMetricID) {
                     AnalyticsMetricDetailView(metric: provider).id(provider.id)
