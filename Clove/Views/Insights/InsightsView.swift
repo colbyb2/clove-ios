@@ -1,5 +1,11 @@
 import SwiftUI
 
+private enum TrackingCoveragePolicy {
+    static func isDailyMetric(_ definition: MetricDefinition) -> Bool {
+        definition.measurementLevel != .event && definition.id != MetricCatalog.flowLevel.id
+    }
+}
+
 @MainActor
 @Observable
 final class InsightsHomeViewModel {
@@ -122,8 +128,9 @@ final class InsightsHomeViewModel {
     }
 
     var averageCoverage: Double? {
-        guard !trackedCoverage.isEmpty else { return nil }
-        return trackedCoverage.map { $0.1.observedDayFraction }.reduce(0, +) / Double(trackedCoverage.count)
+        let dailyMetrics = trackedCoverage.filter { TrackingCoveragePolicy.isDailyMetric($0.0) }
+        guard !dailyMetrics.isEmpty else { return nil }
+        return dailyMetrics.map { $0.1.observedDayFraction }.reduce(0, +) / Double(dailyMetrics.count)
     }
 
     func provider(for id: MetricID) -> (any MetricProvider)? {
@@ -812,33 +819,320 @@ private struct PatternsDetailView: View {
 }
 
 private struct TrackingCoverageDetailView: View {
+    private enum Scope: String, CaseIterable, Identifiable {
+        case attention = "More data"
+        case all = "All daily"
+
+        var id: String { rawValue }
+    }
+
     let coverage: [(MetricDefinition, MetricCoverage)]
+    @State private var scope: Scope = .attention
+    @State private var eventsExpanded = false
+
+    private var dailyCoverage: [(MetricDefinition, MetricCoverage)] {
+        coverage
+            .filter { TrackingCoveragePolicy.isDailyMetric($0.0) }
+            .sorted {
+                if $0.1.observedDayFraction == $1.1.observedDayFraction {
+                    return $0.0.displayName < $1.0.displayName
+                }
+                return $0.1.observedDayFraction < $1.1.observedDayFraction
+            }
+    }
+
+    private var visibleDailyCoverage: [(MetricDefinition, MetricCoverage)] {
+        switch scope {
+        case .attention: dailyCoverage.filter { $0.1.observedDayFraction < 0.75 }
+        case .all: dailyCoverage
+        }
+    }
+
+    private var averageCoverage: Double {
+        guard !dailyCoverage.isEmpty else { return 0 }
+        return dailyCoverage.reduce(0) { $0 + $1.1.observedDayFraction } / Double(dailyCoverage.count)
+    }
+
+    private var eventGroups: [EventCoverageGroup] {
+        let groups = Dictionary(grouping: coverage.filter { !TrackingCoveragePolicy.isDailyMetric($0.0) }) { $0.0.category }
+        return MetricSemanticCategory.allCases.compactMap { category in
+            guard let metrics = groups[category], !metrics.isEmpty else { return nil }
+            return EventCoverageGroup(
+                category: category,
+                itemCount: metrics.count,
+                observationCount: metrics.reduce(0) { $0 + $1.1.observedCount }
+            )
+        }
+    }
+
+    private var possibleDayCount: Int {
+        dailyCoverage.map { $0.1.possibleDayCount }.max() ?? coverage.map { $0.1.possibleDayCount }.max() ?? 0
+    }
 
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 12) {
+            LazyVStack(alignment: .leading, spacing: CloveSpacing.medium) {
                 if coverage.isEmpty {
                     ContentUnavailableView("No Recorded Metrics", systemImage: "checkmark.circle")
                 } else {
-                    ForEach(coverage, id: \.0.id) { definition, value in
-                        VStack(alignment: .leading, spacing: 7) {
-                            HStack {
-                                Text(definition.displayName).bold()
-                                Spacer()
-                                Text(value.observedDayFraction.formatted(.percent.precision(.fractionLength(0)))).bold()
-                            }
-                            ProgressView(value: value.observedDayFraction)
-                                .tint(value.observedDayFraction < 0.5 ? .orange : Theme.shared.accent)
-                            Text("\(value.sourceDayCount) of \(value.possibleDayCount) days")
-                                .font(.caption).foregroundStyle(CloveColors.secondaryText)
-                        }
-                        .padding(CloveSpacing.medium)
-                        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
-                    }
+                    coverageOverview
+                    scopePicker
+                    dailyCoverageSection
+                    occasionalEntriesSection
                 }
-            }.padding(CloveSpacing.large)
+            }
+            .padding(CloveSpacing.large)
+            .padding(.bottom, CloveSpacing.xlarge)
         }
         .background(CloveColors.background.ignoresSafeArea())
         .navigationTitle("Tracking Coverage")
+    }
+
+    private var coverageOverview: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Daily tracking")
+                        .font(.headline)
+                    Text(possibleDayCount == 1 ? "Selected day" : "Selected \(possibleDayCount)-day range")
+                        .font(.caption)
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+                Spacer()
+                Text(averageCoverage.formatted(.percent.precision(.fractionLength(0))))
+                    .font(.system(.title, design: .rounded).weight(.bold))
+                    .foregroundStyle(coverageColor(averageCoverage))
+            }
+
+            ProgressView(value: averageCoverage)
+                .tint(coverageColor(averageCoverage))
+
+            HStack(spacing: 8) {
+                coverageBadge("\(dailyCoverage.count) daily metrics", icon: "calendar")
+                coverageBadge("\(dailyCoverage.filter { $0.1.observedDayFraction >= 0.75 }.count) strong", icon: "checkmark.circle")
+            }
+
+            Text("Coverage is the share of days that contain saved information for a daily metric. Occasional entries are summarized separately below.")
+                .font(.caption)
+                .foregroundStyle(CloveColors.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(CloveSpacing.medium)
+        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.large))
+    }
+
+    private var scopePicker: some View {
+        HStack(spacing: 3) {
+            ForEach(Scope.allCases) { option in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) { scope = option }
+                } label: {
+                    Text(option.rawValue)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(scope == option ? Theme.shared.accent : CloveColors.secondaryText)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 32)
+                        .background(scope == option ? Theme.shared.accent.opacity(0.14) : Color.clear, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .background(CloveColors.card, in: Capsule())
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Coverage filter")
+    }
+
+    @ViewBuilder
+    private var dailyCoverageSection: some View {
+        if dailyCoverage.isEmpty {
+            ContentUnavailableView(
+                "No Daily Metrics Yet",
+                systemImage: "calendar.badge.exclamationmark",
+                description: Text("Daily coverage will appear after you record a recurring metric.")
+            )
+        } else if visibleDailyCoverage.isEmpty {
+            VStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.title)
+                    .foregroundStyle(CloveColors.success)
+                Text("Daily coverage looks strong")
+                    .font(.headline)
+                Text("Every recorded daily metric has coverage of at least 75% in this range.")
+                    .font(.caption)
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(CloveSpacing.large)
+            .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.large))
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(visibleDailyCoverage.enumerated()), id: \.element.0.id) { index, item in
+                    NavigationLink {
+                        CoverageMetricDetailView(definition: item.0)
+                    } label: {
+                        coverageRow(definition: item.0, value: item.1)
+                    }
+                    .buttonStyle(.plain)
+
+                    if index < visibleDailyCoverage.count - 1 {
+                        Divider().padding(.leading, 50)
+                    }
+                }
+            }
+            .padding(.horizontal, CloveSpacing.medium)
+            .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.large))
+        }
+    }
+
+    @ViewBuilder
+    private var occasionalEntriesSection: some View {
+        if !eventGroups.isEmpty {
+            DisclosureGroup(isExpanded: $eventsExpanded) {
+                VStack(spacing: 0) {
+                    ForEach(Array(eventGroups.enumerated()), id: \.element.id) { index, group in
+                        HStack(spacing: 11) {
+                            Image(systemName: occasionalCategoryIcon(group.category))
+                                .font(.subheadline.bold())
+                                .foregroundStyle(MetricPresentation.tint(for: group.category))
+                                .frame(width: 34, height: 34)
+                                .background(MetricPresentation.tint(for: group.category).opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(categoryName(group.category)).font(.subheadline.weight(.semibold))
+                                Text("\(group.itemCount) \(group.itemCount == 1 ? "item" : "items") · \(group.observationCount) \(group.observationCount == 1 ? "recording" : "recordings")")
+                                    .font(.caption)
+                                    .foregroundStyle(CloveColors.secondaryText)
+                            }
+                            Spacer()
+                        }
+                        .padding(.vertical, 10)
+                        if index < eventGroups.count - 1 { Divider().padding(.leading, 45) }
+                    }
+                }
+                .padding(.top, 6)
+            } label: {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Occasional entries")
+                        .font(.headline)
+                        .foregroundStyle(CloveColors.primaryText)
+                    Text("Conditional and one-off tracking is not graded as missing days")
+                        .font(.caption)
+                        .foregroundStyle(CloveColors.secondaryText)
+                }
+            }
+            .tint(CloveColors.secondaryText)
+            .padding(CloveSpacing.medium)
+            .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.large))
+        }
+    }
+
+    private func coverageRow(definition: MetricDefinition, value: MetricCoverage) -> some View {
+        let tint = MetricPresentation.tint(for: definition)
+        return HStack(spacing: 12) {
+            Image(systemName: categoryIcon(definition.category))
+                .font(.subheadline.bold())
+                .foregroundStyle(tint)
+                .frame(width: 38, height: 38)
+                .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(definition.displayName)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                    Spacer()
+                    Text(value.observedDayFraction.formatted(.percent.precision(.fractionLength(0))))
+                        .font(.subheadline.bold())
+                        .foregroundStyle(coverageColor(value.observedDayFraction))
+                }
+                ProgressView(value: value.observedDayFraction)
+                    .tint(coverageColor(value.observedDayFraction))
+                HStack {
+                    Text("\(value.sourceDayCount) of \(value.possibleDayCount) days")
+                    Spacer()
+                    Text(coverageLabel(value.observedDayFraction))
+                }
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(CloveColors.secondaryText)
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.caption.bold())
+                .foregroundStyle(CloveColors.secondaryText)
+        }
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+    }
+
+    private func coverageBadge(_ text: String, icon: String) -> some View {
+        Label(text, systemImage: icon)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(CloveColors.secondaryText)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .background(CloveColors.background, in: Capsule())
+    }
+
+    private func coverageColor(_ fraction: Double) -> Color {
+        if fraction < 0.4 { return CloveColors.orange }
+        if fraction < 0.75 { return CloveColors.yellow }
+        return CloveColors.success
+    }
+
+    private func coverageLabel(_ fraction: Double) -> String {
+        if fraction < 0.4 { return "Limited" }
+        if fraction < 0.75 { return "Building" }
+        return "Strong"
+    }
+
+    private func categoryIcon(_ category: MetricSemanticCategory) -> String {
+        switch category {
+        case .coreHealth: "heart.text.square"
+        case .symptoms: CloveSymbols.symptom
+        case .medications: CloveSymbols.medication
+        case .lifestyle: "figure.mind.and.body"
+        case .environmental: CloveSymbols.weather
+        case .activities: CloveSymbols.activities
+        case .meals: CloveSymbols.meals
+        }
+    }
+
+    private func occasionalCategoryIcon(_ category: MetricSemanticCategory) -> String {
+        category == .coreHealth ? CloveSymbols.cycle : categoryIcon(category)
+    }
+
+    private func categoryName(_ category: MetricSemanticCategory) -> String {
+        switch category {
+        case .coreHealth: "Cycle tracking"
+        case .symptoms: "Symptoms"
+        case .medications: "Medications"
+        case .lifestyle: "Lifestyle"
+        case .environmental: "Environment"
+        case .activities: "Activities"
+        case .meals: "Meals & foods"
+        }
+    }
+}
+
+private struct EventCoverageGroup: Identifiable {
+    var id: MetricSemanticCategory { category }
+    let category: MetricSemanticCategory
+    let itemCount: Int
+    let observationCount: Int
+}
+
+private struct CoverageMetricDetailView: View {
+    let definition: MetricDefinition
+
+    var body: some View {
+        ScrollView {
+            AnalyticsMetricDetailView(definition: definition)
+                .padding(CloveSpacing.large)
+                .padding(.bottom, CloveSpacing.xlarge)
+        }
+        .background(CloveColors.background.ignoresSafeArea())
+        .navigationTitle(definition.displayName)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
