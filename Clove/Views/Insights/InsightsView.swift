@@ -140,7 +140,7 @@ final class InsightsHomeViewModel {
     }
 
     func provider(forRawID id: String?) -> (any MetricProvider)? {
-        guard let id else { return defaultProvider }
+        guard let id else { return nil }
 
         // An explicit metric selection must never silently become another metric.
         // Providers are keyed by their canonical catalog ID during `load()`, so use
@@ -150,9 +150,15 @@ final class InsightsHomeViewModel {
         }
     }
 
-    var defaultProvider: (any MetricProvider)? {
-        providers.values.first(where: { $0.id == MetricCatalog.mood.id.rawValue })
-            ?? providers.values.sorted { $0.displayName < $1.displayName }.first
+    /// Resolve a picker selection against the live registry rather than relying on the
+    /// dashboard's earlier provider snapshot. Dynamic metrics and identity migrations can make
+    /// those two collections temporarily differ even though the tapped metric is valid.
+    func resolveSelectedProvider(id: String) async -> String? {
+        guard let provider = await MetricRegistry.shared.getMetric(id: id) else { return nil }
+        let canonicalID = provider.catalogMetricDefinition?.id.rawValue ?? provider.id
+        providers[canonicalID] = provider
+        providers[provider.id] = provider
+        return canonicalID
     }
 
     var visibleDiscoveries: [AutomaticDiscovery] {
@@ -462,6 +468,14 @@ private struct MetricExplorerDashboardView: View {
     @State private var selectedMetricID: String?
     @State private var showingPicker = false
 
+    init(viewModel: InsightsHomeViewModel) {
+        self.viewModel = viewModel
+        let defaults = UserDefaults.standard
+        let lastOpened = defaults.string(forKey: Constants.LAST_OPENED_METRIC)
+            ?? defaults.stringArray(forKey: Constants.RECENT_METRICS)?.first
+        _selectedMetricID = State(initialValue: lastOpened)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: CloveSpacing.medium) {
@@ -508,7 +522,14 @@ private struct MetricExplorerDashboardView: View {
         .background(CloveColors.background.ignoresSafeArea())
         .navigationTitle("Metric Explorer")
         .sheet(isPresented: $showingPicker) {
-            MetricExplorer { selectedMetricID = $0 }.presentationDragIndicator(.visible)
+            MetricExplorer { metricID in
+                Task {
+                    guard let resolvedID = await viewModel.resolveSelectedProvider(id: metricID) else { return }
+                    selectedMetricID = resolvedID
+                    UserDefaults.standard.set(resolvedID, forKey: Constants.LAST_OPENED_METRIC)
+                }
+            }
+            .presentationDragIndicator(.visible)
         }
     }
 }

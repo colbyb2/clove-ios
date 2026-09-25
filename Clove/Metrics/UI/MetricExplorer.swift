@@ -336,6 +336,7 @@ struct MetricExplorer: View {
         }
         // Save to UserDefaults
         UserDefaults.standard.set(recentMetrics, forKey: Constants.RECENT_METRICS)
+        UserDefaults.standard.set(metricId, forKey: Constants.LAST_OPENED_METRIC)
     }
 
     private func clearRecentMetrics() {

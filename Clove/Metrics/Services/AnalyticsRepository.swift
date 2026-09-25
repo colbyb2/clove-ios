@@ -176,6 +176,7 @@ struct DefaultAnalyticsRepository: AnalyticsRepository {
         guard request.interval.duration > 0 else { throw AnalyticsRepositoryError.invalidInterval }
         let snapshot = try sourceLoader.load(in: request.interval)
         try Task.checkCancellation()
+        let effectiveInterval = effectiveInterval(for: request.interval, snapshot: snapshot)
         let availableDefinitions = definitions(from: snapshot)
         let definitions: [MetricDefinition]
 
@@ -200,20 +201,20 @@ struct DefaultAnalyticsRepository: AnalyticsRepository {
         try Task.checkCancellation()
         let observations = batch.observations.sorted(by: Self.observationOrder)
         let rawEvents = request.includeRawEvents ? batch.rawEvents.sorted(by: Self.eventOrder) : []
-        let dayCount = possibleDayCount(in: request.interval)
+        let dayCount = possibleDayCount(in: effectiveInterval)
         let observationsByMetric = Dictionary(grouping: observations, by: \.metricID)
         let coverage = Dictionary(uniqueKeysWithValues: definitions.map { definition in
             let values = observationsByMetric[definition.id] ?? []
             return (definition.id, makeCoverage(
                 for: definition.id,
                 observations: values,
-                interval: request.interval,
+                interval: effectiveInterval,
                 possibleDayCount: dayCount
             ))
         })
 
         return AnalyticsDataset(
-            interval: request.interval,
+            interval: effectiveInterval,
             definitions: definitions,
             observations: observations,
             rawEvents: rawEvents,
@@ -221,6 +222,27 @@ struct DefaultAnalyticsRepository: AnalyticsRepository {
             metricAliases: aliasIndex(from: snapshot.metricAliases),
             diagnostics: snapshot.diagnostics
         )
+    }
+
+    /// "All Time" queries use the Unix epoch as an unbounded database-query sentinel. That
+    /// sentinel must not become the user-facing range or coverage denominator; analytics begin
+    /// on the first day for which the user actually has stored health data.
+    private func effectiveInterval(
+        for requestedInterval: DateInterval,
+        snapshot: AnalyticsSourceSnapshot
+    ) -> DateInterval {
+        guard requestedInterval.start.timeIntervalSince1970 <= 1 else { return requestedInterval }
+
+        let recordedDates = snapshot.logs.map { $0.date(in: normalizer.calendar) }
+            + snapshot.foodEntries.map(\.date)
+            + snapshot.activityEntries.map(\.date)
+            + snapshot.bowelMovements.map(\.date)
+            + snapshot.cycleEntries.map(\.date)
+        let firstRecordedDay = recordedDates.min().map { normalizer.day(containing: $0) }
+            ?? normalizer.day(containing: Date())
+
+        guard firstRecordedDay < requestedInterval.end else { return requestedInterval }
+        return DateInterval(start: firstRecordedDay, end: requestedInterval.end)
     }
 
     private func definitions(from snapshot: AnalyticsSourceSnapshot) -> [MetricDefinition] {

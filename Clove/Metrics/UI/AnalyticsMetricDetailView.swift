@@ -52,7 +52,7 @@ final class AnalyticsMetricDetailViewModel {
                 definition: definition,
                 dataset: dataset,
                 previousDataset: previous,
-                granularity: granularity,
+                granularity: AnalyticsChartPipeline().granularity(for: dataset.interval),
                 hydrationGoal: hydrationGoal
             )
             state = result.summary.value == nil ? .empty(definition) : .loaded(result)
@@ -145,6 +145,7 @@ struct AnalyticsMetricDetailView: View {
             }
         }
         .task(id: loadKey) {
+            UserDefaults.standard.set(metricID, forKey: Constants.LAST_OPENED_METRIC)
             await viewModel.load(
                 providerID: metricID,
                 interval: interval,

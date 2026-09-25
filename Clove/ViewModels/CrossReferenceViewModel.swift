@@ -178,7 +178,7 @@ final class CrossReferenceViewModel {
             factorDefinition: factor, outcomeDefinition: outcome,
             alignment: alignment, estimate: estimate, lagProfile: lagProfile, eventOutcomes: eventOutcomes,
             coefficient: effect, significance: 1 - pValue, pValue: pValue, dataPoints: numericPoints,
-            timeRange: interval,
+            timeRange: dataset.interval,
             strengthDescription: estimate?.strength ?? "Event comparison", insights: insights
         )
     }

@@ -795,8 +795,24 @@ private struct TodayRatingInput: View {
                     }
                 }
 
-                if value == nil || useSliderInput {
+                if useSliderInput {
                     OptionalRatingSlider(value: $value, minValue: 0, maxValue: 10, step: 1)
+                } else if value == nil {
+                    Button {
+                        value = 5
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    } label: {
+                        Label("Add (label) rating", systemImage: "plus.circle.fill")
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(Theme.shared.accent)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .background(
+                                Theme.shared.accent.opacity(0.1),
+                                in: RoundedRectangle(cornerRadius: CloveCorners.medium)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Starts at 5, then lets you adjust with minus and plus buttons")
                 } else {
                     PlusMinusControls(value: answeredValue, minValue: 0, maxValue: 10, step: 1, label: label)
                 }

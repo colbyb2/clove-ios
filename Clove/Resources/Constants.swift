@@ -39,6 +39,7 @@ enum Constants {
 
    // Recent Metrics
    static let RECENT_METRICS = "recentMetrics"
+   static let LAST_OPENED_METRIC = "lastOpenedMetric"
 
    // App Review Tracking
    static let APP_INSTALL_DATE = "appInstallDate"
