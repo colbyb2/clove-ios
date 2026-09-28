@@ -110,8 +110,39 @@ enum WhatsNewContent {
         ],
         version: "1.6.0"
     )
+
+    static let version_1_7_0 = Popup(
+        id: "whats_new_1_7_0",
+        type: .whatsNew,
+        icon: "leaf.fill",
+        title: "A Clearer, Calmer Clove",
+        message: "The places you use most have been rebuilt to make tracking faster and your history easier to understand.",
+        features: [
+            WhatsNewFeature(
+                icon: "checkmark.circle.fill",
+                title: "A Calmer Daily Check-In",
+                description: "Today is cleaner and easier to personalize, with focused check-ins, flexible rating controls, quick symptom logging, and optional Gentle Plans."
+            ),
+            WhatsNewFeature(
+                icon: "calendar.badge.clock",
+                title: "History You Can Explore",
+                description: "A completely redesigned calendar, richer day summaries, clearer full-day details, and more useful search make it easier to revisit your records."
+            ),
+            WhatsNewFeature(
+                icon: "sparkles.rectangle.stack.fill",
+                title: "Insights Made Understandable",
+                description: "Metric Explorer, Discover, tracking coverage, and comparisons now prioritize the clearest signals and explain what your data can—and cannot—show."
+            ),
+            WhatsNewFeature(
+                icon: "wand.and.stars",
+                title: "Polished From the Start",
+                description: "A new onboarding experience, improved tracker customization, flexible reminders, and richer in-app notifications help Clove fit the way you track."
+            )
+        ],
+        version: "1.7.0"
+    )
     
     static let allWhatsNewPopups: [Popup] = [
-        version_1_6_0
+        version_1_7_0
     ]
 }

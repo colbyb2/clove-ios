@@ -50,6 +50,24 @@ struct ChangelogItem: Identifiable {
 class ChangelogData {
     static let versions: [ChangelogVersion] = [
         ChangelogVersion(
+            version: "1.7.0",
+            date: "September 2026",
+            changes: [
+                ChangelogItem(type: .improvement, description: "Rebuilt Today around a calmer, faster check-in with less visual clutter, focused tracking, customizable layout, and rating controls that can use sliders or step buttons."),
+                ChangelogItem(type: .new, description: "Added Gentle Plans—an optional, separate space for low-pressure daily intentions that never changes your tracked health data."),
+                ChangelogItem(type: .improvement, description: "Redesigned History with a more informative calendar, metric heatmaps, monthly snapshots, compact day previews, and clearer full-day details."),
+                ChangelogItem(type: .improvement, description: "Overhauled Search with structured filters, useful starting points, clearer results, and direct access to matching days."),
+                ChangelogItem(type: .improvement, description: "Redesigned Metric Explorer with metric-aware charts, plain-language summaries, interactive selections, meaningful colors, and clearer data-quality explanations."),
+                ChangelogItem(type: .improvement, description: "Reorganized Discover so the strongest findings appear first, with searchable connections, changes, trends, context, and personal baselines."),
+                ChangelogItem(type: .improvement, description: "Simplified tracking coverage and cross-reference results so eligible days, missing data, timing, and statistical limitations are easier to understand."),
+                ChangelogItem(type: .improvement, description: "Introduced a new onboarding experience with an animated welcome, quick feature and symptom setup, theme selection, and clearer privacy expectations."),
+                ChangelogItem(type: .new, description: "Expanded in-app notifications with stacking, manual dismissal, persistent messages, and support for custom actions."),
+                ChangelogItem(type: .improvement, description: "Streamlined tracker customization with instant saving, enabled-feature arrangement, improved symptom management, and more flexible reminders."),
+                ChangelogItem(type: .new, description: "Added a detailed feedback form under Help & About so suggestions and problems are easier to share."),
+                ChangelogItem(type: .bugfix, description: "Fixed analytics date ranges, metric selection, chart interaction, category editing, launch reliability, and numerous layout and accessibility issues throughout the app.")
+            ]
+        ),
+        ChangelogVersion(
             version: "1.6.0",
             date: "July 2026",
             changes: [

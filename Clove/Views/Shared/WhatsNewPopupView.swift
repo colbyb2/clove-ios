@@ -263,6 +263,6 @@ struct WhatsNewPopupView: View {
     ZStack {
         CloveColors.background.ignoresSafeArea()
 
-        WhatsNewPopupView(popup: WhatsNewContent.version_1_6_0)
+        WhatsNewPopupView(popup: WhatsNewContent.version_1_7_0)
     }
 }
