@@ -29,7 +29,7 @@ struct TodayCycleCard: View {
                 Text("Cycle")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(CloveColors.primaryText)
-                Text("No active period")
+                Text(cycleDay.map { "Cycle day \($0)" } ?? "No active period")
                     .font(.caption)
                     .foregroundStyle(CloveColors.secondaryText)
             }
@@ -54,6 +54,7 @@ struct TodayCycleCard: View {
                 .accessibilityHint("Open a cycle entry with Period Started selected")
 
             Menu {
+                Button("Log cycle signs", systemImage: "plus.circle") { onLog(.signs) }
                 Button("Hide from Today", systemImage: "eye.slash", action: onHide)
             } label: {
                 Image(systemName: "ellipsis")
@@ -163,9 +164,9 @@ struct TodayCycleCard: View {
         if let entry {
             if entry.isStartOfCycle { return "Period started on this day" }
             if entry.isEndOfCycle == true { return "Period ended on this day" }
-            return "Period details logged"
+            return "Cycle details logged"
         }
-        if isPeriodActive, let cycleDay { return "Period day \(cycleDay) • Nothing logged today" }
+        if isPeriodActive, let cycleDay { return "Cycle day \(cycleDay) • Nothing logged today" }
         return "Nothing logged for this day"
     }
 }
@@ -195,7 +196,7 @@ struct CycleIndicator: View {
 
                 // MARK: - Main Content
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(cycle.flow.displayName)
+                    Text(cycle.summary)
                         .font(.system(.body, design: .rounded).weight(.semibold))
                         .foregroundStyle(CloveColors.primary)
                     
@@ -277,6 +278,7 @@ struct CycleIndicator: View {
     
     private var flowColor: Color {
         switch cycle.flow {
+        case .notRecorded, .noFlow: return .secondary
         case .spotting: return .pink.opacity(0.6)
         case .light: return .pink
         case .medium: return .red
@@ -287,6 +289,7 @@ struct CycleIndicator: View {
     
     private var flowIcon: String {
         switch cycle.flow {
+        case .notRecorded, .noFlow: return "circle"
         case .spotting, .light: return "drop"
         case .medium, .heavy: return "drop.fill"
         case .veryHeavy: return "drop.triangle.fill"

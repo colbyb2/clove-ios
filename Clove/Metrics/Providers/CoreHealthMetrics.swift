@@ -327,7 +327,7 @@ struct FlowLevelMetricProvider: MetricProvider {
     func getDataPoints(for period: TimePeriod) async -> [MetricDataPoint] {
         let cycles = CycleRepo.shared.getCycles(for: period)
 
-        return cycles.map { cycle in
+        return cycles.filter { $0.flow != .notRecorded }.map { cycle in
             MetricDataPoint(
                 date: cycle.date,
                 value: cycle.flow.numericValue,
@@ -338,7 +338,7 @@ struct FlowLevelMetricProvider: MetricProvider {
     }
 
     func getDataPointCount(for period: TimePeriod) async -> Int {
-        return CycleRepo.shared.getCycles(for: period).count
+        return CycleRepo.shared.getCycles(for: period).filter { $0.flow != .notRecorded }.count
     }
 
     func formatValue(_ value: Double) -> String {

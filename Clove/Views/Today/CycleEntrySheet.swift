@@ -3,6 +3,7 @@ import SwiftUI
 enum CycleEntryPreset {
     case start
     case end
+    case signs
 }
 
 struct CycleEntrySheet: View {
@@ -17,6 +18,9 @@ struct CycleEntrySheet: View {
     @State private var isEndOfCycle: Bool = false
     @State private var hasCramps: Bool = false
     @State private var animateIn = false
+    @State private var fertilitySigns = false
+    @State private var ovulation = false
+    @State private var showingSigns = false
 
     // Assuming these singletons exist based on your code
     private let repo = CycleRepo.shared
@@ -27,7 +31,7 @@ struct CycleEntrySheet: View {
             // MARK: - Header
             ZStack {
                 HStack(spacing: 6) {
-                    Text("Log Period")
+                    Text("Log Cycle")
                         .font(.system(.headline, design: .rounded).weight(.bold))
                         .foregroundStyle(CloveColors.primary)
                 }
@@ -68,13 +72,17 @@ struct CycleEntrySheet: View {
                         LazyVGrid(
                             columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12
                         ) {
-                            ForEach(FlowLevel.allCases, id: \.self) { flow in
+                            ForEach(FlowLevel.selectableCases, id: \.self) { flow in
                                 FlowOptionCard(
                                     flow: flow,
                                     isSelected: selectedFlow == flow
                                 ) {
                                     triggerHaptic()
-                                    selectedFlow = flow
+                                    selectedFlow = selectedFlow == flow ? nil : flow
+                                    if selectedFlow?.isBleeding != true {
+                                        isStartOfCycle = false
+                                        isEndOfCycle = false
+                                    }
                                 }
                             }
                         }
@@ -91,31 +99,33 @@ struct CycleEntrySheet: View {
                             .padding(.horizontal)
 
                         VStack(spacing: 12) {
-                            // Cycle Start Toggle
-                            DetailSelectionRow(
-                                title: "Period Started",
-                                subtitle: "Mark as Day 1 of new cycle",
-                                icon: "arrow.counterclockwise.circle.fill",
-                                color: .blue,
-                                isSelected: isStartOfCycle
-                            ) {
-                                triggerHaptic(style: .light)
-                                isStartOfCycle.toggle()
-                                if isStartOfCycle { isEndOfCycle = false }
-                            }
+                            if selectedFlow?.isBleeding == true {
+                                // Cycle Start Toggle
+                                DetailSelectionRow(
+                                    title: "Period Started",
+                                    subtitle: "Mark as Day 1 of new cycle",
+                                    icon: "arrow.counterclockwise.circle.fill",
+                                    color: .blue,
+                                    isSelected: isStartOfCycle
+                                ) {
+                                    triggerHaptic(style: .light)
+                                    isStartOfCycle.toggle()
+                                    if isStartOfCycle { isEndOfCycle = false }
+                                }
 
-                            DetailSelectionRow(
-                                title: "Period Ended",
-                                subtitle: "Mark the final day, even if days were missed",
-                                icon: "checkmark.circle.fill",
-                                color: .pink,
-                                isSelected: isEndOfCycle
-                            ) {
-                                triggerHaptic(style: .light)
-                                isEndOfCycle.toggle()
-                                if isEndOfCycle { isStartOfCycle = false }
-                            }
+                                DetailSelectionRow(
+                                    title: "Period Ended",
+                                    subtitle: "Mark the final day, even if days were missed",
+                                    icon: "checkmark.circle.fill",
+                                    color: .pink,
+                                    isSelected: isEndOfCycle
+                                ) {
+                                    triggerHaptic(style: .light)
+                                    isEndOfCycle.toggle()
+                                    if isEndOfCycle { isStartOfCycle = false }
+                                }
 
+                            }
                             // Cramps Toggle
                             DetailSelectionRow(
                                 title: "Cramping",
@@ -132,6 +142,58 @@ struct CycleEntrySheet: View {
                     }
                     .opacity(animateIn ? 1 : 0)
                     .offset(y: animateIn ? 0 : 30)
+
+                    VStack(spacing: 14) {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) { showingSigns.toggle() }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "sparkles")
+                                    .font(.headline).foregroundStyle(.purple)
+                                    .frame(width: 42, height: 42)
+                                    .background(Color.purple.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                                VStack(alignment: .leading, spacing: 3) {
+                                    HStack(spacing: 8) {
+                                        Text("Cycle signs").font(.subheadline.weight(.semibold))
+                                        Text("Optional").font(.caption2.weight(.medium))
+                                            .padding(.horizontal, 7).padding(.vertical, 3)
+                                            .background(CloveColors.background, in: Capsule())
+                                    }
+                                    Text(fertilitySigns || ovulation ? "Observations added" : "Add observations for this day")
+                                        .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                                }
+                                Spacer(minLength: 4)
+                                Image(systemName: showingSigns ? "chevron.up" : "chevron.down")
+                                    .font(.caption.weight(.semibold)).foregroundStyle(CloveColors.secondaryText)
+                            }
+                            .foregroundStyle(CloveColors.primaryText)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityValue(showingSigns ? "Expanded" : "Collapsed")
+
+                        if showingSigns {
+                            DetailSelectionRow(title: "Fertility signs", subtitle: "Signs observed today",
+                                icon: "sparkles", color: .purple, isSelected: fertilitySigns) {
+                                triggerHaptic(style: .light)
+                                fertilitySigns.toggle()
+                            }
+                            .accessibilityValue(fertilitySigns ? "Recorded" : "Not recorded")
+                            DetailSelectionRow(title: "Suspected ovulation", subtitle: "Based on your signs or testing",
+                                icon: "circle.dotted.circle", color: .orange, isSelected: ovulation) {
+                                triggerHaptic(style: .light)
+                                ovulation.toggle()
+                            }
+                            .accessibilityValue(ovulation ? "Recorded" : "Not recorded")
+                            Text("Log only what you observed. Ovulation timing is an estimate.")
+                                .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .padding(16)
+                    .background(CloveColors.card.opacity(0.5), in: RoundedRectangle(cornerRadius: 20))
+                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.purple.opacity(0.12), lineWidth: 1))
+                    .padding(.horizontal)
                 }
                 .padding(.bottom, 100)  // Space for button
             }
@@ -158,11 +220,15 @@ struct CycleEntrySheet: View {
         .background(CloveColors.background)
         .onAppear {
             if let entry = existingEntry {
-                selectedFlow = entry.flow
+                selectedFlow = entry.flow == .notRecorded ? nil : entry.flow
+                fertilitySigns = entry.fertilitySigns == true
+                ovulation = entry.ovulation == true
+                showingSigns = fertilitySigns || ovulation
                 isStartOfCycle = entry.isStartOfCycle
                 isEndOfCycle = entry.isEndOfCycle == true
                 hasCramps = entry.hasCramps
             }
+            if preset == .signs { showingSigns = true }
             if preset == .start {
                 isStartOfCycle = true
                 isEndOfCycle = false
@@ -177,19 +243,22 @@ struct CycleEntrySheet: View {
     }
 
     private var isValid: Bool {
-        selectedFlow != nil
+        selectedFlow != nil || fertilitySigns || ovulation || hasCramps
     }
 
     private func saveEntry() {
-        guard let flow = selectedFlow else { return }
+        guard isValid else { return }
+        let flow = selectedFlow ?? .notRecorded
 
         let entry = Cycle(
             id: existingEntry?.id,
             date: date,
             flow: flow,
-            isStartOfCycle: isStartOfCycle,
-            isEndOfCycle: isEndOfCycle,
-            hasCramps: hasCramps
+            isStartOfCycle: flow.isBleeding && isStartOfCycle,
+            isEndOfCycle: flow.isBleeding && isEndOfCycle,
+            hasCramps: hasCramps,
+            fertilitySigns: fertilitySigns ? true : nil,
+            ovulation: ovulation ? true : nil
         )
 
         if repo.save([entry]) {
@@ -224,6 +293,7 @@ struct FlowOptionCard: View {
     // Dynamic styling based on flow intensity
     var style: (icon: String, scale: CGFloat, color: Color) {
         switch flow {
+        case .notRecorded, .noFlow: return ("circle", 0.8, .secondary)
         case .spotting: return ("drop", 0.8, .pink.opacity(0.6))
         case .light: return ("drop.fill", 0.8, .pink.opacity(0.8))
         case .medium: return ("drop.fill", 1.0, .pink)

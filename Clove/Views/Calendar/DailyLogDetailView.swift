@@ -325,7 +325,7 @@ struct DailyLogDetailView: View {
                 DayContextItem(
                     id: "cycle",
                     title: "Cycle",
-                    value: "\(prefix)\(cycle.flow.displayName) flow",
+                    value: "\(prefix)\(cycle.summary)",
                     icon: flowIcon(for: cycle.flow),
                     color: flowColor(for: cycle.flow)
                 )
@@ -449,6 +449,7 @@ struct DailyLogDetailView: View {
 
     private func flowColor(for flow: FlowLevel) -> Color {
         switch flow {
+        case .notRecorded, .noFlow: return .secondary
         case .spotting: return .pink.opacity(0.6)
         case .light: return .pink
         case .medium: return .red
@@ -459,6 +460,7 @@ struct DailyLogDetailView: View {
 
     private func flowIcon(for flow: FlowLevel) -> String {
         switch flow {
+        case .notRecorded, .noFlow: return "circle"
         case .spotting, .light: return "drop"
         case .medium, .heavy: return "drop.fill"
         case .veryHeavy: return "drop.triangle.fill"

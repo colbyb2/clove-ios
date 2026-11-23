@@ -430,7 +430,7 @@ struct CycleObservationAdapter {
         guard let flow = definitions.first(where: { $0.id == MetricCatalog.flowLevel.id }) else { return .empty }
         var result = MetricObservationBatch.empty
 
-        for entry in entries {
+        for entry in entries where entry.flow != .notRecorded {
             let day = normalizer.day(containing: entry.date)
             let identity = ObservationAdapterSupport.recordID(
                 entry.id,

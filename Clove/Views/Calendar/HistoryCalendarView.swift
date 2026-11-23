@@ -222,7 +222,7 @@ struct HistoryCalendarView: View {
             metrics: metrics,
             details: details,
             note: log?.notes,
-            cycleDescription: cycle.map { "Period · \($0.flow.displayName) flow" },
+            cycleDescription: cycle.map { "Cycle · \($0.summary)" },
             onView: { presentedDate = day },
             onEdit: { dependencies.navigationCoordinator.editDayInTodayView(date: day) }
         )
@@ -362,6 +362,8 @@ struct HistoryCalendarView: View {
                 color: color,
                 icon: nil,
                 hasCycleEntry: hasCycle,
+                cycleSymbol: viewModel.cyclesByDate[date]?.flow.isBleeding == true ? "drop.fill" : "circle",
+                cycleDescription: viewModel.cyclesByDate[date]?.summary,
                 isPredictedCycle: isPredicted,
                 hasData: viewModel.hasAnyData(for: date),
                 isFlareDay: log?.isFlareDay ?? false,

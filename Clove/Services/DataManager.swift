@@ -55,10 +55,11 @@ class DataManager {
         
         // Fetch all logs from database
         let logs = LogsRepo.shared.getLogs()
-        guard !logs.isEmpty else {
+        let cycleEntries = categories.contains(.cycle) ? CycleRepo.shared.getAllCycles() : []
+        guard !logs.isEmpty || !cycleEntries.isEmpty else {
             throw DataExportError.noData
         }
-        
+
         await updateProgress(0.3)
         
         // Get symptom information for selected symptoms
@@ -73,7 +74,8 @@ class DataManager {
         let csvContent = try generateCSVContent(
             logs: logs,
             categories: categories,
-            selectedSymptoms: selectedSymptoms
+            selectedSymptoms: selectedSymptoms,
+            cycleEntries: cycleEntries
         )
         
         await updateProgress(0.8)
@@ -86,10 +88,11 @@ class DataManager {
         return csvURL
     }
     
-    private func generateCSVContent(
+    func generateCSVContent(
         logs: [DailyLog],
         categories: Set<ExportCategory>,
-        selectedSymptoms: [TrackedSymptom]
+        selectedSymptoms: [TrackedSymptom],
+        cycleEntries: [Cycle] = []
     ) throws -> String {
         var csvLines: [String] = []
         
@@ -98,11 +101,23 @@ class DataManager {
         csvLines.append(headers.joined(separator: ","))
         
         // Sort logs by date (oldest first)
-        let sortedLogs = logs.sorted { $0.date < $1.date }
+        let calendar = Calendar.current
+        let loggedDays = Set(logs.map { calendar.startOfDay(for: $0.date) })
+        let cyclesByDay = Dictionary(grouping: cycleEntries, by: { calendar.startOfDay(for: $0.date) })
+        var exportLogs = logs
+        if categories.contains(.cycle) {
+            exportLogs.append(contentsOf: Set(cyclesByDay.keys).subtracting(loggedDays).map { DailyLog(date: $0) })
+        }
+        let sortedLogs = exportLogs.sorted { $0.date < $1.date }
         
         // Generate data rows
         for log in sortedLogs {
-            let row = generateCSVRow(log: log, categories: categories, selectedSymptoms: selectedSymptoms)
+            let entry = cyclesByDay[calendar.startOfDay(for: log.date)]?.max { $0.date < $1.date }
+            var row = generateCSVRow(log: log, categories: categories, selectedSymptoms: selectedSymptoms, cycleEntry: entry)
+            if !loggedDays.contains(calendar.startOfDay(for: log.date)), categories.contains(.flareDay) {
+                let headers = generateCSVHeaders(categories: categories, selectedSymptoms: [])
+                if let index = headers.firstIndex(of: ExportCategory.flareDay.rawValue) { row[index] = "" }
+            }
             csvLines.append(row.joined(separator: ","))
         }
         
@@ -113,10 +128,14 @@ class DataManager {
         var headers: [String] = []
         
         // Add category headers in logical order
-        let orderedCategories: [ExportCategory] = [.date, .mood, .pain, .energy, .hydration, .flareDay, .weather, .bowelMovements, .medications, .meals, .activities, .notes]
+        let orderedCategories: [ExportCategory] = [.date, .mood, .pain, .energy, .hydration, .flareDay, .weather, .bowelMovements, .medications, .meals, .activities, .cycle, .notes]
         
         for category in orderedCategories {
             if categories.contains(category) {
+                if category == .cycle {
+                    headers.append(contentsOf: ["Cycle Flow", "Period Started", "Period Ended", "Fertility Signs", "Suspected Ovulation"])
+                    continue
+                }
                 let header = category == .hydration
                     ? "Hydration (\(HydrationPreferences.unit().symbol))"
                     : category.rawValue
@@ -132,14 +151,25 @@ class DataManager {
         return headers
     }
     
-    private func generateCSVRow(log: DailyLog, categories: Set<ExportCategory>, selectedSymptoms: [TrackedSymptom]) -> [String] {
+    private func generateCSVRow(log: DailyLog, categories: Set<ExportCategory>, selectedSymptoms: [TrackedSymptom], cycleEntry: Cycle?) -> [String] {
         var row: [String] = []
         
         // Add category data in same order as headers
-        let orderedCategories: [ExportCategory] = [.date, .mood, .pain, .energy, .hydration, .flareDay, .weather, .bowelMovements, .medications, .meals, .activities, .notes]
+        let orderedCategories: [ExportCategory] = [.date, .mood, .pain, .energy, .hydration, .flareDay, .weather, .bowelMovements, .medications, .meals, .activities, .cycle, .notes]
         
         for category in orderedCategories {
             if categories.contains(category) {
+                if category == .cycle {
+                    let entry = cycleEntry
+                    row.append(contentsOf: [
+                        entry.flatMap { $0.flow == .notRecorded ? nil : $0.flow.displayName } ?? "",
+                        entry?.isStartOfCycle == true ? "Yes" : "",
+                        entry?.isEndOfCycle == true ? "Yes" : "",
+                        entry?.fertilitySigns == true ? "Yes" : "",
+                        entry?.ovulation == true ? "Yes" : ""
+                    ].map(escapeCSVField))
+                    continue
+                }
                 let value = getValueForCategory(category: category, log: log)
                 row.append(escapeCSVField(value))
             }
@@ -157,6 +187,8 @@ class DataManager {
     
     private func getValueForCategory(category: ExportCategory, log: DailyLog) -> String {
         switch category {
+        case .cycle:
+            return "" // Cycle fields are exported as separate columns.
         case .date:
             let formatter = DateFormatter()
             formatter.dateStyle = .medium

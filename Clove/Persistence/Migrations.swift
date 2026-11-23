@@ -29,7 +29,8 @@ enum Migrations {
         SymptomActiveStateMigration(),
         SymptomDisplayOrderMigration(),
         ActivityCategoryTaxonomyMigration(),
-        PacingPlanMigration()
+        PacingPlanMigration(),
+        CycleObservationsMigration()
     ]
 }
 
@@ -851,6 +852,16 @@ struct StableDynamicMetricIdentityMigration: Migration {
                 sql: "UPDATE \(table) SET analyticsIdentityID = ? WHERE lower(trim(name)) = ?",
                 arguments: [id, DynamicMetricIdentityStore.normalize(name)]
             )
+        }
+    }
+}
+
+struct CycleObservationsMigration: Migration {
+    var identifier: String { "cycleObservations_112226" }
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "cycle") { table in
+            table.add(column: "fertilitySigns", .boolean)
+            table.add(column: "ovulation", .boolean)
         }
     }
 }

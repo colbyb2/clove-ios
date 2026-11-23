@@ -86,6 +86,8 @@ final class CloveArchiveTests: XCTestCase {
         XCTAssertEqual(restored.6?.title, "Call a friend")
         XCTAssertEqual(restored.6?.state, .deferred)
         XCTAssertEqual(restored.7?.flow, .heavy)
+        XCTAssertEqual(restored.7?.fertilitySigns, true)
+        XCTAssertNil(restored.7?.ovulation)
         XCTAssertEqual(restored.8?.title, "Sleep vs pain")
         XCTAssertEqual(defaults.string(forKey: Constants.SELECTED_COLOR), backedUpColor)
         let restoredColorComponents = Theme.shared.accent.toString()
@@ -200,7 +202,8 @@ final class CloveArchiveTests: XCTestCase {
                 date: AnalyticsTestDates.date(2026, 9, 17),
                 flow: .heavy,
                 isStartOfCycle: true,
-                hasCramps: true
+                hasCramps: true,
+                fertilitySigns: true
             ).insert(db)
             try SavedAnalysis(
                 id: 81,

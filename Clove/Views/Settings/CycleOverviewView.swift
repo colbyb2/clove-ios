@@ -403,7 +403,7 @@ struct CycleOverviewView: View {
     private func groupIntoPeriods(_ cycles: [Cycle]) -> [Period] {
         guard !cycles.isEmpty else { return [] }
         let calendar = Calendar.current
-        let sortedCycles = cycles.sorted { $0.date < $1.date }
+        let sortedCycles = cycles.filter { $0.flow.isBleeding }.sorted { $0.date < $1.date }
         var periods: [Period] = []
         var currentPeriodEntries: [Cycle] = []
         var lastDate: Date? = nil

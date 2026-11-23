@@ -24,6 +24,17 @@ final class InsightsHomeViewModel {
     var providers: [String: any MetricProvider] = [:]
     var discoveryRun: DiscoveryRun?
     var contextAnalysis: ContextAnalysisResult?
+    var cycleEntries: [Cycle] = []
+    private(set) var isCycleEnabled = false
+    private let settingsRepository: any UserSettingsRepositoryProtocol
+
+    init(settingsRepository: any UserSettingsRepositoryProtocol = UserSettingsRepo.shared) {
+        self.settingsRepository = settingsRepository
+    }
+
+    func refreshCycleSettings() {
+        isCycleEnabled = settingsRepository.getSettings()?.trackCycle ?? false
+    }
     var baselines: [PersonalBaseline] = []
     var insightFeedback: [String: InsightFeedback] = [:]
     var hypotheses: [SavedHypothesis] = []
@@ -49,6 +60,7 @@ final class InsightsHomeViewModel {
     func load() async {
         let started = Date()
         state = .loading
+        refreshCycleSettings()
         do {
             let factory = AnalyticsDateRangeFactory()
             let interval: DateInterval
@@ -82,7 +94,8 @@ final class InsightsHomeViewModel {
             insights = InsightGenerator().generate(dataset: current, previous: previous)
             snapshot = WellbeingSnapshotEngine().build(current: current, previous: previous)
             discoveryRun = AutomaticDiscoveryEngine().scan(dataset: current)
-            let cycleStarts = CycleRepo.shared.getAllCycles().filter(\.isStartOfCycle).map(\.date)
+            cycleEntries = CycleRepo.shared.getAllCycles()
+            let cycleStarts = cycleEntries.filter(\.isStartOfCycle).map(\.date)
             contextAnalysis = ContextAnalysisEngine().analyze(dataset: current, recordedCycleStarts: cycleStarts)
             baselines = current.definitions.compactMap { definition in
                 PersonalBaselineEngine().build(definition: definition, observations: current.observations(for: definition.id))
@@ -243,6 +256,7 @@ struct InsightsView: View {
     var body: some View {
         if unifiedAnalyticsEnabled {
             insightsContent
+                .onAppear { viewModel.refreshCycleSettings() }
         } else {
             NavigationStack {
                 ContentUnavailableView {
@@ -280,6 +294,11 @@ struct InsightsView: View {
             .navigationTitle("Insights")
             .refreshable { await viewModel.load() }
             .task(id: viewModel.rangeLoadKey) { await viewModel.load() }
+            .onAppear {
+                if case .loaded = viewModel.state {
+                    Task { await viewModel.load() }
+                }
+            }
             .sheet(isPresented: $showingCustomRange) {
                 CustomDateRangeSheet(initialRange: viewModel.customInterval) { interval in
                     viewModel.selectCustomRange(interval)
@@ -350,6 +369,12 @@ struct InsightsView: View {
                 dashboardCard(title: "Coverage", value: viewModel.averageCoverage?.formatted(.percent.precision(.fractionLength(0))) ?? "—",
                               caption: "average", icon: "checkmark.circle.fill", color: .green)
             }
+            if viewModel.isCycleEnabled, let dataset = viewModel.dataset {
+                NavigationLink(destination: CycleDayInsightsView(dataset: dataset, entries: viewModel.cycleEntries)) {
+                    dashboardCard(title: "Cycle Insights", value: "\(Set(viewModel.cycleEntries.filter(\.isStartOfCycle).map { Calendar.current.startOfDay(for: $0.date) }).count)", caption: "marked starts",
+                                  icon: "calendar", color: .pink, isBeta: true)
+                }
+            }
             if correlations {
                 NavigationLink(destination: CrossReferenceView()) {
                     dashboardCard(title: "Compare", value: "\(viewModel.savedAnalyses.count)", caption: "saved",
@@ -360,7 +385,7 @@ struct InsightsView: View {
         .buttonStyle(.plain)
     }
 
-    private func dashboardCard(title: String, value: String, caption: String, icon: String, color: Color) -> some View {
+    private func dashboardCard(title: String, value: String, caption: String, icon: String, color: Color, isBeta: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Image(systemName: icon).font(.title3.bold()).foregroundStyle(color)
@@ -370,9 +395,21 @@ struct InsightsView: View {
             }
             Spacer(minLength: 2)
             Text(value).font(.title2.bold()).foregroundStyle(CloveColors.primaryText).lineLimit(1)
-            HStack(spacing: 4) {
-                Text(title).font(.subheadline.bold()).foregroundStyle(CloveColors.primaryText)
-                Text("· \(caption)").font(.caption).foregroundStyle(CloveColors.secondaryText).lineLimit(1)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Text(title).font(.subheadline.bold()).foregroundStyle(CloveColors.primaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if isBeta {
+                        Text("Beta")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(color)
+                            .padding(.horizontal, 5).padding(.vertical, 2)
+                            .background(color.opacity(0.12), in: Capsule())
+                            .fixedSize()
+                    }
+                }
+                Text(caption).font(.caption).foregroundStyle(CloveColors.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(14)

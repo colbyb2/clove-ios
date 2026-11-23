@@ -359,6 +359,7 @@ enum ExportCategory: String, CaseIterable {
     case meals = "Meals"
     case activities = "Activities"
     case notes = "Notes"
+    case cycle = "Cycle"
 
     var displayName: String {
         self == .hydration ? "Hydration (\(HydrationPreferences.unit().symbol))" : rawValue
@@ -366,6 +367,7 @@ enum ExportCategory: String, CaseIterable {
     
     var icon: String {
         switch self {
+        case .cycle: return "calendar.badge.clock"
         case .date: return "calendar"
         case .mood: return "face.smiling"
         case .pain: return "cross.case"
@@ -383,6 +385,7 @@ enum ExportCategory: String, CaseIterable {
     
     var description: String {
         switch self {
+        case .cycle: return "Flow and recorded cycle signs"
         case .date: return "Log dates"
         case .mood: return "Daily mood ratings"
         case .pain: return "Pain level scores"

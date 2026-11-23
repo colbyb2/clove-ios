@@ -155,7 +155,7 @@ struct CalendarView: View {
                 if showsCycleOverlay && record.hasCycleEntry {
                     HStack {
                         Spacer()
-                        Image(systemName: "drop.fill")
+                        Image(systemName: record.cycleSymbol)
                             .font(.system(size: 8, weight: .bold))
                             .foregroundStyle(Color.pink)
                             .padding(4)
@@ -182,7 +182,7 @@ struct CalendarView: View {
         if let value = record?.accessibilityValue { parts.append(value) }
         else if record?.hasData == true { parts.append("Data recorded") }
         if record?.isFlareDay == true { parts.append("Flare day") }
-        if showsCycleOverlay && record?.hasCycleEntry == true { parts.append("Period recorded") }
+        if showsCycleOverlay && record?.hasCycleEntry == true { parts.append(record?.cycleDescription ?? "Cycle recorded") }
         if showsCycleOverlay && record?.isPredictedCycle == true { parts.append("Predicted period") }
         return parts.joined(separator: ", ")
     }
@@ -245,6 +245,8 @@ struct CalendarRecord {
     let color: Color
     var icon: String? = nil
     var hasCycleEntry: Bool = false
+    var cycleSymbol: String = "drop.fill"
+    var cycleDescription: String? = nil
     var isPredictedCycle: Bool = false
     var hasData: Bool = false
     var isFlareDay: Bool = false

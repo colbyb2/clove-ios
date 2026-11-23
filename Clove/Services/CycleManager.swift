@@ -120,7 +120,7 @@ struct CycleManager: CycleManaging {
 
         return CyclePredictionAnalysis(
             prediction: prediction,
-            totalEntries: entries.count,
+            totalEntries: entries.filter { $0.flow.isBleeding }.count,
             detectedStarts: startDates,
             acceptedIntervals: acceptedIntervals,
             excludedIntervals: excludedIntervals,
@@ -183,7 +183,7 @@ struct CycleManager: CycleManaging {
         starts: [Date]
     ) -> (durations: [Int], incompleteCount: Int) {
         guard !starts.isEmpty else { return ([], 0) }
-        let normalizedEntries = entries.map { entry in
+        let normalizedEntries = entries.filter { $0.flow.isBleeding }.map { entry in
             (date: calendar.startOfDay(for: entry.date), entry: entry)
         }
         var durations: [Int] = []

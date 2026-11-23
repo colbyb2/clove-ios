@@ -81,11 +81,15 @@ struct AdvancedDiscoveryView: View {
         }
     }
 
+    private var exploreSections: [ExploreSection] {
+        ExploreSection.allCases.filter { $0 != .cycles || viewModel.isCycleEnabled }
+    }
+
     private var explore: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeading("Explore your data", caption: "Choose a question instead of sorting through one long feed")
             VStack(spacing: 0) {
-                ForEach(Array(ExploreSection.allCases.enumerated()), id: \.element.id) { index, item in
+                ForEach(Array(exploreSections.enumerated()), id: \.element.id) { index, item in
                     NavigationLink {
                         explorePage(item)
                     } label: {
@@ -109,7 +113,7 @@ struct AdvancedDiscoveryView: View {
                         .padding(.vertical, 12)
                     }
                     .buttonStyle(.plain)
-                    if index < ExploreSection.allCases.count - 1 { Divider().padding(.leading, 51) }
+                    if index < exploreSections.count - 1 { Divider().padding(.leading, 51) }
                 }
             }
             .padding(.horizontal, CloveSpacing.medium)
@@ -289,7 +293,7 @@ struct AdvancedDiscoveryView: View {
                 case .flares:
                     flareContent
                 case .cycles:
-                    cycleContent
+                    if viewModel.isCycleEnabled { cycleContent }
                 case .baselines:
                     baselineContent
                 }
@@ -347,6 +351,14 @@ struct AdvancedDiscoveryView: View {
     }
 
     @ViewBuilder private var cycleContent: some View {
+        if let dataset = viewModel.dataset {
+            NavigationLink("Compare by cycle day") {
+                CycleDayInsightsView(dataset: dataset, entries: viewModel.cycleEntries)
+            }
+        }
+        Text("Estimated phase patterns").font(.headline)
+        Text("Phases below use calendar estimates, rather than logged fertility signs or suspected ovulation.")
+            .font(.caption).foregroundStyle(CloveColors.secondaryText)
         if let summaries = viewModel.contextAnalysis?.phaseSummaries, !summaries.isEmpty {
             ForEach(CyclePhase.allCases, id: \.self) { phase in
                 let matches = summaries.filter { $0.phase == phase && matchesSearch($0.metricName, cycleSummary($0), phase.rawValue) }.sorted {

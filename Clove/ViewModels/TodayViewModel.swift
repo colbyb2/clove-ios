@@ -571,7 +571,7 @@ class TodayViewModel {
       guard (0...14).contains(elapsedDays) else { return false }
 
       return !relevantEntries.contains {
-         $0.isEndOfCycle == true && calendar.startOfDay(for: $0.date) >= startDay
+         ($0.isEndOfCycle == true || $0.flow == .noFlow) && calendar.startOfDay(for: $0.date) >= startDay
       }
    }
 
