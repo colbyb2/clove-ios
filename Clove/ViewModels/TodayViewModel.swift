@@ -30,10 +30,17 @@ class TodayViewModel {
    private let medicationRepository: MedicationRepositoryProtocol
    private let bowelMovementRepository: BowelMovementRepositoryProtocol
    private let cycleRepository: CycleRepositoryProtocol
+   private let customMetricsRepository: (any CustomMetricsRepositoryProtocol)?
    private let toastManager: ToastManaging
 
    // MARK: - State
    var settings: UserSettings = .default
+   private(set) var customDefinitions: [CustomMetricDefinition] = []
+   private(set) var customValues: [String: CustomDailyValue] = [:]
+   private var customBaseline: [String: CustomDailyValue] = [:]
+   private var modifiedCustomIDs: Set<String> = []
+   var hasPendingChanges: Bool { !modifiedAutoSaveFields.isEmpty || !modifiedCustomIDs.isEmpty }
+
 
    var selectedDate: Date = Date()
    var logData: LogData = LogData()
@@ -66,7 +73,8 @@ class TodayViewModel {
          medicationRepository: MedicationRepository.shared,
          bowelMovementRepository: BowelMovementRepo.shared,
          cycleRepository: CycleRepo.shared,
-         toastManager: ToastManager.shared
+         toastManager: ToastManager.shared,
+         customMetricsRepository: CustomMetricsRepo.shared
       )
    }
 
@@ -78,7 +86,8 @@ class TodayViewModel {
       medicationRepository: MedicationRepositoryProtocol,
       bowelMovementRepository: BowelMovementRepositoryProtocol,
       cycleRepository: CycleRepositoryProtocol,
-      toastManager: ToastManaging
+      toastManager: ToastManaging,
+      customMetricsRepository: (any CustomMetricsRepositoryProtocol)? = nil
    ) {
       self.logsRepository = logsRepository
       self.symptomsRepository = symptomsRepository
@@ -87,6 +96,7 @@ class TodayViewModel {
       self.bowelMovementRepository = bowelMovementRepository
       self.cycleRepository = cycleRepository
       self.toastManager = toastManager
+      self.customMetricsRepository = customMetricsRepository
    }
 
    /// Preview factory with mock dependencies and configurable state
@@ -139,6 +149,7 @@ class TodayViewModel {
          loadError == nil,
          Calendar.current.isDate(date, inSameDayAs: loadedDate) {
          selectedDate = loadedDate
+         refreshCustomMetrics()
          return
       }
 
@@ -147,9 +158,13 @@ class TodayViewModel {
 
       let loadedLog: DailyLog?
       let loadedSymptoms: [TrackedSymptom]
+      let loadedDefinitions: [CustomMetricDefinition]
+      let loadedValues: [CustomDailyValue]
       do {
          loadedLog = try logsRepository.loadLog(for: date)
          loadedSymptoms = try symptomsRepository.loadTrackedSymptoms()
+         loadedDefinitions = try customMetricsRepository?.definitions() ?? []
+         loadedValues = try customMetricsRepository?.values(on: date) ?? []
       } catch {
          loadError = repositoryError(error, operation: .read, resource: "health data")
          if hadLoadedData {
@@ -164,6 +179,10 @@ class TodayViewModel {
       self.selectedDate = date
       loadedDate = date
       trackedSymptoms = loadedSymptoms
+      customDefinitions = loadedDefinitions
+      customValues = Dictionary(uniqueKeysWithValues: loadedValues.map { ($0.metricID, $0) })
+      customBaseline = customValues
+      modifiedCustomIDs.removeAll()
 
       // Load bowel movements for this date (externally, not in LogData)
       let bowelMovements = bowelMovementRepository.getBowelMovementsForDate(date)
@@ -319,7 +338,9 @@ class TodayViewModel {
       )
 
       do {
-         try logsRepository.persistLog(log)
+         try persistCheckIn(log: modifiedAutoSaveFields.isEmpty && !modifiedCustomIDs.isEmpty ? nil : log)
+         customBaseline = customValues
+         modifiedCustomIDs.removeAll()
          autoSaveBaseline = AutoSaveSnapshot(logData: logData)
          modifiedAutoSaveFields.removeAll()
          saveState = .saved
@@ -356,7 +377,7 @@ class TodayViewModel {
       }
 
       autoSaveTask?.cancel()
-      guard !modifiedAutoSaveFields.isEmpty else {
+      guard hasPendingChanges else {
          saveState = .saved
          return
       }
@@ -373,7 +394,7 @@ class TodayViewModel {
 
    @discardableResult
    private func saveModifiedFields() -> Bool {
-      guard !modifiedAutoSaveFields.isEmpty else {
+      guard hasPendingChanges else {
          saveState = .saved
          return true
       }
@@ -382,7 +403,7 @@ class TodayViewModel {
       let fieldsToSave = modifiedAutoSaveFields
       var log: DailyLog
       do {
-         log = try logsRepository.loadLog(for: loadedDate) ?? DailyLog(date: loadedDate)
+         log = fieldsToSave.isEmpty ? DailyLog(date: loadedDate) : (try logsRepository.loadLog(for: loadedDate) ?? DailyLog(date: loadedDate))
       } catch {
          saveState = .failed
          saveError = repositoryError(error, operation: .read, resource: "daily log before saving")
@@ -416,7 +437,9 @@ class TodayViewModel {
       }
 
       do {
-         try logsRepository.persistLog(log)
+         try persistCheckIn(log: fieldsToSave.isEmpty ? nil : log)
+         customBaseline = customValues
+         modifiedCustomIDs.removeAll()
          autoSaveBaseline.update(fieldsToSave, from: logData)
          modifiedAutoSaveFields.subtract(fieldsToSave)
          saveState = modifiedAutoSaveFields.isEmpty ? .saved : .saving
@@ -426,6 +449,48 @@ class TodayViewModel {
          saveState = .failed
          saveError = repositoryError(error, operation: .write, resource: "daily log")
          return false
+      }
+   }
+
+   func refreshCustomMetrics() {
+      do {
+         let definitions = try customMetricsRepository?.definitions() ?? []
+         let stored = try customMetricsRepository?.values(on: loadedDate) ?? []
+         let byID = Dictionary(uniqueKeysWithValues: stored.map { ($0.metricID, $0) })
+         customDefinitions = definitions
+         for id in Set(customValues.keys).union(byID.keys) where !modifiedCustomIDs.contains(id) {
+            customValues[id] = byID[id]
+            customBaseline[id] = byID[id]
+         }
+         loadSettings()
+      } catch { loadError = repositoryError(error, operation: .read, resource: "custom metrics") }
+   }
+
+   func setCustomValue(_ value: CustomDailyValue?, for id: String) {
+      guard hasLoadedLogData else { return }
+      customValues[id] = value
+      let previous = customBaseline[id]
+      if previous?.numberValue == value?.numberValue && previous?.booleanValue == value?.booleanValue && previous?.durationMinutes == value?.durationMinutes {
+         modifiedCustomIDs.remove(id)
+      } else { modifiedCustomIDs.insert(id) }
+      autoSaveTask?.cancel()
+      guard hasPendingChanges else { saveState = .saved; return }
+      saveState = .saving
+      autoSaveTask = Task { [weak self] in
+         try? await Task.sleep(nanoseconds: 600_000_000)
+         guard !Task.isCancelled else { return }
+         self?.autoSaveTask = nil
+         self?.saveModifiedFields()
+      }
+   }
+
+   private func persistCheckIn(log: DailyLog?) throws {
+      if let customMetricsRepository {
+         try customMetricsRepository.persist(values: modifiedCustomIDs.compactMap { customValues[$0] },
+             clearedIDs: Set(modifiedCustomIDs.filter { customValues[$0] == nil }), on: loadedDate, log: log)
+      } else {
+         guard modifiedCustomIDs.isEmpty else { throw CustomMetricError.missingDefinition }
+         if let log { try logsRepository.persistLog(log) }
       }
    }
 
@@ -445,7 +510,7 @@ class TodayViewModel {
    func flushPendingChanges(showFailureFeedback: Bool = false) -> Bool {
       autoSaveTask?.cancel()
       autoSaveTask = nil
-      guard !modifiedAutoSaveFields.isEmpty else { return saveState != .failed }
+      guard hasPendingChanges else { return saveState != .failed }
       let saved = saveModifiedFields()
       if !saved, showFailureFeedback {
          toastManager.showToast(

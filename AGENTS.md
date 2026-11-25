@@ -21,8 +21,10 @@ open Clove.xcodeproj
 ```
 
 ### Testing
-- No automated test suite currently exists
-- Testing is done through Xcode's built-in simulator and device testing
+- Run automated tests with `./scripts/test-ios.sh`. Pass Xcode filters when needed, e.g. `./scripts/test-ios.sh -only-testing:CloveAnalyticsTests/TodayLayoutPreferencesTests`.
+- This uses a dedicated **Clove Automated Tests** simulator, waits for boot completion, disables parallel simulator clones, and shuts down only that test device afterward.
+- Never run automated tests on the user's interactive simulator or shut down/reboot their device during verification. Shared simulator use can leave Xcode launches failing with SpringBoard `Busy` / `Application failed preflight checks`.
+- Build-only checks may still use a generic iOS Simulator destination. Manual UI testing uses the user's Xcode simulator.
 
 ## Architecture
 

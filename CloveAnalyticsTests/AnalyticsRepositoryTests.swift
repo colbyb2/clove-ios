@@ -22,7 +22,7 @@ final class AnalyticsRepositoryTests: XCTestCase {
 
         XCTAssertEqual(result.observations.count, 2)
         XCTAssertEqual(result.diagnostics.databaseReadCount, 1)
-        XCTAssertEqual(result.diagnostics.statementCount, 9)
+        XCTAssertEqual(result.diagnostics.statementCount, 11)
         XCTAssertEqual(result.coverage[MetricCatalog.mood.id]?.possibleDayCount, 2)
     }
 

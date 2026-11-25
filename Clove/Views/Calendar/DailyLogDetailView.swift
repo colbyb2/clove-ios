@@ -8,6 +8,9 @@ struct DailyLogDetailView: View {
     @State private var foodEntries: [FoodEntry] = []
     @State private var activityEntries: [ActivityEntry] = []
     @State private var cycleEntry: Cycle? = nil
+    @State private var customRecords: [CustomMetricRecord] = []
+    @State private var customError: String?
+    @State private var editingCustom: CustomMetricDefinition?
     @State private var isFoodsExpanded: Bool = false
     @State private var isActivitiesExpanded: Bool = false
     @State private var isMedicationsExpanded: Bool = false
@@ -23,6 +26,7 @@ struct DailyLogDetailView: View {
                         atAGlanceSection
                     }
 
+                    if !customRecords.isEmpty { customMetricsSection }
                     if !log.symptomRatings.isEmpty {
                         symptomsSection
                     }
@@ -67,6 +71,14 @@ struct DailyLogDetailView: View {
                 }
             }
         }
+        .sheet(item: $editingCustom) { definition in
+            CustomMetricValueEditor(definition: definition, date: log.date,
+                existing: customRecords.first { $0.id == definition.id }?.value) { value in
+                try CustomMetricsRepo.shared.persist(values: value.map { [$0] } ?? [],
+                    clearedIDs: value == nil ? [definition.id] : [], on: log.date, log: nil)
+                loadCustomRecords()
+            }
+        }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .onAppear {
@@ -74,7 +86,36 @@ struct DailyLogDetailView: View {
             loadFoodEntries()
             loadActivityEntries()
             loadCycleEntry()
+            loadCustomRecords()
         }
+    }
+
+    private func loadCustomRecords() {
+        do {
+            let definitions = try CustomMetricsRepo.shared.definitions()
+            let values = try CustomMetricsRepo.shared.values(on: log.date)
+            let byID = Dictionary(uniqueKeysWithValues: definitions.map { ($0.id, $0) })
+            customRecords = values.compactMap { value in byID[value.metricID].map { CustomMetricRecord(definition: $0, value: value) } }
+                .sorted { $0.definition.displayOrder < $1.definition.displayOrder }
+            customError = nil
+        } catch { customError = error.localizedDescription }
+    }
+
+    private var customMetricsSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Custom Tracking").font(.headline)
+            ForEach(customRecords) { record in
+                Button { editingCustom = record.definition } label: {
+                    HStack {
+                        CustomMetricIcon(definition: record.definition)
+                        Text(record.definition.name).font(.subheadline.weight(.medium))
+                        Spacer()
+                        Text(record.definition.format(record.value)).font(.subheadline)
+                        Image(systemName: "pencil").font(.caption)
+                    }.foregroundStyle(CloveColors.primaryText).contentShape(Rectangle())
+                }.buttonStyle(.plain)
+            }
+        }.padding(16).background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
     }
 
     // MARK: - Header Section
@@ -295,6 +336,9 @@ struct DailyLogDetailView: View {
     private var contextItems: [DayContextItem] {
         var items: [DayContextItem] = []
 
+        if let customError {
+            items.append(DayContextItem(id: "customError", title: "Custom metrics unavailable", value: customError, icon: "exclamationmark.triangle", color: .orange))
+        }
         if let weather = log.weather {
             items.append(
                 DayContextItem(
@@ -358,7 +402,7 @@ struct DailyLogDetailView: View {
     }
 
     private var hasAnyData: Bool {
-        hasAtAGlanceData || !log.symptomRatings.isEmpty || hasDailyDetails ||
+        !customRecords.isEmpty || hasAtAGlanceData || !log.symptomRatings.isEmpty || hasDailyDetails ||
         (log.notes != nil && !log.notes!.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ||
         log.isFlareDay
     }

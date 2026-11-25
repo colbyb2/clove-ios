@@ -506,3 +506,19 @@ struct MetricObservationPipeline {
         return MetricDailyReducer(normalizer: normalizer).reduce(batch, definitions: definitions)
     }
 }
+
+struct CustomMetricObservationAdapter {
+    let normalizer: MetricDayNormalizer
+    func adapt(values: [CustomDailyValue], definitions: [MetricDefinition]) -> MetricObservationBatch {
+        let ids = Set(definitions.filter { $0.source == .customDailyValues }.map(\.id))
+        let observations = values.compactMap { value -> MetricObservation? in
+            let id = MetricID(rawValue: "custom:\(value.metricID)")
+            guard ids.contains(id), let date = LocalDayKey.date(from: value.dayKey, calendar: normalizer.calendar),
+                  let number = value.numericValue, number.isFinite else { return nil }
+            let observed: MetricObservedValue = value.booleanValue.map { .boolean($0) } ?? .number(number)
+            return MetricObservation(metricID: id, timestamp: date, day: date, state: .observed(observed),
+                source: MetricSourceReference(kind: .customDailyValue, recordID: "\(value.metricID):\(value.dayKey)"))
+        }
+        return MetricObservationBatch(observations: observations, rawEvents: [])
+    }
+}

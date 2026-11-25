@@ -5,10 +5,12 @@ class ImportValidator {
     // Expected column order based on DataManager export format
     static let expectedColumns: [String] = [
         "Date", "Mood", "Pain Level", "Energy Level", "Hydration (oz)", "Flare Day",
-        "Weather", "Bowel Movements", "Medications", "Meals", "Activities", "Notes"
+        "Weather", "Bowel Movements", "Medications", "Meals", "Activities", "Notes",
+        "Cycle", "Cycle Flow", "Period Started", "Period Ended", "Fertility Signs", "Suspected Ovulation", "Ovulation (Reported)"
     ]
     
     static func validateHeaders(_ headers: [String]) throws {
+        if headers.contains("Metric ID") && headers.contains("Input Type") { throw ImportError.customMetricsCSV }
         // Check for required Date column
         guard headers.contains("Date") else {
             throw ImportError.missingRequiredColumns(["Date"])
@@ -36,6 +38,10 @@ class ImportValidator {
         }
         
         switch column {
+        case "Cycle", "Cycle Flow", "Period Started", "Period Ended", "Fertility Signs", "Suspected Ovulation", "Ovulation (Reported)":
+            // CSV never carried the cycle definitions needed for lossless restoration.
+            throw ImportError.cycleCSV
+
         case "Date":
             if !isValidDate(value) {
                 throw ImportError.invalidDateFormat(value)

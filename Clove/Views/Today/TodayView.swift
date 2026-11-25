@@ -159,11 +159,11 @@ struct TodayView: View {
                 )
             }
 
-            ForEach(visibleModules) { module in
-                moduleContainer(module)
+            ForEach(visibleItems) { item in
+                itemContainer(item)
             }
 
-            if visibleModules.isEmpty {
+            if visibleItems.isEmpty {
                 VStack(spacing: CloveSpacing.small) {
                     Image(systemName: focusedCheckIn ? "scope" : "rectangle.3.group")
                         .font(.title2)
@@ -258,11 +258,37 @@ struct TodayView: View {
         unfinishedPlanCount = PacingPlanRepo.shared.unfinishedCount(for: date ?? viewModel.selectedDate)
     }
 
-    private var visibleModules: [TodayModule] {
-        layoutPreferences.order.filter { module in
-            moduleIsEnabled(module)
-                && !layoutPreferences.hidden.contains(module)
-                && (!focusedCheckIn || layoutPreferences.essentials.contains(module))
+    private var visibleItems: [TodayLayoutItem] {
+        layoutPreferences.items(customMetricIDs: viewModel.customDefinitions.map(\.id)).filter { item in
+            let enabled: Bool
+            switch item {
+            case .module(let module): enabled = moduleIsEnabled(module)
+            case .customMetric(let id):
+                enabled = viewModel.settings.trackCustomMetrics && viewModel.customDefinitions.contains {
+                    $0.id == id && ($0.isActive || (!Calendar.current.isDateInToday(viewModel.selectedDate) && viewModel.customValues[id] != nil))
+                }
+            }
+            return enabled && !layoutPreferences.isHidden(item)
+                && (!focusedCheckIn || layoutPreferences.isEssential(item))
+        }
+    }
+
+    @ViewBuilder
+    private func itemContainer(_ item: TodayLayoutItem) -> some View {
+        switch item {
+        case .module(let module):
+            moduleContainer(module)
+        case .customMetric(let id):
+            if let definition = viewModel.customDefinitions.first(where: { $0.id == id }) {
+                VStack(alignment: .leading, spacing: 6) {
+                    if focusedCheckIn, viewModel.customValues[id] == nil {
+                        Label("Not answered yet", systemImage: "circle.dashed")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.orange)
+                    }
+                    CustomMetricTracker(viewModel: viewModel, definition: definition)
+                }
+            }
         }
     }
 
@@ -310,6 +336,8 @@ struct TodayView: View {
     @ViewBuilder
     private func moduleContent(_ module: TodayModule) -> some View {
         switch module {
+        case .customMetrics:
+            EmptyView()
         case .mood:
             TodayRatingInput(
                 value: $viewModel.logData.mood,
@@ -426,6 +454,7 @@ struct TodayView: View {
 
     private func moduleIsEnabled(_ module: TodayModule) -> Bool {
         switch module {
+        case .customMetrics: false
         case .mood: viewModel.settings.trackMood
         case .pain: viewModel.settings.trackPain
         case .energy: viewModel.settings.trackEnergy
@@ -445,6 +474,7 @@ struct TodayView: View {
 
     private func needsEntry(_ module: TodayModule) -> Bool? {
         switch module {
+        case .customMetrics: viewModel.customDefinitions.contains { $0.isActive && viewModel.customValues[$0.id] == nil }
         case .mood: viewModel.logData.mood == nil
         case .pain: viewModel.logData.painLevel == nil
         case .energy: viewModel.logData.energyLevel == nil
@@ -659,11 +689,12 @@ struct TodayView: View {
     }
 }
 
-private struct TodayActionRow: View {
+struct TodayActionRow: View {
     let title: String
     let icon: String
     let summary: String
     let hasValue: Bool
+    var tint: Color? = nil
     let action: () -> Void
 
     var body: some View {
@@ -674,7 +705,7 @@ private struct TodayActionRow: View {
             HStack(spacing: 10) {
                 Image(systemName: icon)
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Theme.shared.accent)
+                    .foregroundStyle(tint ?? Theme.shared.accent)
                     .frame(width: 24)
                 Text(title)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))

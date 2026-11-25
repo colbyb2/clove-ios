@@ -291,6 +291,7 @@ struct HistoryCalendarView: View {
     private func previewDetails(summary: HistoryDaySummary?, log: DailyLog?) -> [String] {
         guard let summary else { return [] }
         var details: [String] = []
+        details.append(contentsOf: summary.customMetrics.map { "\($0.definition.name): \($0.definition.format($0.value))" })
 
         if let log {
             details.append(contentsOf: log.symptomRatings.prefix(3).map { rating in

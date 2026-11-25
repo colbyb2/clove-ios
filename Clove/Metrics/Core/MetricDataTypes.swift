@@ -9,6 +9,7 @@ enum MetricCategory: String, CaseIterable, Identifiable {
     case environmental
     case activities
     case meals
+    case customMetrics
 
     var id: String { rawValue }
     var displayName: String {
@@ -19,6 +20,7 @@ enum MetricCategory: String, CaseIterable, Identifiable {
         case .lifestyle: return "Lifestyle"
         case .environmental: return "Environmental"
         case .activities: return "Activities"
+        case .customMetrics: return "Custom Metrics"
         case .meals: return "Meals"
         }
     }

@@ -88,6 +88,8 @@ struct AnalyticsSourceSnapshot {
     let dynamicIdentities: [DynamicMetricIdentity]
     let metricAliases: [MetricIdentityAlias]
     let diagnostics: AnalyticsQueryDiagnostics
+    var customDefinitions: [CustomMetricDefinition] = []
+    var customValues: [CustomDailyValue] = []
 }
 
 protocol AnalyticsSourceLoading {
@@ -98,9 +100,11 @@ protocol AnalyticsSourceLoading {
 /// fixed by source family, not multiplied by the number of requested metrics.
 struct GRDBAnalyticsSourceLoader: AnalyticsSourceLoading {
     let databaseManager: DatabaseManaging
+    let calendar: Calendar
 
-    init(databaseManager: DatabaseManaging = DatabaseManager.shared) {
+    init(databaseManager: DatabaseManaging = DatabaseManager.shared, calendar: Calendar = .current) {
         self.databaseManager = databaseManager
+        self.calendar = calendar
     }
 
     func load(in interval: DateInterval) throws -> AnalyticsSourceSnapshot {
@@ -142,6 +146,9 @@ struct GRDBAnalyticsSourceLoader: AnalyticsSourceLoading {
                 .order(Column("aliasID").asc, Column("canonicalID").asc)
                 .fetchAll(db)
 
+            let customDefinitions = try CustomMetricDefinition.fetchAll(db)
+            let customValues = try CustomDailyValue.filter(Column("dayKey") >= LocalDayKey.make(for: interval.start, calendar: calendar) && Column("dayKey") < LocalDayKey.make(for: interval.end, calendar: calendar)).fetchAll(db)
+
             return AnalyticsSourceSnapshot(
                 logs: logs,
                 foodEntries: foods,
@@ -152,7 +159,8 @@ struct GRDBAnalyticsSourceLoader: AnalyticsSourceLoading {
                 trackedMedications: medications,
                 dynamicIdentities: identities,
                 metricAliases: aliases,
-                diagnostics: AnalyticsQueryDiagnostics(databaseReadCount: 1, statementCount: 9)
+                diagnostics: AnalyticsQueryDiagnostics(databaseReadCount: 1, statementCount: 11),
+                customDefinitions: customDefinitions, customValues: customValues
             )
         }
     }
@@ -189,7 +197,7 @@ struct DefaultAnalyticsRepository: AnalyticsRepository {
             definitions = availableDefinitions
         }
 
-        let batch = MetricObservationPipeline(normalizer: normalizer).makeDailyBatch(
+        var batch = MetricObservationPipeline(normalizer: normalizer).makeDailyBatch(
             definitions: definitions,
             logs: snapshot.logs,
             foodEntries: snapshot.foodEntries,
@@ -198,6 +206,7 @@ struct DefaultAnalyticsRepository: AnalyticsRepository {
             cycleEntries: snapshot.cycleEntries,
             occurrenceNames: occurrenceNames(from: snapshot.metricAliases, definitions: definitions)
         )
+        batch.append(CustomMetricObservationAdapter(normalizer: normalizer).adapt(values: snapshot.customValues, definitions: definitions))
         try Task.checkCancellation()
         let observations = batch.observations.sorted(by: Self.observationOrder)
         let rawEvents = request.includeRawEvents ? batch.rawEvents.sorted(by: Self.eventOrder) : []
@@ -238,6 +247,7 @@ struct DefaultAnalyticsRepository: AnalyticsRepository {
             + snapshot.activityEntries.map(\.date)
             + snapshot.bowelMovements.map(\.date)
             + snapshot.cycleEntries.map(\.date)
+            + snapshot.customValues.compactMap { LocalDayKey.date(from: $0.dayKey) }
         let firstRecordedDay = recordedDates.min().map { normalizer.day(containing: $0) }
             ?? normalizer.day(containing: Date())
 
@@ -247,6 +257,7 @@ struct DefaultAnalyticsRepository: AnalyticsRepository {
 
     private func definitions(from snapshot: AnalyticsSourceSnapshot) -> [MetricDefinition] {
         var result = MetricCatalog.staticDefinitions
+        result.append(contentsOf: snapshot.customDefinitions.map(\.analyticsDefinition))
 
         var symptomsByID: [Int64: (name: String, isBinary: Bool)] = [:]
         for rating in snapshot.logs.flatMap(\.symptomRatings) {

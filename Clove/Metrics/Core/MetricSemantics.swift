@@ -47,6 +47,7 @@ enum MetricSemanticCategory: String, CaseIterable, Codable, Sendable {
     case environmental
     case activities
     case meals
+    case customMetrics
 }
 
 enum MetricSource: Equatable, Codable, Sendable {
@@ -57,6 +58,7 @@ enum MetricSource: Equatable, Codable, Sendable {
     case activityEntries
     case bowelMovements
     case cycleEntries
+    case customDailyValues
     case derived(from: [MetricID])
 }
 

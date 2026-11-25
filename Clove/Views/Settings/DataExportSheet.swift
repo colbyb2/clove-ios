@@ -83,6 +83,17 @@ struct DataExportSheet: View {
                                 .foregroundStyle(CloveColors.secondaryText)
                         }
                         
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Custom Metrics").font(.headline)
+                            Text("Export daily custom values with their names, input types, and units. Use Full Clove Backup for restoring these records.")
+                                .font(.caption).foregroundStyle(CloveColors.secondaryText)
+                            Button("Export Custom Metrics CSV", systemImage: "square.and.arrow.up") {
+                                do { exportedFileURL = try CustomMetricsCSV.export(); showShareSheet = true }
+                                catch { errorMessage = error.localizedDescription; showErrorAlert = true }
+                            }.font(.subheadline.weight(.semibold)).tint(Theme.shared.accent)
+                        }
+                        .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
                         // Main categories section
                         VStack(alignment: .leading, spacing: CloveSpacing.medium) {
                             HStack {

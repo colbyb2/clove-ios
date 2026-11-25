@@ -8,6 +8,8 @@ extension MetricCatalog {
         }
 
         switch provider {
+        case let custom as CustomMetricProvider:
+            return custom.definition.analyticsDefinition
         case let symptom as SymptomMetricProvider:
             let isBinary: Bool
             if case .binary = symptom.dataType {

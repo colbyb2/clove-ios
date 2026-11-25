@@ -29,6 +29,7 @@ enum MetricPresentation {
         case .lifestyle: .indigo
         case .environmental: .cyan
         case .activities: CloveColors.green
+        case .customMetrics: .purple
         case .meals: CloveColors.yellow
         }
     }
@@ -41,6 +42,7 @@ enum MetricPresentation {
         case .lifestyle: .indigo
         case .environmental: .cyan
         case .activities: CloveColors.green
+        case .customMetrics: .purple
         case .meals: CloveColors.yellow
         }
     }

@@ -833,6 +833,7 @@ struct AnalyticsMetricDetailView: View {
             case .symptoms: CloveSymbols.symptom
             case .medications: CloveSymbols.medication
             case .activities: CloveSymbols.activities
+            case .customMetrics: "slider.horizontal.3"
             case .meals: CloveSymbols.meals
             case .environmental: CloveSymbols.weather
             case .lifestyle: "figure.mind.and.body"

@@ -402,6 +402,7 @@ private func cycleCategoryTitle(_ category: MetricSemanticCategory) -> String {
     case .lifestyle: return "Lifestyle"
     case .environmental: return "Environment"
     case .activities: return "Activities"
+    case .customMetrics: return "Custom Metrics"
     case .meals: return "Meals"
     }
 }

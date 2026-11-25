@@ -31,6 +31,8 @@ struct CloveArchive: Codable {
         let savedHypotheses: [SavedHypothesis]
         let notifications: [ScheduledNotification]
         let preferences: CloveArchivePreferences
+        var customMetricDefinitions: [CustomMetricDefinition]? = nil
+        var customDailyValues: [CustomDailyValue]? = nil
     }
 
     let manifest: Manifest
@@ -60,6 +62,7 @@ struct CloveArchivePreferences: Codable {
     let activitySuggestions: [String]?
     let medicationSuggestions: [String]?
     let pacingPlansEnabled: Bool?
+    var todayLayout: Data? = nil
 
     static func capture(from defaults: UserDefaults) -> Self {
         Self(
@@ -83,11 +86,13 @@ struct CloveArchivePreferences: Codable {
             mealSuggestions: defaults.stringArray(forKey: "meals_suggestions"),
             activitySuggestions: defaults.stringArray(forKey: "activities_suggestions"),
             medicationSuggestions: defaults.stringArray(forKey: "medications_suggestions"),
-            pacingPlansEnabled: defaults.object(forKey: Constants.PACING_PLANS_ENABLED) as? Bool
+            pacingPlansEnabled: defaults.object(forKey: Constants.PACING_PLANS_ENABLED) as? Bool,
+            todayLayout: defaults.data(forKey: TodayLayoutPreferences.storageKey)
         )
     }
 
     func restore(to defaults: UserDefaults) {
+        set(todayLayout, forKey: TodayLayoutPreferences.storageKey, in: defaults)
         set(selectedColor, forKey: Constants.SELECTED_COLOR, in: defaults)
         set(selectedTimePeriod, forKey: Constants.TIMEPERIOD, in: defaults)
         set(hydrationGoalOunces, forKey: Constants.HYDRATION_GOAL_OUNCES, in: defaults)
@@ -151,7 +156,7 @@ final class CloveArchiveManager {
     )
 
     static let formatIdentifier = "com.clove.health-backup"
-    static let currentSchemaVersion = 1
+    static let currentSchemaVersion = 2
 
     private struct UnsignedArchive: Codable {
         let manifest: CloveArchive.Manifest
@@ -239,7 +244,9 @@ final class CloveArchiveManager {
                 insightFeedback: try InsightFeedback.fetchAll(db),
                 savedHypotheses: try SavedHypothesis.fetchAll(db),
                 notifications: notifications,
-                preferences: preferences
+                preferences: preferences,
+                customMetricDefinitions: try CustomMetricDefinition.fetchAll(db),
+                customDailyValues: try CustomDailyValue.fetchAll(db)
             )
         }
 
@@ -281,6 +288,8 @@ final class CloveArchiveManager {
             try Self.insert(archive.payload.activityEntries, into: db)
             try Self.insert(archive.payload.pacingPlans ?? [], into: db)
             try Self.insert(archive.payload.cycles, into: db)
+            try Self.insert(archive.payload.customMetricDefinitions ?? [], into: db)
+            try Self.insert(archive.payload.customDailyValues ?? [], into: db)
             try Self.insert(archive.payload.metricIdentityAliases, into: db)
             try Self.insert(archive.payload.savedAnalyses, into: db)
             try Self.insert(archive.payload.insightFeedback, into: db)
@@ -322,6 +331,7 @@ final class CloveArchiveManager {
     private static func clearRestorableTables(in db: Database) throws {
         // Child/reference-bearing tables are removed before their identities.
         let tables = [
+            "customDailyValue", "customMetricDefinition",
             "foodEntry", "activityEntry", "pacingPlanItem", "activityCategory", "metricIdentityAlias", "dynamicMetricIdentity",
             "dailyLog", "medicationHistoryEntry", "trackedMedication", "trackedSymptom",
             "bowelMovement", "cycle", "savedAnalysis", "insightFeedback", "savedHypothesis",
@@ -349,12 +359,20 @@ final class CloveArchiveManager {
             throw CloveArchiveError.invalidFormat
         }
         guard archive.manifest.format == formatIdentifier else { throw CloveArchiveError.invalidFormat }
-        guard archive.manifest.schemaVersion == currentSchemaVersion else {
+        guard (1...currentSchemaVersion).contains(archive.manifest.schemaVersion) else {
             throw CloveArchiveError.unsupportedVersion(archive.manifest.schemaVersion)
         }
         let unsigned = UnsignedArchive(manifest: archive.manifest, payload: archive.payload)
         guard try checksum(for: unsigned) == archive.checksum else {
             throw CloveArchiveError.checksumMismatch
+        }
+        let customDefinitions = archive.payload.customMetricDefinitions ?? []
+        guard Set(customDefinitions.map(\.id)).count == customDefinitions.count else { throw CloveArchiveError.invalidFormat }
+        let customByID = Dictionary(uniqueKeysWithValues: customDefinitions.map { ($0.id, $0) })
+        for definition in customDefinitions { try definition.validate() }
+        for value in archive.payload.customDailyValues ?? [] {
+            guard let definition = customByID[value.metricID] else { throw CloveArchiveError.invalidFormat }
+            try value.validate(for: definition)
         }
         return archive
     }

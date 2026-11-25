@@ -1154,6 +1154,7 @@ private struct TrackingCoverageDetailView: View {
         case .lifestyle: "figure.mind.and.body"
         case .environmental: CloveSymbols.weather
         case .activities: CloveSymbols.activities
+        case .customMetrics: "slider.horizontal.3"
         case .meals: CloveSymbols.meals
         }
     }
@@ -1170,6 +1171,7 @@ private struct TrackingCoverageDetailView: View {
         case .lifestyle: "Lifestyle"
         case .environmental: "Environment"
         case .activities: "Activities"
+        case .customMetrics: "Custom Metrics"
         case .meals: "Meals & foods"
         }
     }

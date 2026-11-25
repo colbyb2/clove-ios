@@ -7,6 +7,7 @@ struct HistoryDaySummary {
     var foodEntries: [FoodEntry] = []
     var activityEntries: [ActivityEntry] = []
     var bowelMovements: [BowelMovement] = []
+    var customMetrics: [CustomMetricRecord] = []
 
     var hasMeals: Bool {
         !foodEntries.isEmpty || !(log?.meals.isEmpty ?? true)
@@ -17,7 +18,7 @@ struct HistoryDaySummary {
     }
 
     var hasAnyData: Bool {
-        hasMeals || hasActivities || !bowelMovements.isEmpty || hasDailyLogData
+        hasMeals || hasActivities || !bowelMovements.isEmpty || !customMetrics.isEmpty || hasDailyLogData
     }
 
     private var hasDailyLogData: Bool {
@@ -73,7 +74,9 @@ final class HistoryDaySummaryRepo: HistoryDaySummaryRepositoryProtocol {
                     logs: try DailyLog.fetchAll(db),
                     food: try FoodEntry.fetchAll(db),
                     activities: try ActivityEntry.fetchAll(db),
-                    bowelMovements: try BowelMovement.fetchAll(db)
+                    bowelMovements: try BowelMovement.fetchAll(db),
+                    customDefinitions: try CustomMetricDefinition.fetchAll(db),
+                    customValues: try CustomDailyValue.fetchAll(db)
                 )
             }
 
@@ -93,6 +96,14 @@ final class HistoryDaySummaryRepo: HistoryDaySummaryRepositoryProtocol {
             for movement in source.bowelMovements {
                 let day = calendar.startOfDay(for: movement.date)
                 summaries[day, default: HistoryDaySummary(date: day)].bowelMovements.append(movement)
+            }
+            let definitions = Dictionary(uniqueKeysWithValues: source.customDefinitions.map { ($0.id, $0) })
+            for value in source.customValues {
+                guard let day = LocalDayKey.date(from: value.dayKey, calendar: calendar), let definition = definitions[value.metricID] else { continue }
+                summaries[day, default: HistoryDaySummary(date: day)].customMetrics.append(CustomMetricRecord(definition: definition, value: value))
+            }
+            for key in Array(summaries.keys) {
+                summaries[key]?.customMetrics.sort { $0.definition.displayOrder < $1.definition.displayOrder }
             }
             return summaries
         } catch {

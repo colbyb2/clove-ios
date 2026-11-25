@@ -22,6 +22,7 @@ enum MetricSourceKind: String, Sendable {
     case bowelMovement
     case cycleEntry
     case dailyReduction
+    case customDailyValue
 }
 
 /// Stable reference back to the persistence record and field that produced an observation.

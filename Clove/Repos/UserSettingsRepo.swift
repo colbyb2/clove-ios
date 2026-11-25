@@ -60,7 +60,7 @@ private extension UserSettings {
     var analyticsFingerprint: [Bool] {
         [
             trackMood, trackPain, trackEnergy, trackHydration, trackSymptoms, trackMeals,
-            trackActivities, trackMeds, showFlareToggle, trackWeather, trackBowelMovements, trackCycle
+            trackActivities, trackMeds, showFlareToggle, trackWeather, trackBowelMovements, trackCycle, trackCustomMetrics
         ]
     }
 }

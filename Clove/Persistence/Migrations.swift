@@ -30,7 +30,9 @@ enum Migrations {
         SymptomDisplayOrderMigration(),
         ActivityCategoryTaxonomyMigration(),
         PacingPlanMigration(),
-        CycleObservationsMigration()
+        CycleObservationsMigration(),
+        CustomMetricsMigration(),
+        CustomMetricMeasurementLockMigration()
     ]
 }
 
@@ -863,5 +865,51 @@ struct CycleObservationsMigration: Migration {
             table.add(column: "fertilitySigns", .boolean)
             table.add(column: "ovulation", .boolean)
         }
+    }
+}
+
+struct CustomMetricsMigration: Migration {
+    var identifier: String { "customDailyMetrics_112226" }
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "userSettings") { $0.add(column: "trackCustomMetrics", .boolean).notNull().defaults(to: false) }
+        try db.create(table: "customMetricDefinition") { t in
+            t.primaryKey("id", .text)
+            t.column("name", .text).notNull()
+            t.column("kind", .text).notNull()
+            t.column("unit", .text).notNull()
+            t.column("precision", .integer).notNull()
+            t.column("ratingMin", .integer).notNull()
+            t.column("ratingMax", .integer).notNull()
+            t.column("icon", .text).notNull()
+            t.column("colorHex", .text).notNull()
+            t.column("displayOrder", .integer).notNull()
+            t.column("isEnabled", .boolean).notNull()
+            t.column("archivedAt", .datetime)
+            t.column("createdAt", .datetime).notNull()
+        }
+        try db.create(table: "customDailyValue") { t in
+            t.column("metricID", .text).notNull().references("customMetricDefinition", onDelete: .restrict)
+            t.column("dayKey", .text).notNull()
+            t.column("numberValue", .double)
+            t.column("booleanValue", .boolean)
+            t.column("durationMinutes", .integer)
+            t.column("createdAt", .datetime).notNull()
+            t.column("updatedAt", .datetime).notNull()
+            t.primaryKey(["metricID", "dayKey"])
+            t.check(sql: "(numberValue IS NOT NULL) + (booleanValue IS NOT NULL) + (durationMinutes IS NOT NULL) = 1")
+            t.check(sql: "booleanValue IS NULL OR booleanValue IN (0, 1)")
+            t.check(sql: "durationMinutes IS NULL OR durationMinutes >= 0")
+        }
+        try db.create(index: "customDailyValue_day", on: "customDailyValue", columns: ["dayKey"])
+    }
+}
+
+struct CustomMetricMeasurementLockMigration: Migration {
+    var identifier: String { "customMetricMeasurementLock_112226" }
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "customMetricDefinition") { t in
+            t.add(column: "hasRecordedValues", .boolean).notNull().defaults(to: false)
+        }
+        try db.execute(sql: "UPDATE customMetricDefinition SET hasRecordedValues = 1 WHERE id IN (SELECT DISTINCT metricID FROM customDailyValue)")
     }
 }

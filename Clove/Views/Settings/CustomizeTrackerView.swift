@@ -26,7 +26,8 @@ struct CustomizeTrackerView: View {
         TrackingOption(key: "trackBowelMovements", title: "Bowel Movements", icon: "toilet", color: Color(hex: "9b6230"), description: "Track Bristol Stool Chart types"),
         TrackingOption(key: "trackCycle", title: "Cycle", icon: "drop.fill", color: Color(hex: "ff6b9d"), description: "Track period and flow levels"),
         TrackingOption(key: "trackNotes", title: "Notes", icon: "note.text", color: .indigo, description: "Add daily notes"),
-        TrackingOption(key: "showFlareToggle", title: "Flare Day", icon: "exclamationmark.triangle", color: .pink, description: "Mark flare-up days")
+        TrackingOption(key: "showFlareToggle", title: "Flare Day", icon: "exclamationmark.triangle", color: .pink, description: "Mark flare-up days"),
+        TrackingOption(key: "trackCustomMetrics", title: "Custom Tracking", icon: "slider.horizontal.3", color: .purple, description: "Create your own daily measurements")
     ]
 
     var body: some View {
@@ -45,6 +46,21 @@ struct CustomizeTrackerView: View {
                     }
                 }
 
+                NavigationLink {
+                    ManageCustomMetricsView().onDisappear { viewModel.load() }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "slider.horizontal.3").font(.headline).foregroundStyle(.purple)
+                            .frame(width: 38, height: 38)
+                            .background(Color.purple.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Manage Custom Metrics").font(.subheadline.weight(.semibold)).foregroundStyle(CloveColors.primaryText)
+                            Text("Create, edit, and reorder daily measurements").font(.caption).foregroundStyle(CloveColors.secondaryText)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(CloveColors.secondaryText)
+                    }.padding(14).background(CloveColors.card, in: RoundedRectangle(cornerRadius: CloveCorners.medium))
+                }.buttonStyle(.plain)
                 arrangeTodayLink
                 inputMethodSection
             }
@@ -190,6 +206,7 @@ struct CustomizeTrackerView: View {
         case "trackMeds": viewModel.settings.trackMeds
         case "trackWeather": viewModel.settings.trackWeather
         case "trackBowelMovements": viewModel.settings.trackBowelMovements
+        case "trackCustomMetrics": viewModel.settings.trackCustomMetrics
         case "trackCycle": viewModel.settings.trackCycle
         case "trackNotes": viewModel.settings.trackNotes
         case "showFlareToggle": viewModel.settings.showFlareToggle
@@ -229,6 +246,7 @@ struct CustomizeTrackerView: View {
         case "trackMeds": viewModel.settings.trackMeds = value
         case "trackWeather": viewModel.settings.trackWeather = value
         case "trackBowelMovements": viewModel.settings.trackBowelMovements = value
+        case "trackCustomMetrics": viewModel.settings.trackCustomMetrics = value
         case "trackCycle": viewModel.settings.trackCycle = value
         case "trackNotes": viewModel.settings.trackNotes = value
         case "showFlareToggle": viewModel.settings.showFlareToggle = value

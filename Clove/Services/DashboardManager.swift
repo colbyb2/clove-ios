@@ -115,6 +115,7 @@ final class DashboardManager {
         case .lifestyle: "figure.mind.and.body"
         case .environmental: CloveSymbols.weather
         case .activities: CloveSymbols.activities
+        case .customMetrics: "slider.horizontal.3"
         case .meals: CloveSymbols.meals
         }
     }

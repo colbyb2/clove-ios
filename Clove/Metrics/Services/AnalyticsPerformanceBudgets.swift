@@ -6,5 +6,6 @@ enum AnalyticsPerformanceBudgets {
     static let maximumIndexedLookupSeconds = 0.25
     static let maximumAutomaticDiscoveryTests = 60
     static let maximumLongRangeChartPoints = 132
-    static let maximumRepositoryStatements = 9
+    // Two fixed batched reads add custom definitions and daily values.
+    static let maximumRepositoryStatements = 11
 }

@@ -6,6 +6,7 @@ enum AnalyticsRevisionReason: String, Sendable {
     case activity
     case bowelMovement
     case cycle
+    case customMetric
     case medication
     case symptomDefinition
     case analyticSettings

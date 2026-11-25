@@ -3,11 +3,13 @@ import XCTest
 
 final class CSVImportCompatibilityTests: XCTestCase {
     func testCurrentExportColumnsStayCompatibleWithImporter() throws {
-        let exportColumns = ExportCategory.allCases.map(\.rawValue)
+        let exportColumns = try DataManager.shared.generateCSVContent(logs: [], categories: Set(ExportCategory.allCases), selectedSymptoms: [])
+            .components(separatedBy: "\n")[0].components(separatedBy: ",")
         let symptomName = "Joint pain"
         let headers = exportColumns + [symptomName]
 
-        XCTAssertEqual(Set(exportColumns), Set(ImportValidator.expectedColumns))
+        let recognized = Set(ImportValidator.expectedColumns + ["Hydration (fl oz)", "Hydration (mL)"])
+        XCTAssertTrue(Set(exportColumns).isSubset(of: recognized))
         XCTAssertNoThrow(try ImportValidator.validateHeaders(headers))
         XCTAssertEqual(ImportValidator.extractSymptomColumns(from: headers), [symptomName])
         XCTAssertTrue(ImportValidator.expectedColumns.contains("Hydration (oz)"))

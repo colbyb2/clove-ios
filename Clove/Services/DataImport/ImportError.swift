@@ -1,6 +1,8 @@
 import Foundation
 
 enum ImportError: LocalizedError {
+    case cycleCSV
+    case customMetricsCSV
     case fileReadError
     case invalidFileFormat
     case invalidCSVStructure
@@ -14,6 +16,10 @@ enum ImportError: LocalizedError {
     
     var errorDescription: String? {
         switch self {
+        case .cycleCSV:
+            return "This CSV contains cycle records. Use a Full Clove Backup to restore cycle records."
+        case .customMetricsCSV:
+            return "This CSV contains custom metrics. Use a Full Clove Backup to restore custom metrics and their settings."
         case .fileReadError:
             return "Unable to read the selected file"
         case .invalidFileFormat:
@@ -39,6 +45,10 @@ enum ImportError: LocalizedError {
     
     var recoverySuggestion: String? {
         switch self {
+        case .cycleCSV:
+            return "Cycle CSV columns are for sharing; full backups preserve all cycle details."
+        case .customMetricsCSV:
+            return "Custom Metrics CSV is for spreadsheets and sharing; it is not a Clove backup."
         case .fileReadError:
             return "Please check file permissions and try again"
         case .invalidFileFormat:

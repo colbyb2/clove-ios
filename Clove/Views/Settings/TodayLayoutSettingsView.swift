@@ -3,10 +3,12 @@ import SwiftUI
 struct TodayLayoutSettingsView: View {
     let settings: UserSettings
     @State private var preferences = TodayLayoutPreferences.load()
+    @State private var customDefinitions: [CustomMetricDefinition] = []
+    @State private var loadError: String?
     @AppStorage(Constants.FOCUSED_CHECK_IN) private var focusedCheckIn = false
 
-    private var enabledModules: [TodayModule] {
-        preferences.order.filter(moduleIsEnabled)
+    private var enabledItems: [TodayLayoutItem] {
+        preferences.items(customMetricIDs: customDefinitions.map(\.id)).filter(itemIsEnabled)
     }
 
     var body: some View {
@@ -14,43 +16,56 @@ struct TodayLayoutSettingsView: View {
             Section {
                 Toggle("Focused check-in", isOn: $focusedCheckIn)
             } footer: {
-                Text("Focused mode shows only modules marked Essential. It highlights unanswered items without requiring you to complete them.")
+                Text("Focused mode shows only trackers marked Essential. It highlights unanswered items without requiring you to complete them.")
             }
 
             Section {
-                ForEach(enabledModules) { module in
-                    moduleRow(module)
+                ForEach(enabledItems) { item in
+                    itemRow(item)
                 }
                 .onMove(perform: moveModules)
             } header: {
-                Text("Today Modules")
+                Text("Today Trackers")
             } footer: {
                 Text("Only enabled trackers appear here. Use Edit to drag them into your preferred order. The menu controls visibility, default expansion, and focused-mode essentials.")
+            }
+            if let loadError {
+                Section { Text(loadError).foregroundStyle(.red) }
             }
         }
         .navigationTitle("Arrange Today")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { EditButton() }
-        .onAppear { preferences = .load() }
+        .onAppear {
+            preferences = .load()
+            do {
+                customDefinitions = try CustomMetricsRepo.shared.definitions()
+                preferences.setItems(preferences.items(customMetricIDs: customDefinitions.map(\.id)))
+                preferences.save()
+                loadError = nil
+            } catch {
+                loadError = "Custom metrics could not be loaded. Please reopen this screen to try again."
+            }
+        }
     }
 
-    private func moduleRow(_ module: TodayModule) -> some View {
+    private func itemRow(_ item: TodayLayoutItem) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: module.icon)
-                .foregroundStyle(Theme.shared.accent)
+            Image(systemName: icon(for: item))
+                .foregroundStyle(tint(for: item))
                 .frame(width: 28)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(module.title)
+                Text(title(for: item))
                     .foregroundStyle(CloveColors.primaryText)
                 HStack(spacing: 6) {
-                    if preferences.essentials.contains(module) {
+                    if preferences.isEssential(item) {
                         badge("Essential", icon: "star.fill")
                     }
-                    if preferences.collapsed.contains(module) {
+                    if case .module(let module) = item, preferences.collapsed.contains(module) {
                         badge("Collapsed", icon: "rectangle.compress.vertical")
                     }
-                    if preferences.hidden.contains(module) {
+                    if preferences.isHidden(item) {
                         badge("Hidden", icon: "eye.slash.fill")
                     }
                 }
@@ -60,27 +75,31 @@ struct TodayLayoutSettingsView: View {
 
             Menu {
                 Button {
-                    toggle(module, in: \TodayLayoutPreferences.essentials)
+                    preferences.setEssential(!preferences.isEssential(item), for: item)
+                    preferences.save()
                 } label: {
                     Label(
-                        preferences.essentials.contains(module) ? "Remove from Essentials" : "Mark Essential",
-                        systemImage: preferences.essentials.contains(module) ? "star.slash" : "star"
+                        preferences.isEssential(item) ? "Remove from Essentials" : "Mark Essential",
+                        systemImage: preferences.isEssential(item) ? "star.slash" : "star"
                     )
                 }
-                Button {
-                    toggle(module, in: \TodayLayoutPreferences.collapsed)
-                } label: {
-                    Label(
-                        preferences.collapsed.contains(module) ? "Expand by Default" : "Collapse by Default",
-                        systemImage: preferences.collapsed.contains(module) ? "rectangle.expand.vertical" : "rectangle.compress.vertical"
-                    )
+                if case .module(let module) = item {
+                    Button {
+                        toggle(module, in: \TodayLayoutPreferences.collapsed)
+                    } label: {
+                        Label(
+                            preferences.collapsed.contains(module) ? "Expand by Default" : "Collapse by Default",
+                            systemImage: preferences.collapsed.contains(module) ? "rectangle.expand.vertical" : "rectangle.compress.vertical"
+                        )
+                    }
                 }
                 Button {
-                    toggle(module, in: \TodayLayoutPreferences.hidden)
+                    preferences.setHidden(!preferences.isHidden(item), for: item)
+                    preferences.save()
                 } label: {
                     Label(
-                        preferences.hidden.contains(module) ? "Show on Today" : "Hide from Today",
-                        systemImage: preferences.hidden.contains(module) ? "eye" : "eye.slash"
+                        preferences.isHidden(item) ? "Show on Today" : "Hide from Today",
+                        systemImage: preferences.isHidden(item) ? "eye" : "eye.slash"
                     )
                 }
             } label: {
@@ -89,9 +108,9 @@ struct TodayLayoutSettingsView: View {
                     .foregroundStyle(Theme.shared.accent)
                     .frame(width: 44, height: 44)
             }
-            .accessibilityLabel("Options for \(module.title)")
+            .accessibilityLabel("Options for \(title(for: item))")
         }
-        .opacity(preferences.hidden.contains(module) ? 0.55 : 1)
+        .opacity(preferences.isHidden(item) ? 0.55 : 1)
     }
 
     private func badge(_ text: String, icon: String) -> some View {
@@ -110,15 +129,45 @@ struct TodayLayoutSettingsView: View {
     }
 
     private func moveModules(from source: IndexSet, to destination: Int) {
-        var reorderedEnabled = enabledModules
-        reorderedEnabled.move(fromOffsets: source, toOffset: destination)
-        let disabled = preferences.order.filter { !moduleIsEnabled($0) }
-        preferences.order = reorderedEnabled + disabled
+        var reordered = enabledItems
+        reordered.move(fromOffsets: source, toOffset: destination)
+        let disabled = preferences.items(customMetricIDs: customDefinitions.map(\.id)).filter { !itemIsEnabled($0) }
+        preferences.setItems(reordered + disabled)
         preferences.save()
+    }
+
+    private func itemIsEnabled(_ item: TodayLayoutItem) -> Bool {
+        switch item {
+        case .module(let module): moduleIsEnabled(module)
+        case .customMetric(let id): settings.trackCustomMetrics && customDefinitions.contains { $0.id == id && $0.isActive }
+        }
+    }
+
+    private func title(for item: TodayLayoutItem) -> String {
+        switch item {
+        case .module(let module): module.title
+        case .customMetric(let id): customDefinitions.first { $0.id == id }?.name ?? "Metric"
+        }
+    }
+
+    private func icon(for item: TodayLayoutItem) -> String {
+        switch item {
+        case .module(let module): module.icon
+        case .customMetric(let id): customDefinitions.first { $0.id == id }?.icon ?? "number"
+        }
+    }
+
+    private func tint(for item: TodayLayoutItem) -> Color {
+        if case .customMetric(let id) = item,
+           let definition = customDefinitions.first(where: { $0.id == id }) {
+            return Color(hex: definition.colorHex)
+        }
+        return Theme.shared.accent
     }
 
     private func moduleIsEnabled(_ module: TodayModule) -> Bool {
         switch module {
+        case .customMetrics: false
         case .mood: settings.trackMood
         case .pain: settings.trackPain
         case .energy: settings.trackEnergy

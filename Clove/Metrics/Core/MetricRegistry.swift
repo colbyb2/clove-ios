@@ -196,6 +196,8 @@ class MetricRegistry {
     private func getAllMetricProviders() async -> [any MetricProvider] {
         var metrics: [any MetricProvider] = staticMetrics
         
+        metrics.append(contentsOf: ((try? CustomMetricsRepo.shared.definitions()) ?? []).map { CustomMetricProvider(definition: $0) })
+
         // Add dynamically generated metrics
         metrics.append(contentsOf: await generateCoreHealthMetrics())
         metrics.append(contentsOf: await generateSymptomMetrics())
