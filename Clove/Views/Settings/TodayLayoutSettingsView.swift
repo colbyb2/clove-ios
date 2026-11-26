@@ -172,6 +172,7 @@ struct TodayLayoutSettingsView: View {
         case .pain: settings.trackPain
         case .energy: settings.trackEnergy
         case .hydration: settings.trackHydration
+        case .sleep: settings.trackSleep
         case .symptoms: settings.trackSymptoms
         case .meals: settings.trackMeals
         case .plans: false

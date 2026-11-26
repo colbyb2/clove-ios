@@ -1,6 +1,7 @@
 import Foundation
 
 enum ImportError: LocalizedError {
+    case sleepCSV
     case cycleCSV
     case customMetricsCSV
     case fileReadError
@@ -16,6 +17,8 @@ enum ImportError: LocalizedError {
     
     var errorDescription: String? {
         switch self {
+        case .sleepCSV:
+            return "This CSV contains sleep records. Use a Full Clove Backup to restore sleep records."
         case .cycleCSV:
             return "This CSV contains cycle records. Use a Full Clove Backup to restore cycle records."
         case .customMetricsCSV:
@@ -45,6 +48,8 @@ enum ImportError: LocalizedError {
     
     var recoverySuggestion: String? {
         switch self {
+        case .sleepCSV:
+            return "Sleep CSV columns are for sharing; full backups preserve your recorded times and time zones."
         case .cycleCSV:
             return "Cycle CSV columns are for sharing; full backups preserve all cycle details."
         case .customMetricsCSV:

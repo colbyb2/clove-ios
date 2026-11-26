@@ -366,6 +366,7 @@ final class CloveArchiveManager {
         guard try checksum(for: unsigned) == archive.checksum else {
             throw CloveArchiveError.checksumMismatch
         }
+        for log in archive.payload.dailyLogs { try log.validateSleep() }
         let customDefinitions = archive.payload.customMetricDefinitions ?? []
         guard Set(customDefinitions.map(\.id)).count == customDefinitions.count else { throw CloveArchiveError.invalidFormat }
         let customByID = Dictionary(uniqueKeysWithValues: customDefinitions.map { ($0.id, $0) })

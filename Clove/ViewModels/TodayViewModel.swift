@@ -10,6 +10,7 @@ class TodayViewModel {
       case painLevel
       case energyLevel
       case hydration
+      case sleep
       case isFlareDay
       case weather
       case notes
@@ -150,6 +151,12 @@ class TodayViewModel {
          Calendar.current.isDate(date, inSameDayAs: loadedDate) {
          selectedDate = loadedDate
          refreshCustomMetrics()
+         if !modifiedAutoSaveFields.contains(.sleep) {
+            do {
+               logData.sleep = try logsRepository.loadLog(for: loadedDate)?.sleep
+               autoSaveBaseline.update([.sleep], from: logData)
+            } catch { loadError = repositoryError(error, operation: .read, resource: "sleep") }
+         }
          return
       }
 
@@ -334,7 +341,8 @@ class TodayViewModel {
          notes: settings.trackNotes ? logData.notes : nil,
          isFlareDay: logData.isFlareDay,
          weather: settings.trackWeather ? logData.weather : nil,
-         symptomRatings: settings.trackSymptoms ? logData.symptomRatings.compactMap { $0.toModel() } : []
+         symptomRatings: settings.trackSymptoms ? logData.symptomRatings.compactMap { $0.toModel() } : [],
+         sleep: logData.sleep
       )
 
       do {
@@ -420,6 +428,8 @@ class TodayViewModel {
             log.energyLevel = settings.trackEnergy ? Self.rating(from: logData.energyLevel) : nil
          case .hydration:
             log.waterIntake = settings.trackHydration && logData.waterIntake > 0 ? logData.waterIntake : nil
+         case .sleep:
+            log.sleep = logData.sleep
          case .isFlareDay:
             log.isFlareDay = logData.isFlareDay
          case .weather:
@@ -668,6 +678,7 @@ private struct AutoSaveSnapshot {
    var painLevel: Double?
    var energyLevel: Double?
    var waterIntake: Int
+   var sleep: SleepPeriod?
    var isFlareDay: Bool
    var weather: String?
    var notes: String?
@@ -679,6 +690,7 @@ private struct AutoSaveSnapshot {
       painLevel = logData.painLevel
       energyLevel = logData.energyLevel
       waterIntake = logData.waterIntake
+      sleep = logData.sleep
       isFlareDay = logData.isFlareDay
       weather = logData.weather
       notes = logData.notes
@@ -692,6 +704,7 @@ private struct AutoSaveSnapshot {
       case .painLevel: painLevel == logData.painLevel
       case .energyLevel: energyLevel == logData.energyLevel
       case .hydration: waterIntake == logData.waterIntake
+      case .sleep: sleep == logData.sleep
       case .isFlareDay: isFlareDay == logData.isFlareDay
       case .weather: weather == logData.weather
       case .notes: notes == logData.notes
@@ -707,6 +720,7 @@ private struct AutoSaveSnapshot {
          case .painLevel: painLevel = logData.painLevel
          case .energyLevel: energyLevel = logData.energyLevel
          case .hydration: waterIntake = logData.waterIntake
+         case .sleep: sleep = logData.sleep
          case .isFlareDay: isFlareDay = logData.isFlareDay
          case .weather: weather = logData.weather
          case .notes: notes = logData.notes

@@ -11,6 +11,7 @@ class LogData {
     var painLevel: Double? = nil
     var energyLevel: Double? = nil
     var waterIntake: Int = 0
+    var sleep: SleepPeriod?
     var isFlareDay: Bool = false
     var weather: String? = nil
     var meals: [String] = []
@@ -41,6 +42,7 @@ class LogData {
         self.painLevel = log.painLevel.map(Double.init)
         self.energyLevel = log.energyLevel.map(Double.init)
         self.waterIntake = log.waterIntake ?? 0
+        self.sleep = log.sleep
         self.isFlareDay = log.isFlareDay
         self.weather = log.weather
         self.meals = log.meals

@@ -74,7 +74,7 @@ final class CustomMetricsRepo: CustomMetricsRepositoryProtocol {
                 guard value.dayKey == key, let definition = try CustomMetricDefinition.fetchOne(db, key: value.metricID) else { throw CustomMetricError.missingDefinition }
                 try value.validate(for: definition)
             }
-            if let log { try log.upsert(db) }
+            if let log { try log.validateSleep(); try log.upsert(db) }
             for id in clearedIDs {
                 try db.execute(sql: "DELETE FROM customDailyValue WHERE metricID = ? AND dayKey = ?", arguments: [id, key])
             }

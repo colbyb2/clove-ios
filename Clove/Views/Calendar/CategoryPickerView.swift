@@ -89,7 +89,7 @@ private struct MetricPickerSheet: View {
     private var dailyTrackers: [TrackingCategory] {
         categories.filter {
             switch $0 {
-            case .hydration, .meals, .activities, .medications, .bowelMovements: true
+            case .sleep, .hydration, .meals, .activities, .medications, .bowelMovements: true
             default: false
             }
         }

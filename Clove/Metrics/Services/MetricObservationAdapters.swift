@@ -84,6 +84,13 @@ struct DailyLogObservationAdapter {
         case "painLevel": state = log.painLevel.map { .observed(.number(Double($0))) } ?? .missing
         case "energyLevel": state = log.energyLevel.map { .observed(.number(Double($0))) } ?? .missing
         case "waterIntake": state = log.waterIntake.map { .observed(.number(Double($0))) } ?? .missing
+        case "sleepJSON":
+            if let sleep = log.sleep, (try? sleep.validate(dayKey: log.dayKey)) != nil {
+                state = .observed(.number(Double(sleep.durationMinutes)))
+            } else {
+                state = .missing
+                if log.sleepJSON != nil { flags.insert(.invalidSourceValue) }
+            }
         case "isFlareDay": state = .observed(.boolean(log.isFlareDay))
         case "weather":
             if let weather = log.weather?.trimmingCharacters(in: .whitespacesAndNewlines), !weather.isEmpty {

@@ -47,6 +47,7 @@ class HistoryCalendarViewModel {
       if userSettings.trackPain { categories.append(.pain) }
       if userSettings.trackEnergy { categories.append(.energy) }
       if userSettings.trackHydration { categories.append(.hydration) }
+      if userSettings.trackSleep { categories.append(.sleep) }
       if userSettings.trackMeals { categories.append(.meals) }
       if userSettings.trackActivities { categories.append(.activities) }
       if userSettings.trackMeds { categories.append(.medications) }
@@ -217,6 +218,7 @@ enum TrackingCategory: Hashable, Identifiable {
    case pain
    case energy
    case hydration
+   case sleep
    case meals
    case activities
    case medications
@@ -230,6 +232,7 @@ enum TrackingCategory: Hashable, Identifiable {
       case .pain: return "pain"
       case .energy: return "energy"
       case .hydration: return "hydration"
+      case .sleep: return "sleep"
       case .meals: return "meals"
       case .activities: return "activities"
       case .medications: return "medications"
@@ -245,6 +248,7 @@ enum TrackingCategory: Hashable, Identifiable {
       case .pain: return "Pain"
       case .energy: return "Energy"
       case .hydration: return "Hydration"
+      case .sleep: return "Sleep"
       case .meals: return "Meals"
       case .activities: return "Activities"
       case .medications: return "Medications"
@@ -260,6 +264,7 @@ enum TrackingCategory: Hashable, Identifiable {
       case .pain: return "cross.fill"
       case .energy: return "bolt.fill"
       case .hydration: return "drop.fill"
+      case .sleep: return "bed.double.fill"
       case .meals: return "fork.knife"
       case .activities: return "figure.walk"
       case .medications: return "pills.fill"

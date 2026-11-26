@@ -128,10 +128,14 @@ class DataManager {
         var headers: [String] = []
         
         // Add category headers in logical order
-        let orderedCategories: [ExportCategory] = [.date, .mood, .pain, .energy, .hydration, .flareDay, .weather, .bowelMovements, .medications, .meals, .activities, .cycle, .notes]
+        let orderedCategories: [ExportCategory] = [.date, .mood, .pain, .energy, .hydration, .sleep, .flareDay, .weather, .bowelMovements, .medications, .meals, .activities, .cycle, .notes]
         
         for category in orderedCategories {
             if categories.contains(category) {
+                if category == .sleep {
+                    headers.append(contentsOf: ["Sleep Bedtime", "Sleep Wake Time", "Sleep Duration (min)", "Sleep Time Zone"])
+                    continue
+                }
                 if category == .cycle {
                     headers.append(contentsOf: ["Cycle Flow", "Period Started", "Period Ended", "Fertility Signs", "Suspected Ovulation"])
                     continue
@@ -155,10 +159,20 @@ class DataManager {
         var row: [String] = []
         
         // Add category data in same order as headers
-        let orderedCategories: [ExportCategory] = [.date, .mood, .pain, .energy, .hydration, .flareDay, .weather, .bowelMovements, .medications, .meals, .activities, .cycle, .notes]
+        let orderedCategories: [ExportCategory] = [.date, .mood, .pain, .energy, .hydration, .sleep, .flareDay, .weather, .bowelMovements, .medications, .meals, .activities, .cycle, .notes]
         
         for category in orderedCategories {
             if categories.contains(category) {
+                if category == .sleep {
+                    let formatter = ISO8601DateFormatter()
+                    row.append(contentsOf: [
+                        log.sleep.map { formatter.string(from: $0.bedtime) } ?? "",
+                        log.sleep.map { formatter.string(from: $0.wakeTime) } ?? "",
+                        log.sleep.map { String($0.durationMinutes) } ?? "",
+                        log.sleep?.timeZoneIdentifier ?? ""
+                    ].map(escapeCSVField))
+                    continue
+                }
                 if category == .cycle {
                     let entry = cycleEntry
                     row.append(contentsOf: [
@@ -187,6 +201,7 @@ class DataManager {
     
     private func getValueForCategory(category: ExportCategory, log: DailyLog) -> String {
         switch category {
+        case .sleep: return log.sleep?.durationText ?? ""
         case .cycle:
             return "" // Cycle fields are exported as separate columns.
         case .date:

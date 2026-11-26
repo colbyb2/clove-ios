@@ -18,7 +18,7 @@ enum MetricCatalogContractChecks {
             Set(definitions.map(\.id)).count == definitions.count
         }
         check("registered static count", failures: &failures) {
-            MetricCatalog.registeredStaticDefinitions.count == 11
+            MetricCatalog.registeredStaticDefinitions.count == 12
         }
         check("hydration is daily volume", failures: &failures) {
             MetricCatalog.hydration.measurementLevel == .continuous &&

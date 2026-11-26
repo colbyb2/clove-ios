@@ -19,6 +19,7 @@ struct UserSettings: Codable, FetchableRecord, PersistableRecord, Identifiable {
     var trackBowelMovements: Bool
     var trackCycle: Bool
     var trackCustomMetrics: Bool = false
+    var trackSleep: Bool = false
 }
 
 extension UserSettings {
@@ -61,13 +62,13 @@ extension UserSettings {
 
 extension UserSettings {
     func isSomeEnabled() -> Bool {
-        return trackMood || trackPain || trackEnergy || trackHydration || trackSymptoms || trackMeals || trackActivities || trackMeds || showFlareToggle || trackWeather || trackNotes || trackBowelMovements || trackCycle || trackCustomMetrics
+        return trackMood || trackPain || trackEnergy || trackHydration || trackSymptoms || trackMeals || trackActivities || trackMeds || showFlareToggle || trackWeather || trackNotes || trackBowelMovements || trackCycle || trackCustomMetrics || trackSleep
     }
 }
 
 extension UserSettings {
     private enum CodingKeys: String, CodingKey {
-        case id, trackMood, trackPain, trackEnergy, trackHydration, autoSaveEnabled, trackSymptoms, trackMeals, trackActivities, trackMeds, showFlareToggle, trackWeather, trackNotes, trackBowelMovements, trackCycle, trackCustomMetrics
+        case id, trackMood, trackPain, trackEnergy, trackHydration, autoSaveEnabled, trackSymptoms, trackMeals, trackActivities, trackMeds, showFlareToggle, trackWeather, trackNotes, trackBowelMovements, trackCycle, trackCustomMetrics, trackSleep
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -86,6 +87,7 @@ extension UserSettings {
         trackNotes = try c.decode(Bool.self, forKey: .trackNotes)
         trackBowelMovements = try c.decode(Bool.self, forKey: .trackBowelMovements)
         trackCycle = try c.decode(Bool.self, forKey: .trackCycle)
+        trackSleep = try c.decodeIfPresent(Bool.self, forKey: .trackSleep) ?? false
         trackCustomMetrics = try c.decodeIfPresent(Bool.self, forKey: .trackCustomMetrics) ?? false
     }
     func encode(to container: inout PersistenceContainer) throws {
@@ -105,6 +107,7 @@ extension UserSettings {
         container["trackBowelMovements"] = trackBowelMovements
         container["trackCycle"] = trackCycle
         container["trackCustomMetrics"] = trackCustomMetrics
+        container["trackSleep"] = trackSleep
     }
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -123,6 +126,7 @@ extension UserSettings {
         try c.encode(trackNotes, forKey: .trackNotes)
         try c.encode(trackBowelMovements, forKey: .trackBowelMovements)
         try c.encode(trackCycle, forKey: .trackCycle)
+        if trackSleep { try c.encode(true, forKey: .trackSleep) }
         if trackCustomMetrics { try c.encode(true, forKey: .trackCustomMetrics) }
     }
 }

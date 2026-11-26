@@ -70,6 +70,7 @@ class LogsRepo {
          try databaseManager.write { db in
             var normalizedLog = log
             normalizedLog.dayKey = LocalDayKey.make(for: log.date, calendar: calendar)
+            try normalizedLog.validateSleep()
             try normalizedLog.upsert(db)
          }
          analyticsRevisionSource.bump(reason: .dailyLog)

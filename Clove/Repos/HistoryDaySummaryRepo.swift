@@ -26,6 +26,7 @@ struct HistoryDaySummary {
         return log.mood != nil
             || log.painLevel != nil
             || log.energyLevel != nil
+            || log.sleep != nil
             || (log.waterIntake ?? 0) > 0
             || !log.medicationsTaken.isEmpty
             || !log.medicationAdherence.isEmpty

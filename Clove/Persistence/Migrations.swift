@@ -32,7 +32,8 @@ enum Migrations {
         PacingPlanMigration(),
         CycleObservationsMigration(),
         CustomMetricsMigration(),
-        CustomMetricMeasurementLockMigration()
+        CustomMetricMeasurementLockMigration(),
+        SleepTrackingMigration()
     ]
 }
 
@@ -911,5 +912,13 @@ struct CustomMetricMeasurementLockMigration: Migration {
             t.add(column: "hasRecordedValues", .boolean).notNull().defaults(to: false)
         }
         try db.execute(sql: "UPDATE customMetricDefinition SET hasRecordedValues = 1 WHERE id IN (SELECT DISTINCT metricID FROM customDailyValue)")
+    }
+}
+
+struct SleepTrackingMigration: Migration {
+    var identifier: String { "sleepTracking_112426" }
+    func migrate(_ db: Database) throws {
+        try db.alter(table: "dailyLog") { $0.add(column: "sleepJSON", .text) }
+        try db.alter(table: "userSettings") { $0.add(column: "trackSleep", .boolean).notNull().defaults(to: false) }
     }
 }

@@ -178,6 +178,10 @@ struct HistoryCalendarView: View {
             return averageSummary(values: monthLogs.compactMap(\.painLevel), label: "average pain")
         case .energy:
             return averageSummary(values: monthLogs.compactMap(\.energyLevel), label: "average energy")
+        case .sleep:
+            let values = monthLogs.compactMap { $0.sleep?.durationMinutes }
+            guard !values.isEmpty else { return nil }
+            return "\(SleepPeriod.format(minutes: values.reduce(0, +) / values.count)) average sleep"
         case .hydration:
             let values = monthLogs.compactMap(\.waterIntake).filter { $0 > 0 }
             guard !values.isEmpty else { return nil }
@@ -297,6 +301,7 @@ struct HistoryCalendarView: View {
             details.append(contentsOf: log.symptomRatings.prefix(3).map { rating in
                 rating.isBinary ? "\(rating.symptomName): \(rating.rating > 0 ? "present" : "absent")" : "\(rating.symptomName) \(rating.rating)"
             })
+            if let sleep = log.sleep { details.append("Sleep: \(sleep.durationText)") }
             if let water = log.waterIntake, water > 0 {
                 details.append(hydrationUnit.formatted(canonicalOunces: water))
             }
@@ -382,6 +387,7 @@ struct HistoryCalendarView: View {
         case .mood: return log?.mood.map(String.init)
         case .pain: return log?.painLevel.map(String.init)
         case .energy: return log?.energyLevel.map(String.init)
+        case .sleep: return log?.sleep?.durationText
         case .hydration:
             guard let value = log?.waterIntake, value > 0 else { return nil }
             return hydrationUnit.formatted(canonicalOunces: value)
@@ -436,7 +442,7 @@ struct HistoryCalendarView: View {
         case .allData:
             // Show a general indicator if any data exists
             if log.mood != nil || log.painLevel != nil || log.energyLevel != nil ||
-                (log.waterIntake ?? 0) > 0 || !log.symptomRatings.isEmpty {
+                (log.waterIntake ?? 0) > 0 || log.sleep != nil || !log.symptomRatings.isEmpty {
                 return Theme.shared.accent.opacity(0.7)
             }
             return .clear
@@ -492,6 +498,8 @@ struct HistoryCalendarView: View {
                 }
             }
 
+        case .sleep:
+            if log.sleep != nil { return Color.indigo.opacity(0.75) }
         case .hydration:
             if let waterIntake = log.waterIntake, waterIntake > 0 {
                 return hydrationColor(ounces: waterIntake)
@@ -838,6 +846,8 @@ struct ColorLegendView: View {
                     labels: ["Exhausted", "Energized"]
                 )
 
+            case .sleep:
+                BinaryLegendView(noColor: .clear, yesColor: .indigo.opacity(0.75), noLabel: "Not logged", yesLabel: "Sleep logged")
             case .hydration:
                 if hydrationGoalEnabled {
                     GradientLegendView(

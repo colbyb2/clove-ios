@@ -9,6 +9,7 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
     var painLevel: Int?
     var energyLevel: Int?
     var waterIntake: Int?
+    var sleepJSON: String?
     var meals: [String]
     var activities: [String]
     var medicationsTaken: [String]
@@ -35,7 +36,8 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
         notes: String? = nil,
         isFlareDay: Bool = false,
         weather: String? = nil,
-        symptomRatings: [SymptomRating] = []
+        symptomRatings: [SymptomRating] = [],
+        sleep: SleepPeriod? = nil
     ) {
         self.id = id
         self.date = date
@@ -44,6 +46,7 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
         self.painLevel = painLevel
         self.energyLevel = energyLevel
         self.waterIntake = waterIntake
+        self.sleepJSON = sleep.map(Self.encodeJSON)
         self.meals = meals
         self.activities = activities
         self.medicationsTaken = medicationsTaken
@@ -56,6 +59,7 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
 
     private enum CodingKeys: String, CodingKey {
         case id, date, dayKey, mood, painLevel, energyLevel, waterIntake
+        case sleepJSON
         case meals, activities, medicationsTaken, medicationAdherenceJSON
         case notes, isFlareDay, weather, symptomRatingsJSON
     }
@@ -70,6 +74,7 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
         painLevel = try container.decodeIfPresent(Int.self, forKey: .painLevel)
         energyLevel = try container.decodeIfPresent(Int.self, forKey: .energyLevel)
         waterIntake = try container.decodeIfPresent(Int.self, forKey: .waterIntake)
+        sleepJSON = try container.decodeIfPresent(String.self, forKey: .sleepJSON)
         meals = try container.decodeIfPresent([String].self, forKey: .meals) ?? []
         activities = try container.decodeIfPresent([String].self, forKey: .activities) ?? []
         medicationsTaken = try container.decodeIfPresent([String].self, forKey: .medicationsTaken) ?? []
@@ -90,6 +95,20 @@ struct DailyLog: Codable, FetchableRecord, PersistableRecord, Identifiable {
     
     var medicationAdherence: [MedicationAdherence] {
         Self.decodeJSON(medicationAdherenceJSON, fallback: [])
+    }
+
+    var sleep: SleepPeriod? {
+        get {
+            guard let sleepJSON, let data = sleepJSON.data(using: .utf8) else { return nil }
+            return try? JSONDecoder().decode(SleepPeriod.self, from: data)
+        }
+        set { sleepJSON = newValue.map(Self.encodeJSON) }
+    }
+
+    func validateSleep() throws {
+        guard sleepJSON != nil else { return }
+        guard let sleep else { throw SleepEntryError.invalidInterval }
+        try sleep.validate(dayKey: dayKey)
     }
 
     private static func encodeJSON<Value: Encodable>(_ value: Value) -> String {

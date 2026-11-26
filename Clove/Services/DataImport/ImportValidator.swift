@@ -4,6 +4,7 @@ class ImportValidator {
     
     // Expected column order based on DataManager export format
     static let expectedColumns: [String] = [
+        "Sleep Bedtime", "Sleep Wake Time", "Sleep Duration (min)", "Sleep Time Zone",
         "Date", "Mood", "Pain Level", "Energy Level", "Hydration (oz)", "Flare Day",
         "Weather", "Bowel Movements", "Medications", "Meals", "Activities", "Notes",
         "Cycle", "Cycle Flow", "Period Started", "Period Ended", "Fertility Signs", "Suspected Ovulation", "Ovulation (Reported)"
@@ -38,6 +39,8 @@ class ImportValidator {
         }
         
         switch column {
+        case "Sleep Bedtime", "Sleep Wake Time", "Sleep Duration (min)", "Sleep Time Zone":
+            throw ImportError.sleepCSV
         case "Cycle", "Cycle Flow", "Period Started", "Period Ended", "Fertility Signs", "Suspected Ovulation", "Ovulation (Reported)":
             // CSV never carried the cycle definitions needed for lossless restoration.
             throw ImportError.cycleCSV

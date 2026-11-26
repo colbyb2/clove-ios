@@ -351,6 +351,11 @@ struct DailyLogDetailView: View {
             )
         }
 
+        if let sleep = log.sleep {
+            items.append(DayContextItem(id: "sleep", title: "Sleep", value: "\(sleep.durationText) · \(sleep.timeRangeText(includeDays: true))",
+                                       icon: "bed.double.fill", color: .indigo))
+        }
+
         if let waterIntake = log.waterIntake, waterIntake > 0 {
             items.append(
                 DayContextItem(

@@ -49,6 +49,24 @@ enum MetricCatalog {
         displayFormat: MetricDisplayFormat(maximumFractionDigits: 0)
     )
 
+    static let sleepDuration = MetricDefinition(
+        id: "sleep_duration",
+        displayName: "Sleep Duration",
+        description: "Time between manually recorded bedtime and waking, saved on the wake-up day",
+        category: .coreHealth,
+        source: .dailyLog(field: "sleepJSON"),
+        measurementLevel: .continuous,
+        unit: .minutes,
+        domain: .nonNegative,
+        directionality: .neutral,
+        aggregation: MetricAggregationPolicy(daily: .latest, weekly: .average, monthly: .average),
+        unrecordedDayPolicy: .missing,
+        supportedAnalyses: [.descriptive, .trend, .distribution, .periodComparison, .relationship, .laggedRelationship],
+        minimumSamples: standardSamples,
+        recommendedVisualizations: [.line, .bar],
+        displayFormat: MetricDisplayFormat(maximumFractionDigits: 0)
+    )
+
     static let flareDay = MetricDefinition(
         id: "flare_day",
         displayName: "Flare Days",
@@ -178,6 +196,7 @@ enum MetricCatalog {
         painLevel,
         energyLevel,
         hydration,
+        sleepDuration,
         flareDay,
         medicationAdherence,
         weather,

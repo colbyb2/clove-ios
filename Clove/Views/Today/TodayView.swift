@@ -360,6 +360,11 @@ struct TodayView: View {
                 icon: CloveSymbols.energy,
                 isExpanded: ratingModuleExpansion(for: .energy)
             )
+        case .sleep:
+            SleepTracker(period: viewModel.logData.sleep, dayKey: LocalDayKey.make(for: viewModel.selectedDate)) { period in
+                viewModel.logData.sleep = period
+                viewModel.scheduleAutoSave(for: .sleep)
+            }
         case .hydration:
             HydrationTracker(ounces: $viewModel.logData.waterIntake) { _ in viewModel.saveHydration() }
         case .symptoms:
@@ -459,6 +464,7 @@ struct TodayView: View {
         case .pain: viewModel.settings.trackPain
         case .energy: viewModel.settings.trackEnergy
         case .hydration: viewModel.settings.trackHydration
+        case .sleep: viewModel.settings.trackSleep
         case .symptoms: viewModel.settings.trackSymptoms
         case .meals: viewModel.settings.trackMeals
         case .plans: false
@@ -479,6 +485,7 @@ struct TodayView: View {
         case .pain: viewModel.logData.painLevel == nil
         case .energy: viewModel.logData.energyLevel == nil
         case .hydration: viewModel.logData.waterIntake == 0
+        case .sleep: viewModel.logData.sleep == nil
         case .symptoms: viewModel.logData.symptomRatings.contains { $0.ratingDouble == nil }
         case .medications: viewModel.logData.medicationAdherence.isEmpty
         case .weather: viewModel.logData.weather == nil

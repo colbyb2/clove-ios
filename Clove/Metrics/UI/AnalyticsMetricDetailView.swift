@@ -411,21 +411,39 @@ struct AnalyticsMetricDetailView: View {
             .chartXSelection(value: persistentChartSelection)
 
         case .numericLine:
+            let isSleep = result.definition.id == MetricCatalog.sleepDuration.id
+            let displayScale = isSleep ? 1.0 / 60 : 1.0
+            let domain = numericDomain(result.definition, result: result)
             Chart(activePoints(result)) { point in
                 LineMark(
                     x: .value("Date", point.date),
-                    y: .value("Value", point.value),
+                    y: .value(isSleep ? "Hours" : "Value", point.value * displayScale),
                     series: .value("Continuous segment", point.segment)
                 )
                 .interpolationMethod(.catmullRom)
                 .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
                 .foregroundStyle(tint)
 
-                PointMark(x: .value("Date", point.date), y: .value("Value", point.value))
+                PointMark(x: .value("Date", point.date), y: .value(isSleep ? "Hours" : "Value", point.value * displayScale))
                     .symbolSize(point.date == selectedPoint(in: result)?.date ? 110 : 32)
                     .foregroundStyle(MetricPresentation.valueColor(point.value, definition: result.definition))
             }
-            .chartYScale(domain: numericDomain(result.definition, result: result))
+            .chartYScale(domain: (domain.lowerBound * displayScale)...(domain.upperBound * displayScale))
+            .chartYAxis {
+                if isSleep {
+                    AxisMarks { value in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel {
+                            if let hours = value.as(Double.self) {
+                                Text("\(hours.formatted(.number.precision(.fractionLength(0...1))))h")
+                            }
+                        }
+                    }
+                } else {
+                    AxisMarks()
+                }
+            }
             .chartXSelection(value: persistentChartSelection)
             .chartPlotStyle { plot in plot.background(tint.opacity(0.035)) }
         }
@@ -774,6 +792,7 @@ struct AnalyticsMetricDetailView: View {
     }
 
     private func format(_ value: Double, definition: MetricDefinition) -> String {
+        if definition.id == MetricCatalog.sleepDuration.id { return SleepPeriod.format(minutes: Int(value.rounded())) }
         if definition.unit == .fluidOunces { return formatHydration(value) }
         let digits = definition.displayFormat.maximumFractionDigits
         return value.formatted(.number.precision(.fractionLength(0...digits))) +
@@ -825,6 +844,7 @@ struct AnalyticsMetricDetailView: View {
         case MetricCatalog.painLevel.id: CloveSymbols.pain
         case MetricCatalog.energyLevel.id: CloveSymbols.energy
         case MetricCatalog.hydration.id: CloveSymbols.hydration
+        case MetricCatalog.sleepDuration.id: "bed.double.fill"
         case MetricCatalog.bristolStoolType.id, MetricCatalog.bowelMovementFrequency.id: CloveSymbols.bowelMovement
         case MetricCatalog.medicationAdherence.id: CloveSymbols.medication
         case MetricCatalog.flowLevel.id: CloveSymbols.cycle

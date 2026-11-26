@@ -17,6 +17,7 @@ struct CustomizeTrackerView: View {
         TrackingOption(key: "trackPain", title: "Pain", icon: "bandage", color: .red, description: "Monitor pain intensity"),
         TrackingOption(key: "trackEnergy", title: "Energy", icon: "bolt.fill", color: .yellow, description: "Log your energy levels"),
         TrackingOption(key: "trackHydration", title: "Hydration", icon: "drop.fill", color: .blue, description: "Track daily water intake"),
+        TrackingOption(key: "trackSleep", title: "Sleep", icon: "bed.double.fill", color: .indigo, description: "Log bedtime and wake-up time"),
         TrackingOption(key: "trackSymptoms", title: "Symptoms", icon: "stethoscope", color: .orange, description: "Track specific symptoms"),
         TrackingOption(key: "trackMeals", title: "Meals", icon: "fork.knife", color: .green, description: "Record your meals"),
         TrackingOption(key: "trackPlans", title: "Gentle Plans", icon: "leaf.fill", color: .teal, description: "Keep an optional pacing list"),
@@ -199,6 +200,7 @@ struct CustomizeTrackerView: View {
         case "trackPain": viewModel.settings.trackPain
         case "trackEnergy": viewModel.settings.trackEnergy
         case "trackHydration": viewModel.settings.trackHydration
+        case "trackSleep": viewModel.settings.trackSleep
         case "trackSymptoms": viewModel.settings.trackSymptoms
         case "trackMeals": viewModel.settings.trackMeals
         case "trackPlans": pacingPlansEnabled
@@ -239,6 +241,7 @@ struct CustomizeTrackerView: View {
         case "trackPain": viewModel.settings.trackPain = value
         case "trackEnergy": viewModel.settings.trackEnergy = value
         case "trackHydration": viewModel.settings.trackHydration = value
+        case "trackSleep": viewModel.settings.trackSleep = value
         case "trackSymptoms": viewModel.settings.trackSymptoms = value
         case "trackMeals": viewModel.settings.trackMeals = value
         case "trackPlans": pacingPlansEnabled = value

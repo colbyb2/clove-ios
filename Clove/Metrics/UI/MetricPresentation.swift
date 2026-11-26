@@ -13,6 +13,7 @@ enum MetricPresentation {
         if definition.id == MetricCatalog.mood.id { return Theme.shared.accent }
         if definition.id == MetricCatalog.painLevel.id { return CloveColors.orange }
         if definition.id == MetricCatalog.energyLevel.id { return CloveColors.yellow }
+        if definition.id == MetricCatalog.sleepDuration.id { return .indigo }
         if definition.id == MetricCatalog.hydration.id { return CloveColors.blue }
         if definition.id == MetricCatalog.bristolStoolType.id ||
             definition.id == MetricCatalog.bowelMovementFrequency.id { return .indigo }

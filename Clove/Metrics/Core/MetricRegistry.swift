@@ -24,6 +24,7 @@ class MetricRegistry {
         PainLevelMetricProvider(),
         EnergyLevelMetricProvider(),
         HydrationMetricProvider(),
+        SleepMetricProvider(),
         FlareDayMetricProvider(),
         MedicationAdherenceMetricProvider(),
         WeatherMetricProvider(),
