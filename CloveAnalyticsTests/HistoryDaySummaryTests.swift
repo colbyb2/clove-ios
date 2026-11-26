@@ -10,9 +10,9 @@ final class HistoryDaySummaryTests: XCTestCase {
         let activityDate = AnalyticsTestDates.date(2026, 9, 9, hour: 15)
 
         try database.write { db in
-            var food = FoodEntry(name: "Lunch", category: .lunch, date: foodDate)
+            let food = FoodEntry(name: "Lunch", category: .lunch, date: foodDate)
             try food.insert(db)
-            var activity = ActivityEntry(name: "Walk", category: .exercise, date: activityDate)
+            let activity = ActivityEntry(name: "Walk", category: .exercise, date: activityDate)
             try activity.insert(db)
         }
 
