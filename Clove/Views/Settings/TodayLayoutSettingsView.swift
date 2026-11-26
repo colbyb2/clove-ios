@@ -7,133 +7,158 @@ struct TodayLayoutSettingsView: View {
     @State private var loadError: String?
     @AppStorage(Constants.FOCUSED_CHECK_IN) private var focusedCheckIn = false
 
+    private var allItems: [TodayLayoutItem] {
+        preferences.items(customMetricIDs: customDefinitions.map(\.id))
+    }
+
     private var enabledItems: [TodayLayoutItem] {
-        preferences.items(customMetricIDs: customDefinitions.map(\.id)).filter(itemIsEnabled)
+        allItems.filter(itemIsEnabled)
+    }
+
+    private var essentialCount: Int {
+        enabledItems.filter { preferences.isEssential($0) && !preferences.isHidden($0) }.count
     }
 
     var body: some View {
         List {
-            Section {
-                Toggle("Focused check-in", isOn: $focusedCheckIn)
-            } footer: {
-                Text("Focused mode shows only trackers marked Essential. It highlights unanswered items without requiring you to complete them.")
+            focusedSection
+
+            if enabledItems.isEmpty {
+                Section {
+                    ContentUnavailableView(
+                        "No Trackers Enabled",
+                        systemImage: "square.stack.3d.up.slash",
+                        description: Text("Turn on trackers in Choose What to Track to arrange them here.")
+                    )
+                    .listRowBackground(Color.clear)
+                }
+            } else {
+                trackersSection
             }
 
-            Section {
-                ForEach(enabledItems) { item in
-                    itemRow(item)
-                }
-                .onMove(perform: moveModules)
-            } header: {
-                Text("Today Trackers")
-            } footer: {
-                Text("Only enabled trackers appear here. Use Edit to drag them into your preferred order. The menu controls visibility, default expansion, and focused-mode essentials.")
-            }
             if let loadError {
-                Section { Text(loadError).foregroundStyle(.red) }
+                Section {
+                    Label(loadError, systemImage: "exclamationmark.triangle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(CloveColors.error)
+                        .listRowBackground(CloveColors.card)
+                }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(CloveColors.background)
+        // Reorder handles are always visible, so there's no hidden Edit mode to discover.
+        .environment(\.editMode, .constant(.active))
         .navigationTitle("Arrange Today")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { EditButton() }
-        .onAppear {
-            preferences = .load()
-            do {
-                customDefinitions = try CustomMetricsRepo.shared.definitions()
-                preferences.setItems(preferences.items(customMetricIDs: customDefinitions.map(\.id)))
-                preferences.save()
-                loadError = nil
-            } catch {
-                loadError = "Custom metrics could not be loaded. Please reopen this screen to try again."
+        .sensoryFeedback(.selection, trigger: preferences)
+        .sensoryFeedback(.selection, trigger: focusedCheckIn)
+        .onAppear(perform: load)
+    }
+
+    // MARK: - Sections
+
+    private var focusedSection: some View {
+        Section {
+            Toggle(isOn: $focusedCheckIn.animation()) {
+                HStack(spacing: 12) {
+                    iconTile("scope", tint: Theme.shared.accent)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Focused check-in")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(CloveColors.primaryText)
+                        Text(essentialSummary)
+                            .font(.caption)
+                            .foregroundStyle(CloveColors.secondaryText)
+                            .contentTransition(.numericText())
+                    }
+                }
+            }
+            .tint(Theme.shared.accent)
+            .padding(.vertical, 2)
+            .listRowBackground(CloveColors.card)
+        } footer: {
+            if focusedCheckIn && essentialCount == 0 && !enabledItems.isEmpty {
+                Label("Today will be empty until you star at least one tracker below.", systemImage: "exclamationmark.circle.fill")
+                    .foregroundStyle(CloveColors.orange)
+            } else {
+                Text("Shows only your starred essentials on Today. Unanswered ones are highlighted, but nothing is required.")
             }
         }
     }
 
-    private func itemRow(_ item: TodayLayoutItem) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon(for: item))
-                .foregroundStyle(tint(for: item))
-                .frame(width: 28)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title(for: item))
-                    .foregroundStyle(CloveColors.primaryText)
-                HStack(spacing: 6) {
-                    if preferences.isEssential(item) {
-                        badge("Essential", icon: "star.fill")
+    private var trackersSection: some View {
+        Section {
+            ForEach(enabledItems) { item in
+                TrackerLayoutRow(
+                    title: title(for: item),
+                    icon: icon(for: item),
+                    tint: tint(for: item),
+                    isEssential: preferences.isEssential(item),
+                    isHidden: preferences.isHidden(item),
+                    collapsible: collapsibleModule(for: item) != nil,
+                    isCollapsed: collapsibleModule(for: item).map { preferences.collapsed.contains($0) } ?? false,
+                    toggleEssential: { update { $0.setEssential(!$0.isEssential(item), for: item) } },
+                    toggleHidden: { update { $0.setHidden(!$0.isHidden(item), for: item) } },
+                    toggleCollapsed: {
+                        guard let module = collapsibleModule(for: item) else { return }
+                        update { prefs in
+                            if prefs.collapsed.contains(module) { prefs.collapsed.remove(module) } else { prefs.collapsed.insert(module) }
+                        }
                     }
-                    if case .module(let module) = item, preferences.collapsed.contains(module) {
-                        badge("Collapsed", icon: "rectangle.compress.vertical")
-                    }
-                    if preferences.isHidden(item) {
-                        badge("Hidden", icon: "eye.slash.fill")
-                    }
-                }
+                )
+                .listRowBackground(CloveColors.card)
             }
-
-            Spacer()
-
-            Menu {
-                Button {
-                    preferences.setEssential(!preferences.isEssential(item), for: item)
-                    preferences.save()
-                } label: {
-                    Label(
-                        preferences.isEssential(item) ? "Remove from Essentials" : "Mark Essential",
-                        systemImage: preferences.isEssential(item) ? "star.slash" : "star"
-                    )
-                }
-                if case .module(let module) = item {
-                    Button {
-                        toggle(module, in: \TodayLayoutPreferences.collapsed)
-                    } label: {
-                        Label(
-                            preferences.collapsed.contains(module) ? "Expand by Default" : "Collapse by Default",
-                            systemImage: preferences.collapsed.contains(module) ? "rectangle.expand.vertical" : "rectangle.compress.vertical"
-                        )
-                    }
-                }
-                Button {
-                    preferences.setHidden(!preferences.isHidden(item), for: item)
-                    preferences.save()
-                } label: {
-                    Label(
-                        preferences.isHidden(item) ? "Show on Today" : "Hide from Today",
-                        systemImage: preferences.isHidden(item) ? "eye" : "eye.slash"
-                    )
-                }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-                    .font(.title3)
-                    .foregroundStyle(Theme.shared.accent)
-                    .frame(width: 44, height: 44)
-            }
-            .accessibilityLabel("Options for \(title(for: item))")
+            .onMove(perform: moveItems)
+        } header: {
+            Text("Order on Today")
+        } footer: {
+            Text("Drag \(Image(systemName: "line.3.horizontal")) to reorder. Tap \(Image(systemName: "star")) to mark a tracker essential for focused check-ins.")
         }
-        .opacity(preferences.isHidden(item) ? 0.55 : 1)
     }
 
-    private func badge(_ text: String, icon: String) -> some View {
-        Label(text, systemImage: icon)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(CloveColors.secondaryText)
+    private var essentialSummary: String {
+        switch essentialCount {
+        case 0: "No essentials starred"
+        case 1: "1 essential tracker"
+        default: "\(essentialCount) essential trackers"
+        }
     }
 
-    private func toggle(_ module: TodayModule, in keyPath: WritableKeyPath<TodayLayoutPreferences, Set<TodayModule>>) {
-        if preferences[keyPath: keyPath].contains(module) {
-            preferences[keyPath: keyPath].remove(module)
-        } else {
-            preferences[keyPath: keyPath].insert(module)
+    // MARK: - Actions
+
+    private func load() {
+        preferences = .load()
+        do {
+            customDefinitions = try CustomMetricsRepo.shared.definitions()
+            preferences.setItems(allItems)
+            preferences.save()
+            loadError = nil
+        } catch {
+            loadError = "Custom metrics couldn't be loaded. Reopen this screen to try again."
+        }
+    }
+
+    private func update(_ change: (inout TodayLayoutPreferences) -> Void) {
+        withAnimation(.snappy(duration: 0.25)) {
+            change(&preferences)
         }
         preferences.save()
     }
 
-    private func moveModules(from source: IndexSet, to destination: Int) {
+    private func moveItems(from source: IndexSet, to destination: Int) {
         var reordered = enabledItems
         reordered.move(fromOffsets: source, toOffset: destination)
-        let disabled = preferences.items(customMetricIDs: customDefinitions.map(\.id)).filter { !itemIsEnabled($0) }
+        let disabled = allItems.filter { !itemIsEnabled($0) }
         preferences.setItems(reordered + disabled)
         preferences.save()
+    }
+
+    // MARK: - Item metadata
+
+    private func collapsibleModule(for item: TodayLayoutItem) -> TodayModule? {
+        if case .module(let module) = item { return module }
+        return nil
     }
 
     private func itemIsEnabled(_ item: TodayLayoutItem) -> Bool {
@@ -158,11 +183,15 @@ struct TodayLayoutSettingsView: View {
     }
 
     private func tint(for item: TodayLayoutItem) -> Color {
-        if case .customMetric(let id) = item,
-           let definition = customDefinitions.first(where: { $0.id == id }) {
-            return Color(hex: definition.colorHex)
+        switch item {
+        case .module(let module):
+            return module.layoutTint
+        case .customMetric(let id):
+            if let definition = customDefinitions.first(where: { $0.id == id }) {
+                return Color(hex: definition.colorHex)
+            }
+            return Theme.shared.accent
         }
-        return Theme.shared.accent
     }
 
     private func moduleIsEnabled(_ module: TodayModule) -> Bool {
@@ -183,6 +212,122 @@ struct TodayLayoutSettingsView: View {
         case .cycle: settings.trackCycle
         case .notes: settings.trackNotes
         case .flare: settings.showFlareToggle
+        }
+    }
+}
+
+// MARK: - Row
+
+private struct TrackerLayoutRow: View {
+    let title: String
+    let icon: String
+    let tint: Color
+    let isEssential: Bool
+    let isHidden: Bool
+    let collapsible: Bool
+    let isCollapsed: Bool
+    let toggleEssential: () -> Void
+    let toggleHidden: () -> Void
+    let toggleCollapsed: () -> Void
+
+    private var status: String? {
+        var parts: [String] = []
+        if isHidden { parts.append("Hidden from Today") }
+        if isCollapsed { parts.append("Starts collapsed") }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            iconTile(icon, tint: isHidden ? CloveColors.secondaryText : tint)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(isHidden ? CloveColors.secondaryText : CloveColors.primaryText)
+                    .strikethrough(isHidden, color: CloveColors.secondaryText.opacity(0.6))
+                    .lineLimit(1)
+                if let status {
+                    Text(status)
+                        .font(.caption)
+                        .foregroundStyle(CloveColors.secondaryText)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            Button(action: toggleEssential) {
+                Image(systemName: isEssential ? "star.fill" : "star")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(isEssential ? CloveColors.yellow : CloveColors.secondaryText.opacity(0.5))
+                    .symbolEffect(.bounce, value: isEssential)
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .disabled(isHidden)
+            .opacity(isHidden ? 0.4 : 1)
+            .accessibilityLabel(isEssential ? "Remove \(title) from essentials" : "Mark \(title) essential")
+            .accessibilityAddTraits(isEssential ? .isSelected : [])
+
+            Menu {
+                Button(action: toggleHidden) {
+                    Label(isHidden ? "Show on Today" : "Hide from Today",
+                          systemImage: isHidden ? "eye" : "eye.slash")
+                }
+                if collapsible {
+                    Button(action: toggleCollapsed) {
+                        Label(isCollapsed ? "Start Expanded" : "Start Collapsed",
+                              systemImage: isCollapsed ? "rectangle.expand.vertical" : "rectangle.compress.vertical")
+                    }
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(CloveColors.secondaryText)
+                    .frame(width: 32, height: 36)
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.button)
+            .buttonStyle(.borderless)
+            .accessibilityLabel("More options for \(title)")
+        }
+        .padding(.vertical, 4)
+        .frame(minHeight: 44)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private func iconTile(_ systemName: String, tint: Color) -> some View {
+    Image(systemName: systemName)
+        .font(.system(size: 15, weight: .semibold))
+        .foregroundStyle(tint)
+        .frame(width: 32, height: 32)
+        .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .accessibilityHidden(true)
+}
+
+private extension TodayModule {
+    /// Matches the tile colors in Choose What to Track so a tracker reads the same everywhere.
+    var layoutTint: Color {
+        switch self {
+        case .mood: .blue
+        case .pain: .red
+        case .energy: .yellow
+        case .hydration: .blue
+        case .sleep: .indigo
+        case .symptoms: .orange
+        case .meals: .green
+        case .plans: .teal
+        case .activities: .cyan
+        case .medications: .purple
+        case .weather: .mint
+        case .bowelMovements: Color(hex: "9b6230")
+        case .cycle: Color(hex: "ff6b9d")
+        case .notes: .indigo
+        case .flare: .pink
+        case .customMetrics: .purple
         }
     }
 }

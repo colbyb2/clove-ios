@@ -44,6 +44,13 @@ struct TodayView: View {
                         if pacingPlansEnabled {
                             surfacePicker
                         }
+
+                        if focusedCheckIn, selectedSurface == .checkIn, viewModel.hasLoadedData {
+                            FocusedCheckInBar(hiddenCount: unfocusedItems.count - visibleItems.count) {
+                                withAnimation(.easeInOut(duration: 0.2)) { focusedCheckIn = false }
+                            }
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        }
                     }
 
                     if selectedSurface == .plans, pacingPlansEnabled {
@@ -259,6 +266,12 @@ struct TodayView: View {
     }
 
     private var visibleItems: [TodayLayoutItem] {
+        guard focusedCheckIn else { return unfocusedItems }
+        return unfocusedItems.filter(layoutPreferences.isEssential)
+    }
+
+    /// Everything Today would show with focused check-in off.
+    private var unfocusedItems: [TodayLayoutItem] {
         layoutPreferences.items(customMetricIDs: viewModel.customDefinitions.map(\.id)).filter { item in
             let enabled: Bool
             switch item {
@@ -269,7 +282,6 @@ struct TodayView: View {
                 }
             }
             return enabled && !layoutPreferences.isHidden(item)
-                && (!focusedCheckIn || layoutPreferences.isEssential(item))
         }
     }
 
@@ -1142,4 +1154,56 @@ private struct DailySaveStatusView: View {
     }
     .environment(NavigationCoordinator.shared)
     .previewScenario(.minimal)
+}
+
+/// Compact, always-visible reminder that focused check-in is filtering Today, with a one-tap exit.
+private struct FocusedCheckInBar: View {
+    let hiddenCount: Int
+    let onShowAll: () -> Void
+
+    private var detail: String {
+        switch hiddenCount {
+        case ..<1: "Showing essentials only"
+        case 1: "1 tracker hidden"
+        default: "\(hiddenCount) trackers hidden"
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "scope")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.shared.accent)
+
+            (Text("Focused check-in")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(CloveColors.primaryText)
+             + Text("  ·  \(detail)")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(CloveColors.secondaryText))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+
+            Spacer(minLength: 4)
+
+            Button(action: onShowAll) {
+                Text("Show all")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.shared.accent)
+                    .padding(.horizontal, 10)
+                    .frame(height: 28)
+                    .background(Theme.shared.accent.opacity(0.14), in: Capsule())
+                    .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Show all trackers")
+            .accessibilityHint("Turns off focused check-in")
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 6)
+        .padding(.vertical, 6)
+        .background(Theme.shared.accent.opacity(0.08), in: Capsule())
+        .overlay { Capsule().stroke(Theme.shared.accent.opacity(0.22), lineWidth: 1) }
+        .accessibilityElement(children: .combine)
+    }
 }
