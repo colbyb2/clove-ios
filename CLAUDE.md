@@ -21,8 +21,17 @@ open Clove.xcodeproj
 ```
 
 ### Testing
-- No automated test suite currently exists
-- Testing is done through Xcode's built-in simulator and device testing
+```bash
+scripts/test-ios.sh                                                  # full suite on the dedicated test simulator
+scripts/test-ios.sh -only-testing:CloveAnalyticsTests/CSVRoundTripTests # one class
+```
+- XCTest target `CloveAnalyticsTests` (covers the whole app, not only analytics); CI runs it on every PR (`.github/workflows/tests.yml`)
+- Use `TestDatabaseManager` (in-memory SQLite + production migrations) for repo/migration tests and the `Mock*` repositories in `Clove/Repos/Mocks` for ViewModel tests
+- Never touch `DatabaseManager.shared` or the user's data in tests; restore any `UserDefaults.standard` keys a test writes
+- New persisted field → add a decoding fallback and a fixture in `PersistedFormatCompatibilityTests`; new migration → `MigrationUpgradeTests` must still pass
+- New export column → extend `CSVRoundTripTests` so export → import stays lossless
+- Known bugs are pinned with `XCTExpectFailure`; remove the marker when fixing the bug
+- Analytics-specific conventions: `docs/analytics-overhaul/TESTING.md`
 
 ## Architecture
 

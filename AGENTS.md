@@ -25,6 +25,13 @@ open Clove.xcodeproj
 - This uses a dedicated **Clove Automated Tests** simulator, waits for boot completion, disables parallel simulator clones, and shuts down only that test device afterward.
 - Never run automated tests on the user's interactive simulator or shut down/reboot their device during verification. Shared simulator use can leave Xcode launches failing with SpringBoard `Busy` / `Application failed preflight checks`.
 - Build-only checks may still use a generic iOS Simulator destination. Manual UI testing uses the user's Xcode simulator.
+- XCTest target `CloveAnalyticsTests` (covers the whole app, not only analytics); CI runs it on every PR (`.github/workflows/tests.yml`)
+- Use `TestDatabaseManager` (in-memory SQLite + production migrations) for repo/migration tests and the `Mock*` repositories in `Clove/Repos/Mocks` for ViewModel tests
+- Never touch `DatabaseManager.shared` or the user's data in tests; restore any `UserDefaults.standard` keys a test writes
+- New persisted field → add a decoding fallback and a fixture in `PersistedFormatCompatibilityTests`; new migration → `MigrationUpgradeTests` must still pass
+- New export column → extend `CSVRoundTripTests` so export → import stays lossless
+- Known bugs are pinned with `XCTExpectFailure`; remove the marker when fixing the bug
+- Analytics-specific conventions: `docs/analytics-overhaul/TESTING.md`
 
 ## Architecture
 
