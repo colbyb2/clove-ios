@@ -28,79 +28,74 @@ class CSVParser {
     }
     
     private static func parseCSVContent(_ content: String) throws -> ParsedCSVData {
-        let lines = content.components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-        
-        guard lines.count >= 2 else {
+        let records = parseRecords(content)
+
+        guard records.count >= 2 else {
             throw ImportError.invalidCSVStructure
         }
-        
-        // Parse headers
-        let headers = parseCSVLine(lines[0])
+
+        let headers = records[0].map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         guard !headers.isEmpty else {
             throw ImportError.invalidCSVStructure
         }
-        
-        // Create column mapping
+
         var columnMap: [String: Int] = [:]
         for (index, header) in headers.enumerated() {
             columnMap[header] = index
         }
-        
-        // Parse data rows
-        var rows: [[String]] = []
-        for i in 1..<lines.count {
-            let row = parseCSVLine(lines[i])
-            if row.count == headers.count {
-                rows.append(row)
-            }
-            // Skip rows with incorrect column count (might be empty or malformed)
-        }
-        
-        return ParsedCSVData(
-            headers: headers,
-            rows: rows,
-            columnMap: columnMap
-        )
+
+        // Rows with an incorrect column count (empty or malformed) are skipped.
+        let rows = records.dropFirst().filter { $0.count == headers.count }
+
+        return ParsedCSVData(headers: headers, rows: Array(rows), columnMap: columnMap)
     }
-    
-    private static func parseCSVLine(_ line: String) -> [String] {
+
+    /// Splits CSV text into records of fields. Line breaks inside quoted
+    /// fields belong to the field, so this scans the whole text rather than
+    /// splitting into lines first. Blank records are dropped.
+    private static func parseRecords(_ content: String) -> [[String]] {
+        var records: [[String]] = []
         var fields: [String] = []
-        var currentField = ""
+        var field = ""
         var inQuotes = false
-        var i = line.startIndex
-        
-        while i < line.endIndex {
-            let char = line[i]
-            
-            if char == "\"" {
-                if inQuotes {
-                    // Check if next character is also a quote (escaped quote)
-                    let nextIndex = line.index(after: i)
-                    if nextIndex < line.endIndex && line[nextIndex] == "\"" {
-                        currentField += "\""
-                        i = line.index(after: nextIndex)
-                        continue
+
+        func endRecord() {
+            fields.append(field)
+            let blank = fields.count == 1
+                && fields[0].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            if !blank { records.append(fields) }
+            fields = []
+            field = ""
+        }
+
+        var i = content.startIndex
+        while i < content.endIndex {
+            let char = content[i]
+            if inQuotes {
+                if char == "\"" {
+                    let next = content.index(after: i)
+                    if next < content.endIndex && content[next] == "\"" {
+                        field.append("\"")
+                        i = next
                     } else {
                         inQuotes = false
                     }
                 } else {
-                    inQuotes = true
+                    field.append(char)
                 }
-            } else if char == "," && !inQuotes {
-                fields.append(currentField)
-                currentField = ""
+            } else if char == "\"" {
+                inQuotes = true
+            } else if char == "," {
+                fields.append(field)
+                field = ""
+            } else if char.isNewline {
+                endRecord()
             } else {
-                currentField += String(char)
+                field.append(char)
             }
-            
-            i = line.index(after: i)
+            i = content.index(after: i)
         }
-        
-        // Add the last field
-        fields.append(currentField)
-        
-        return fields
+        endRecord()
+        return records
     }
 }

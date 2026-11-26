@@ -51,8 +51,8 @@ class ImportValidator {
             }
             
         case "Mood", "Pain Level", "Energy Level":
-            if let intValue = Int(value), intValue >= 1 && intValue <= 10 {
-                // Valid
+            if let intValue = Int(value), intValue >= 0 && intValue <= 10 {
+                // Valid (0 is a real answer the app can store)
             } else {
                 throw ImportError.invalidDataValue(column: column, value: value, row: row)
             }

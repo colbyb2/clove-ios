@@ -7,7 +7,7 @@ import XCTest
 /// carry. These tests exercise the real exporter and the real importer
 /// together, so a change on either side that breaks restore is caught.
 ///
-/// Known defects are marked with `XCTExpectFailure`. When a defect is fixed the
+/// Known defects, if any, are marked with `XCTExpectFailure`. When a defect is fixed the
 /// test starts "unexpectedly passing" and fails, prompting removal of the marker.
 final class CSVRoundTripTests: XCTestCase {
     private let coreCategories: Set<ExportCategory> = [
@@ -40,7 +40,6 @@ final class CSVRoundTripTests: XCTestCase {
     }
 
     func testParserKeepsQuotedLineBreaksInsideOneField() throws {
-        XCTExpectFailure("CSVParser splits on newlines before honoring quotes, truncating multi-line fields")
         let url = try writeCSV("Date,Notes\n\"Mar 1, 2025\",\"Line one\nLine two\"")
 
         let parsed = try CSVParser.parseCSV(from: url)
@@ -80,12 +79,10 @@ final class CSVRoundTripTests: XCTestCase {
 
         let outcome = await roundTripOutcome([log], categories: coreCategories)
 
-        try XCTExpectFailure("ImportValidator accepts 1...10 for Mood/Pain/Energy, but the app stores 0...10") {
-            let restored = (try? outcome.get()) ?? []
-            XCTAssertNoThrow(try outcome.get())
-            XCTAssertEqual(restored.first?.painLevel, 0)
-            XCTAssertEqual(restored.first?.mood, 0)
-        }
+        let restored = try outcome.get()
+        XCTAssertEqual(restored.first?.painLevel, 0)
+        XCTAssertEqual(restored.first?.mood, 0)
+        XCTAssertEqual(restored.first?.energyLevel, 0)
     }
 
     func testMultiLineNotesSurviveRoundTrip() async throws {
@@ -93,9 +90,7 @@ final class CSVRoundTripTests: XCTestCase {
 
         let restored = try await roundTrip([log], categories: coreCategories)
 
-        XCTExpectFailure("CSVParser splits lines before honoring quotes; notes are cut at the first line break") {
-            XCTAssertEqual(restored.first?.notes, "Morning: tired\nEvening: better")
-        }
+        XCTAssertEqual(restored.first?.notes, "Morning: tired\nEvening: better")
     }
 
     func testCycleCSVIsRejectedWithGuidanceInsteadOfCreatingBogusSymptoms() async throws {
